@@ -1,0 +1,24 @@
+title = "profile-bits"
+
+# Keep built-in gitleaks rules. Allowlists only skip known false-positive paths
+# (lockfile integrity hashes, license text) and do not disable detection rules.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Typical false positives: lockfile integrity hashes and LICENSE text"
+paths = [
+  '''(?:^|/)pnpm-lock\.yaml$''',
+  '''(?:^|/)package-lock\.json$''',
+  '''(?:^|/)npm-shrinkwrap\.json$''',
+  '''(?:^|/)yarn\.lock$''',
+  '''(?:^|/)bun\.lock$''',
+  '''(?:^|/)bun\.lockb$''',
+  '''(?:^|/)Cargo\.lock$''',
+  '''(?:^|/)go\.sum$''',
+  '''(?:^|/)poetry\.lock$''',
+  '''(?:^|/)composer\.lock$''',
+  '''(?:^|/)Pipfile\.lock$''',
+  '''(?:^|/)uv\.lock$''',
+  '''(?i)(?:^|/)LICENSE(?:\.(?:md|txt))?$''',
+]

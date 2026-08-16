@@ -1,0 +1,24 @@
+repos:
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.5.8
+    hooks:
+      - id: biome-check
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.23.2
+    hooks:
+      - id: markdownlint-cli2
+
+  - repo: local
+    hooks:
+      - id: generate-action
+        name: generate-action --check
+        language: system
+        entry: just generate-action -- --check
+        pass_filenames: false
+        always_run: true

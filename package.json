@@ -1,0 +1,25 @@
+{
+  "name": "profile-bits",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "test": "vitest run",
+    "docs": "pnpm --filter @profile-bits/docs build",
+    "docs-dev": "pnpm --filter @profile-bits/docs dev",
+    "render": "echo 'placeholder: render (T100)'",
+    "generate-action": "echo 'placeholder: generate-action (T030c)'",
+    "generate-docs": "echo 'placeholder: generate-docs'",
+    "check": "pnpm lint && pnpm test && pnpm generate-action --check && pnpm generate-docs --check"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@fission-ai/openspec": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

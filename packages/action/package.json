@@ -1,0 +1,15 @@
+{
+  "name": "@profile-bits/action",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "optionalDependencies": {
+    "@takumi-rs/core-linux-x64-gnu": "catalog:"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "catalog:"
+  }
+}

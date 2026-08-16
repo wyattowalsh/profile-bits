@@ -80,6 +80,7 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
+# dist/ is gitignored on main; committed only on orphan release/v1
 dist
 .output
 

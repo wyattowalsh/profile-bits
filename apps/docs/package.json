@@ -1,0 +1,15 @@
+{
+  "name": "@profile-bits/docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'placeholder: fumadocs dev (T130a)'",
+    "build": "echo 'placeholder: fumadocs build (T130a)'"
+  },
+  "dependencies": {
+    "fumadocs-core": "catalog:",
+    "fumadocs-ui": "catalog:",
+    "next": "catalog:"
+  }
+}

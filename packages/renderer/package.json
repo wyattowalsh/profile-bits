@@ -1,0 +1,19 @@
+{
+  "name": "@profile-bits/renderer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@takumi-rs/core": "catalog:",
+    "@takumi-rs/helpers": "catalog:",
+    "@takumi-rs/wasm": "catalog:",
+    "takumi-js": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
