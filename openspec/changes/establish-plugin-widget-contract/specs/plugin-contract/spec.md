@@ -1,0 +1,157 @@
+## Purpose
+
+Defines a plugin as a pack of widgets plus declared integrations, and locks yaml SSOT plus a thin Action public surface so widget options never become flattened Marketplace inputs.
+
+## ADDED Requirements
+
+### Requirement: Plugin is a pack of widgets and integrations
+A plugin SHALL be a collection of widgets plus a derived union of integrations, not a single card and not a single API. A plugin MUST declare 1..N widgets and 0..N integrations. Adding a widget MUST NOT require a new plugin. Adding an integration MUST NOT require a new plugin. Core MUST NOT assume one plugin equals one image equals one API.
+
+#### Scenario: Plugin declares multiple widgets
+- **WHEN** a plugin pack is registered
+- **THEN** it MUST expose a widget list of length at least 1 and an integrations union derived from those widgets
+
+#### Scenario: New widget stays on existing pack
+- **WHEN** a new card is added to an existing pack
+- **THEN** the system MUST register it as a widget on that plugin rather than creating a new plugin
+
+### Requirement: First-party github plugin catalog
+The first plugin id MUST be `github`. That plugin MUST include widgets `demo`, `stats`, and `languages`. The `github` plugin MUST declare integrations used by those widgets (`static` for `demo`, `github` for `stats` and `languages`). v0 MUST NOT add extra first-party plugins.
+
+#### Scenario: github plugin widgets
+- **WHEN** the `github` plugin is enabled
+- **THEN** widgets `demo`, `stats`, and `languages` MUST be available on that pack and no other first-party plugin ids MUST exist in v0
+
+### Requirement: Default widget list when plugin is on
+When the `github` plugin is on and no widget list is specified, the system MUST enable `stats` and `languages`. Widget `demo` MUST be opt-in (playground smoke / explicit yaml), not part of pack defaults.
+
+#### Scenario: Pack defaults omit demo
+- **WHEN** the github plugin is enabled with no widget list
+- **THEN** the enabled widgets MUST be `stats` and `languages` and `demo` MUST remain disabled until explicitly enabled
+
+### Requirement: Committed yaml is config SSOT
+Committed `.github/profile-bits.yml` MUST be the configuration source of truth for plugin/widget/option trees, filenames, and format/theme defaults. Yaml parse MUST use `additionalProperties: false`. Widget options MUST live in yaml and MAY change without a Marketplace input bump.
+
+#### Scenario: Yaml file is source of truth
+- **WHEN** `.github/profile-bits.yml` exists at the configured path
+- **THEN** plugin, widget, and option configuration MUST be taken from that file rather than from flattened Action inputs
+
+### Requirement: Yaml document shape
+A valid yaml document MUST accept exactly this shape (unknown keys fail parse). Root fields MUST be `version`, `format`, `theme`, `output_pair`, `animated`, `timezone`, `output_dir`, and `plugins`. Default values MUST match:
+
+```yaml
+version: 1
+format: svg
+theme: dark
+output_pair: false
+animated: false
+timezone: UTC
+output_dir: profile-bits
+plugins:
+  github:
+    widgets:
+      stats:
+        filename: stats
+        include: [followers, repos, stars]
+        hide_rank: true
+        avatar: true
+        animate: false
+        include_private: false
+        include_forks: false
+        include_archived: false
+      languages:
+        filename: languages
+        limit: 8
+        min_pct: 1
+        exclude: []
+        animate: false
+        include_private: false
+        include_forks: false
+        include_archived: false
+```
+
+`theme` MUST be `light` or `dark` (default `dark`). `output_pair: true` MUST write `filename` plus `filename-dark` under `output_dir`. `format: apng` MUST use a `.png` extension. Tokens, `user`, `output_action`, `dry_run`, `allow_skipped`, `committer_*`, `output_condition`, and `config` path MUST stay in thin `action.yml`, not in this yaml document.
+
+#### Scenario: Default yaml shape
+- **WHEN** a consumer commits the default `.github/profile-bits.yml`
+- **THEN** parse MUST succeed with `version: 1`, `format: svg`, `theme: dark`, `output_pair: false`, `animated: false`, `timezone: UTC`, `output_dir: profile-bits`, and github widgets `stats` and `languages` using the default option values above
+
+#### Scenario: output_pair writes paired files
+- **WHEN** yaml `output_pair` is true
+- **THEN** the Action MUST write both `filename` and `filename-dark` under `output_dir`
+
+### Requirement: Thin root action.yml
+Root `action.yml` MUST be thin. Allowed inputs MUST be: `user` (default `github.repository_owner`); `github_token` (API; default `${{ github.token }}` when omitted); `committer_token` (git; default `${{ github.token }}`); `config` (path, default `.github/profile-bits.yml`); `output_action`; `dry_run`; optional `format` / `theme` / `output_pair` / `animated` overrides; optional `plugin_github` bool; plus `committer_branch`, `committer_gist`, `output_condition` (`always` | `data-changed`), `timezone`, and `allow_skipped` (default false). Empty / `""` / whitespace `github_token` MUST be treated as missing (not as omitted default). Breaking a thin input MUST be semver major.
+
+#### Scenario: Omitted token uses github.token
+- **WHEN** `github_token` is omitted from the workflow
+- **THEN** the Action MUST use `${{ github.token }}` as the API token
+
+#### Scenario: Empty token is not omitted
+- **WHEN** `github_token` is provided as empty, `""`, or whitespace
+- **THEN** the Action MUST treat the token as missing and MUST fail the job rather than substituting `${{ github.token }}` or calling GitHub unauthenticated
+
+### Requirement: No flattened plugin option inputs
+The system MUST NOT generate Action inputs of the form `plugin_<plugin>_<widget>_<option>` (including `plugin_github_stats_include`, `plugin_github_widgets` CSV, and `plugin_github_filename_*`). Codegen `--check` MUST fail if a generated input matches `plugin_github_stats_include` or a similar flattened option name.
+
+#### Scenario: Codegen check rejects flattened include
+- **WHEN** generated `action.yml` contains an input named `plugin_github_stats_include` or another `plugin_<plugin>_<widget>_<option>` name
+- **THEN** `generate-action --check` MUST fail
+
+### Requirement: Config precedence yaml over plugin_github
+If the config file exists, yaml MUST win and `plugin_github` MUST be ignored. `plugin_github: true` MUST apply pack defaults (`stats`, `languages`) only when the config file is absent.
+
+#### Scenario: Existing yaml ignores plugin_github
+- **WHEN** `.github/profile-bits.yml` exists and `plugin_github` is also set
+- **THEN** configuration MUST come from yaml and `plugin_github` MUST have no effect
+
+#### Scenario: plugin_github applies only without config
+- **WHEN** the config file is absent and `plugin_github` is true
+- **THEN** the Action MUST enable github pack defaults `stats` and `languages`
+
+### Requirement: Unknown yaml keys and include tokens fail parse
+Unknown yaml keys MUST fail parse. Unknown `include` tokens MUST fail parse. Parse MUST NOT silently drop unknown fields.
+
+#### Scenario: Unknown yaml key
+- **WHEN** yaml contains a key not in the frozen schema
+- **THEN** parse MUST fail the job
+
+#### Scenario: Unknown include token
+- **WHEN** stats `include` contains a token other than `followers`, `following`, `repos`, `stars`, `forks`, `gists`, or `contributions`
+- **THEN** parse MUST fail the job
+
+### Requirement: Action commits widget files only
+The Action MUST commit widget files under `output_dir` only. The Action MUST NOT patch consumer `README.md`. Playground and examples MAY emit markdown for the user to paste.
+
+#### Scenario: README is not patched
+- **WHEN** the Action runs with `output_action: commit`
+- **THEN** widget files MUST be written under `output_dir` and `README.md` MUST NOT be modified by the Action
+
+### Requirement: output_action modes
+`output_action` MUST be one of `none` | `commit` | `pull-request` | `gist` (default `commit`). `gist` MUST be SVG only. `gist` with a non-svg format MUST fail. `output_action: gist` without `canGist` MUST fail the run. Pull-request output MUST require `permissions: { contents: write, pull-requests: write }`.
+
+#### Scenario: gist without canGist fails the run
+- **WHEN** `output_action` is `gist` and the token cannot create gists (`canGist` is false)
+- **THEN** the run MUST fail
+
+#### Scenario: gist with non-svg format fails
+- **WHEN** `output_action` is `gist` and format is not `svg`
+- **THEN** the run MUST fail with a clear error
+
+### Requirement: Action runtime and dist policy
+`runs.using` MUST be `node24` only. `dist/` MUST be gitignored on `main` and committed only on the orphan `release/v1` tree.
+
+#### Scenario: node24 runtime
+- **WHEN** root `action.yml` is generated
+- **THEN** `runs.using` MUST be `node24`
+
+#### Scenario: dist gitignored on main
+- **WHEN** sources live on `main`
+- **THEN** `dist/` MUST be gitignored and MUST NOT be required for the contract to be valid on `main`
+
+### Requirement: All github widgets skipped fails the job
+If every github widget is skipped and `allow_skipped` is false, the Action MUST fail the job. If `allow_skipped` is true, the job MAY complete without widget files.
+
+#### Scenario: all github widgets skipped and allow_skipped false
+- **WHEN** every github widget is skipped and `allow_skipped` is false
+- **THEN** the job MUST fail
