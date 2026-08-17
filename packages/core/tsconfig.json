@@ -7,6 +7,7 @@
     "moduleResolution": "NodeNext",
     "moduleDetection": "force",
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "skipLibCheck": true,
