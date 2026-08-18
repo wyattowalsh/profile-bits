@@ -1,7 +1,7 @@
 ## 1. T130a Fumadocs app
 
-- [ ] 1.1 Scaffold the Fumadocs + shadcn + Tailwind docs app under `apps/docs` (layout, nav hrefs `/playground` and `/generate`, MDX docs chrome). FORBIDDEN: `source.config.*`, `llms.txt`, `app/playground/**`, `app/api/preview/**`, `src/preview/**`, `src/codegen/**`, `src/generate/**`.
-- [ ] 1.2 Docs chrome MUST NOT be the README widget runtime (no Radix/shadcn DOM primitives inside Takumi output). Card size remains 480×160 in docs copy. v0 pack is `github` only.
+- [x] 1.1 Scaffold the Fumadocs + shadcn + Tailwind docs app under `apps/docs` (layout, nav hrefs `/playground` and `/generate`, MDX docs chrome). FORBIDDEN: `source.config.*`, `llms.txt`, `app/playground/**`, `app/api/preview/**`, `src/preview/**`, `src/codegen/**`, `src/generate/**`.
+- [x] 1.2 Docs chrome MUST NOT be the README widget runtime (no Radix/shadcn DOM primitives inside Takumi output). Card size remains 480×160 in docs copy. v0 pack is `github` only.
 
 ## 2. T130b llms.txt
 
