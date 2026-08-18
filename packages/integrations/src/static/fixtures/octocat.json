@@ -1,0 +1,92 @@
+{
+  "generatedAt": "2026-01-15T00:00:00.000Z",
+  "user": {
+    "login": "octocat",
+    "id": 583231,
+    "nodeId": "MDQ6VXNlcjU4MzIzMQ==",
+    "name": "The Octocat",
+    "avatarUrl": "https://avatars.githubusercontent.com/u/583231?v=4",
+    "bio": "GitHub's mascot",
+    "company": "@github",
+    "location": "San Francisco",
+    "createdAt": "2011-01-25T18:44:36Z"
+  },
+  "demo": {
+    "text": "profile-bits",
+    "animate": true
+  },
+  "stats": {
+    "followers": 4000,
+    "following": 9,
+    "repos": 8,
+    "stars": 2250,
+    "forks": 1500,
+    "gists": 8,
+    "contributions": 1600,
+    "rank": "A+"
+  },
+  "repos": [
+    {
+      "id": 1296269,
+      "nodeId": "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
+      "name": "Hello-World",
+      "fullName": "octocat/Hello-World",
+      "fork": false,
+      "archived": false,
+      "stargazersCount": 2000,
+      "forksCount": 1400,
+      "language": null
+    },
+    {
+      "id": 132935648,
+      "nodeId": "MDEwOlJlcG9zaXRvcnkxMzI5MzU2NDg=",
+      "name": "boysenberry-repo-1",
+      "fullName": "octocat/boysenberry-repo-1",
+      "fork": false,
+      "archived": false,
+      "stargazersCount": 200,
+      "forksCount": 80,
+      "language": "HTML"
+    },
+    {
+      "id": 18221276,
+      "nodeId": "MDEwOlJlcG9zaXRvcnkxODIyMTI3Ng==",
+      "name": "git-consortium",
+      "fullName": "octocat/git-consortium",
+      "fork": false,
+      "archived": false,
+      "stargazersCount": 50,
+      "forksCount": 20,
+      "language": null
+    },
+    {
+      "id": 1300192,
+      "nodeId": "MDEwOlJlcG9zaXRvcnkxMzAwMTky",
+      "name": "Spoon-Knife",
+      "fullName": "octocat/Spoon-Knife",
+      "fork": true,
+      "archived": false,
+      "stargazersCount": 10000,
+      "forksCount": 5000,
+      "language": "HTML"
+    },
+    {
+      "id": 1,
+      "nodeId": "MDEwOlJlcG9zaXRvcnkx",
+      "name": "archived-example",
+      "fullName": "octocat/archived-example",
+      "fork": false,
+      "archived": true,
+      "stargazersCount": 18,
+      "forksCount": 2,
+      "language": "C"
+    }
+  ],
+  "languages": [
+    { "name": "JavaScript", "bytes": 48000 },
+    { "name": "HTML", "bytes": 24000 },
+    { "name": "CSS", "bytes": 12000 },
+    { "name": "Python", "bytes": 8000 },
+    { "name": "C", "bytes": 4000 }
+  ]
+}

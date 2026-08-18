@@ -4,9 +4,20 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./static": "./src/static/index.ts",
+    "./github": "./src/github/client.ts"
   },
   "dependencies": {
-    "octokit": "catalog:"
+    "@profile-bits/core": "workspace:*",
+    "@rowanmanning/feed-parser": "catalog:",
+    "ipaddr.js": "catalog:",
+    "ssrfcheck": "catalog:",
+    "octokit": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
