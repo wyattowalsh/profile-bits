@@ -180,15 +180,6 @@ function pickFormat(value: unknown): PreviewOutputFormat | undefined {
     : undefined;
 }
 
-const CUSTOM_ROLE_KEYS = [
-  "bg",
-  "card",
-  "text",
-  "muted",
-  "accent",
-  "border",
-] as const;
-
 function pickTheme(value: unknown): PreviewTheme | undefined {
   return isPreviewTheme(value) ? value : undefined;
 }
@@ -377,9 +368,7 @@ function writeThemeParams(params: URLSearchParams, theme: PreviewTheme): void {
   }
 }
 
-function readCustomRoles(
-  params: URLSearchParams,
-): PreviewCustomRoles | undefined {
+function readCustomRoles(params: URLSearchParams): PreviewCustomRoles {
   const roles: PreviewCustomRoles = {
     bg: params.get("cbg") ?? "",
     card: params.get("ccard") ?? "",
@@ -388,9 +377,6 @@ function readCustomRoles(
     accent: params.get("caccent") ?? "",
     border: params.get("cborder") ?? "",
   };
-  if (CUSTOM_ROLE_KEYS.some((key) => roles[key] === "")) {
-    return undefined;
-  }
   const pair = params.get("cpair");
   if (pair != null && pair !== "") {
     roles.pair = pair;
@@ -401,11 +387,7 @@ function readCustomRoles(
 function parseThemeParam(params: URLSearchParams): PreviewTheme {
   const value = params.get("theme");
   if (value === "custom") {
-    const roles = readCustomRoles(params);
-    if (roles !== undefined) {
-      return { custom: roles };
-    }
-    return "dark";
+    return { custom: readCustomRoles(params) };
   }
   if (value != null && isPreviewNamedTheme(value)) {
     return value;

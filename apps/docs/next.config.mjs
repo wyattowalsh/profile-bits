@@ -27,7 +27,7 @@ fs.writeFileSync(
 
 const tsEsmLoaderRule = {
   condition: {
-    path: /(?:^|\/)packages\/(?:core|integrations|bits|plugins|renderer)\//,
+    path: /(?:^|\/)packages\/(?:core|integrations|bits|plugins|renderer|themes)\//,
   },
   loaders: [turbopackJsExtLoader],
 };
@@ -45,6 +45,7 @@ const nextConfig = {
     "@profile-bits/integrations",
     "@profile-bits/plugins",
     "@profile-bits/renderer",
+    "@profile-bits/themes",
   ],
   experimental: {
     extensionAlias,

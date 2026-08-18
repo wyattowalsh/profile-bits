@@ -236,6 +236,30 @@ describe("exportWorkflow", () => {
     ]);
   });
 
+  it("emits pair for custom + output_pair and parseConfig succeeds", () => {
+    const { configYml } = exportWorkflow({
+      ...DEFAULT_STATE,
+      theme: {
+        custom: {
+          bg: "catppuccin-mocha.bg",
+          card: "catppuccin-mocha.card",
+          text: "catppuccin-mocha.text",
+          muted: "catppuccin-mocha.muted",
+          accent: "catppuccin-mocha.accent",
+          border: "catppuccin-mocha.border",
+          pair: "catppuccin-latte",
+        },
+      },
+      output_pair: true,
+    });
+    expect(configYml).toMatch(/pair:\s*catppuccin-latte/);
+    const config = parseConfig({ yaml: configYml });
+    expect(config.output_pair).toBe(true);
+    expect(config.theme).toMatchObject({
+      custom: { pair: "catppuccin-latte" },
+    });
+  });
+
   it("emits only enabled widgets", () => {
     const { configYml } = exportWorkflow({
       ...DEFAULT_STATE,

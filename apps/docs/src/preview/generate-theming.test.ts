@@ -1,3 +1,4 @@
+import { parseConfig } from "@profile-bits/core";
 import { describe, expect, it } from "vitest";
 import { exportWorkflow } from "../codegen/export-workflow";
 import { parse, serialize, toCrossLink } from "./permalink";
@@ -78,5 +79,35 @@ describe("generate theming export", () => {
     expect(configYml).toContain("theme:");
     expect(configYml).toContain("custom:");
     expect(configYml).toContain("accent: catppuccin-mocha.mauve");
+  });
+
+  it("emits pair when custom output_pair is true and yaml parses", () => {
+    const { configYml } = exportWorkflow({
+      user: "octocat",
+      format: "svg",
+      theme: {
+        custom: {
+          bg: "catppuccin-mocha.bg",
+          card: "catppuccin-mocha.card",
+          text: "catppuccin-mocha.text",
+          muted: "catppuccin-mocha.muted",
+          accent: "catppuccin-mocha.accent",
+          border: "catppuccin-mocha.border",
+          pair: "catppuccin-latte",
+        },
+      },
+      output_pair: true,
+    });
+    expect(configYml).toContain("custom:");
+    expect(configYml).toMatch(/pair:\s*catppuccin-latte/);
+    expect(configYml).toContain("output_pair: true");
+    const config = parseConfig({ yaml: configYml });
+    expect(config.output_pair).toBe(true);
+    expect(config.theme).toMatchObject({
+      custom: {
+        accent: "catppuccin-mocha.accent",
+        pair: "catppuccin-latte",
+      },
+    });
   });
 });

@@ -78,10 +78,15 @@ describe("GlobalBar", () => {
   it("theme picker lists catalog families", () => {
     const html = renderBar({ ...VALUE, theme: "catppuccin-mocha" });
     expect(html).toContain('data-slot="theme-picker"');
+    expect(html).toContain('data-slot="theme-combobox"');
+    expect(html).toContain('role="combobox"');
     expect(html).toContain('data-value="catppuccin-mocha"');
     expect(html).toContain('data-family="catppuccin"');
     expect(html).toContain('data-value="dark"');
     expect(html).toContain('data-value="custom"');
+    expect(html).toContain('data-swatch="bg"');
+    expect(html).toContain('data-swatch="card"');
+    expect(html).toContain('data-swatch="accent"');
   });
 
   it("pairs accessible labels with controls", () => {
@@ -123,7 +128,7 @@ describe("GlobalBar", () => {
     );
 
     expect(html).toContain('data-value="apng"');
-    expect(html).toContain('value="light"');
+    expect(html).toContain('data-value="light"');
     expect(html).toContain("checked");
     expect(html).toContain('value="hubot"');
     expect(onChange).not.toHaveBeenCalled();

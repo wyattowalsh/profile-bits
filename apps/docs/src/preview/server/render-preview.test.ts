@@ -600,6 +600,43 @@ describe("renderPreview", () => {
     ]);
   });
 
+  it("renders a custom theme object as the selected mix", async () => {
+    const themes: unknown[] = [];
+    const result = await renderPreview(
+      {
+        ...STATS_REQUEST,
+        theme: {
+          custom: {
+            bg: "catppuccin-mocha.bg",
+            card: "catppuccin-mocha.card",
+            text: "catppuccin-mocha.text",
+            muted: "catppuccin-mocha.muted",
+            accent: "catppuccin-mocha.accent",
+            border: "catppuccin-mocha.border",
+            pair: "catppuccin-latte",
+          },
+        },
+        output_pair: true,
+      },
+      {
+        now: () => FIXED_NOW,
+        renderStill: async (input) => {
+          themes.push(input.theme);
+          return STILL_BYTES;
+        },
+      },
+    );
+    expect(themes[0]).toBe("catppuccin-latte");
+    expect(themes[1]).toMatchObject({ bg: "#1e1e2e" });
+    expect(result.files.map((file) => file.filename)).toEqual([
+      "stats.svg",
+      "stats-dark.svg",
+    ]);
+    expect(result.files.map((file) => file.filename)).not.toContain(
+      "stats-light.svg",
+    );
+  });
+
   it("source does not construct GitHub URLs, zip, embeds, or log tokens", async () => {
     const source = await readFile(
       new URL("./render-preview.ts", import.meta.url),

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parse, serialize, stripTokens, toCrossLink } from "./permalink";
 import {
+  isPreviewCustomTheme,
   PREVIEW_BIT_IDS,
   PREVIEW_OUTPUT_FORMATS,
   PREVIEW_TOKEN_QUERY_KEYS,
@@ -147,6 +148,20 @@ describe("serialize/parse round-trip", () => {
     const params = serialize({ ...PLUGIN_STATE, theme: custom });
     expect(params.get("theme")).toBe("custom");
     expect(params.get("caccent")).toBe("catppuccin-mocha.mauve");
+  });
+
+  it("does not coerce incomplete custom permalinks to dark", () => {
+    const restored = parse(
+      "theme=custom&ccard=dark.card&ctext=dark.text&cmuted=dark.muted&caccent=dark.accent&cborder=dark.border",
+    );
+    expect(restored.theme).not.toBe("dark");
+    expect(typeof restored.theme).toBe("object");
+    if (typeof restored.theme === "string") {
+      throw new Error("expected custom theme object");
+    }
+    expect(restored.theme.custom.bg).toBe("");
+    expect(restored.theme.custom.card).toBe("dark.card");
+    expect(isPreviewCustomTheme(restored.theme)).toBe(false);
   });
 
   it("restores output_pair true and false", () => {

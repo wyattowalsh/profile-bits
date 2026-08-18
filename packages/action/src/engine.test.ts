@@ -1278,4 +1278,145 @@ plugins:
     expect(renderWidget.mock.calls[0]?.[0].theme).toBe("catppuccin-mocha");
     expect(result.files).toEqual(["profile-bits/stats.svg"]);
   });
+
+  it("writes the custom mix only when output_pair is false and pair is a map", async () => {
+    const renderWidget = vi.fn<RenderWidget>((request) => ({
+      id: request.id,
+      outcome: "render",
+      files: [{ path: `${request.id}.svg`, contents: "svg" }],
+    }));
+    const config = parseConfig({
+      yaml: `version: 1
+theme:
+  custom:
+    bg: catppuccin-mocha.bg
+    card: catppuccin-mocha.card
+    text: catppuccin-mocha.text
+    muted: catppuccin-mocha.muted
+    accent: catppuccin-mocha.accent
+    border: catppuccin-mocha.border
+    pair:
+      bg: catppuccin-latte.bg
+      card: catppuccin-latte.card
+      text: catppuccin-latte.text
+      muted: catppuccin-latte.muted
+      accent: catppuccin-latte.accent
+      border: catppuccin-latte.border
+output_pair: false
+plugins:
+  github:
+    widgets:
+      stats: {}
+`,
+    });
+
+    const result = await runEngine(
+      { inputs: inputs(), config },
+      {
+        probeCapabilities: () => PUBLIC_CAPABILITIES,
+        renderWidget,
+      },
+    );
+
+    expect(renderWidget).toHaveBeenCalledOnce();
+    expect(renderWidget.mock.calls[0]?.[0].theme).toMatchObject({
+      bg: "#1e1e2e",
+    });
+    expect(result.files).toEqual(["profile-bits/stats.svg"]);
+  });
+
+  it("writes light pair map then dark custom mix when output_pair is true", async () => {
+    const renderWidget = vi.fn<RenderWidget>((request) => ({
+      id: request.id,
+      outcome: "render",
+      files: [{ path: `${request.id}.svg`, contents: "svg" }],
+    }));
+    const config = parseConfig({
+      yaml: `version: 1
+theme:
+  custom:
+    bg: catppuccin-mocha.bg
+    card: catppuccin-mocha.card
+    text: catppuccin-mocha.text
+    muted: catppuccin-mocha.muted
+    accent: catppuccin-mocha.accent
+    border: catppuccin-mocha.border
+    pair:
+      bg: catppuccin-latte.bg
+      card: catppuccin-latte.card
+      text: catppuccin-latte.text
+      muted: catppuccin-latte.muted
+      accent: catppuccin-latte.accent
+      border: catppuccin-latte.border
+output_pair: true
+plugins:
+  github:
+    widgets:
+      stats: {}
+`,
+    });
+
+    const result = await runEngine(
+      { inputs: inputs(), config },
+      {
+        probeCapabilities: () => PUBLIC_CAPABILITIES,
+        renderWidget,
+      },
+    );
+
+    expect(renderWidget).toHaveBeenCalledTimes(2);
+    expect(renderWidget.mock.calls[0]?.[0].theme).toMatchObject({
+      bg: "#eff1f5",
+    });
+    expect(renderWidget.mock.calls[1]?.[0].theme).toMatchObject({
+      bg: "#1e1e2e",
+    });
+    expect(result.files).toEqual([
+      "profile-bits/stats.svg",
+      "profile-bits/stats-dark.svg",
+    ]);
+  });
+
+  it("pairs a named id with the custom mix when output_pair is true", async () => {
+    const renderWidget = vi.fn<RenderWidget>((request) => ({
+      id: request.id,
+      outcome: "render",
+      files: [{ path: `${request.id}.svg`, contents: "svg" }],
+    }));
+    const config = parseConfig({
+      yaml: `version: 1
+theme:
+  custom:
+    bg: catppuccin-mocha.bg
+    card: catppuccin-mocha.card
+    text: catppuccin-mocha.text
+    muted: catppuccin-mocha.muted
+    accent: catppuccin-mocha.accent
+    border: catppuccin-mocha.border
+    pair: catppuccin-latte
+output_pair: true
+plugins:
+  github:
+    widgets:
+      stats: {}
+`,
+    });
+
+    const result = await runEngine(
+      { inputs: inputs(), config },
+      {
+        probeCapabilities: () => PUBLIC_CAPABILITIES,
+        renderWidget,
+      },
+    );
+
+    expect(renderWidget.mock.calls.map((call) => call[0].theme)).toEqual([
+      "catppuccin-latte",
+      expect.objectContaining({ bg: "#1e1e2e" }),
+    ]);
+    expect(result.files).toEqual([
+      "profile-bits/stats.svg",
+      "profile-bits/stats-dark.svg",
+    ]);
+  });
 });

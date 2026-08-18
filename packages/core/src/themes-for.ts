@@ -1,4 +1,5 @@
 import {
+  contrastRatio,
   resolveTheme,
   THEME_REGISTRY,
   type ThemeId,
@@ -7,12 +8,14 @@ import {
 import {
   type Config,
   type CustomRoleMap,
+  type CustomThemeConfig,
   isCustomThemeConfig,
-  type ThemeConfig,
 } from "./types.js";
 
+type ThemePolarity = "light" | "dark";
+
 export type ThemeMember = {
-  polarity: "light" | "dark";
+  polarity: ThemePolarity;
   theme: ThemeId | ThemePalette;
 };
 
@@ -30,76 +33,97 @@ export function themesFor(
 export function themeMembersFor(
   config: Pick<Config, "theme" | "output_pair">,
 ): ThemeMember[] {
-  const members = allMembers(config.theme);
-  if (!config.output_pair) {
-    return [selectedMember(config.theme, members)];
+  if (!isCustomThemeConfig(config.theme)) {
+    return namedMembers(config.theme, config.output_pair);
   }
-  return [...members].sort((left, right) =>
+  const { selected, pair } = customMembers(config.theme);
+  if (!config.output_pair) {
+    return [selected];
+  }
+  if (pair === undefined) {
+    throw new Error("Custom theme requires pair when output_pair is true");
+  }
+  return [selected, pair].sort((left, right) =>
     left.polarity === right.polarity ? 0 : left.polarity === "light" ? -1 : 1,
   );
 }
 
-function allMembers(theme: ThemeConfig): ThemeMember[] {
-  if (!isCustomThemeConfig(theme)) {
-    const flavor = THEME_REGISTRY[theme];
-    if (flavor === undefined) {
-      throw new Error(`Unknown theme flavor "${theme}"`);
-    }
-    const pair = THEME_REGISTRY[flavor.pair];
-    if (pair === undefined) {
-      throw new Error(`Unknown theme pair "${flavor.pair}"`);
-    }
-    return [
-      { polarity: flavor.polarity, theme: flavor.id },
-      { polarity: pair.polarity, theme: pair.id },
-    ];
+function namedMembers(theme: string, outputPair: boolean): ThemeMember[] {
+  const flavor = THEME_REGISTRY[theme];
+  if (flavor === undefined) {
+    throw new Error(`Unknown theme flavor "${theme}"`);
   }
+  const selected: ThemeMember = {
+    polarity: flavor.polarity,
+    theme: flavor.id,
+  };
+  if (!outputPair) {
+    return [selected];
+  }
+  const pair = THEME_REGISTRY[flavor.pair];
+  if (pair === undefined) {
+    throw new Error(`Unknown theme pair "${flavor.pair}"`);
+  }
+  return [
+    { polarity: flavor.polarity, theme: flavor.id },
+    { polarity: pair.polarity, theme: pair.id },
+  ].sort((left, right) =>
+    left.polarity === right.polarity ? 0 : left.polarity === "light" ? -1 : 1,
+  );
+}
 
+function customMembers(theme: CustomThemeConfig): {
+  selected: ThemeMember;
+  pair?: ThemeMember;
+} {
   const customPalette = resolveTheme(theme.custom, THEME_REGISTRY);
   const pair = theme.custom.pair;
   if (pair === undefined) {
-    return [{ polarity: "dark", theme: customPalette }];
+    return {
+      selected: {
+        polarity: polarityFromBg(customPalette.bg),
+        theme: customPalette,
+      },
+    };
   }
   if (typeof pair === "string") {
     const pairFlavor = THEME_REGISTRY[pair];
     if (pairFlavor === undefined) {
       throw new Error(`Unknown theme flavor "${pair}"`);
     }
-    return [
-      { polarity: pairFlavor.polarity, theme: pair },
-      {
-        polarity: pairFlavor.polarity === "light" ? "dark" : "light",
+    return {
+      selected: {
+        polarity: oppositePolarity(pairFlavor.polarity),
         theme: customPalette,
       },
-    ];
+      pair: { polarity: pairFlavor.polarity, theme: pair },
+    };
   }
-  return [
-    { polarity: "light", theme: resolveRoleMap(pair) },
-    { polarity: "dark", theme: customPalette },
-  ];
+  const pairPalette = resolveRoleMap(pair);
+  const selectedPolarity = polarityFromBg(customPalette.bg);
+  const pairPolarity = polarityFromBg(pairPalette.bg);
+  if (selectedPolarity === pairPolarity) {
+    throw new Error(
+      "Custom pair map must have the opposite polarity of the selected mix",
+    );
+  }
+  return {
+    selected: { polarity: selectedPolarity, theme: customPalette },
+    pair: { polarity: pairPolarity, theme: pairPalette },
+  };
 }
 
-function selectedMember(
-  theme: ThemeConfig,
-  members: readonly ThemeMember[],
-): ThemeMember {
-  if (!isCustomThemeConfig(theme)) {
-    const selected = members.find((member) => member.theme === theme);
-    if (selected === undefined) {
-      throw new Error(`Unknown theme flavor "${theme}"`);
-    }
-    return selected;
+function polarityFromBg(bg: string): ThemePolarity {
+  const vsWhite = contrastRatio(bg, "#ffffff");
+  const vsBlack = contrastRatio(bg, "#000000");
+  if (vsWhite === vsBlack) {
+    throw new Error("Unable to determine theme polarity from background");
   }
-  const custom = members.find((member) => typeof member.theme !== "string");
-  if (custom !== undefined) {
-    return custom;
-  }
-  return (
-    members[0] ?? {
-      polarity: "dark",
-      theme: resolveTheme("dark", THEME_REGISTRY),
-    }
-  );
+  return vsWhite < vsBlack ? "light" : "dark";
+}
+
+function oppositePolarity(polarity: ThemePolarity): ThemePolarity {
+  return polarity === "light" ? "dark" : "light";
 }
 
 function resolveRoleMap(roles: CustomRoleMap): ThemePalette {

@@ -41,7 +41,7 @@ function parsePreviewRequest(value: unknown): PreviewRequest | undefined {
     return undefined;
   }
   const theme = rec.theme;
-  if (typeof theme !== "string" || !isPreviewTheme(theme)) {
+  if (!isPreviewTheme(theme)) {
     return undefined;
   }
   const user = rec.user;

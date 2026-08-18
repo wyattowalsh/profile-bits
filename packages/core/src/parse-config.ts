@@ -9,6 +9,7 @@ import {
   createEmptyPluginsConfig,
   createGithubPackDefaultConfig,
 } from "./config.js";
+import { themeMembersFor } from "./themes-for.js";
 import {
   type ActionInputs,
   type Config,
@@ -120,6 +121,14 @@ function assertThemeRefs(config: Config): Config {
   const pair = config.theme.custom.pair;
   if (pair !== undefined && typeof pair !== "string") {
     resolveCustomRoleMap(pair);
+  }
+  try {
+    themeMembersFor({ theme: config.theme, output_pair: false });
+  } catch (cause) {
+    throw new ConfigParseError(
+      cause instanceof Error ? cause.message : "Invalid custom theme",
+      { cause },
+    );
   }
   return config;
 }

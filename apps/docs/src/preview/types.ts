@@ -232,6 +232,10 @@ export function isPreviewNamedTheme(value: string): value is PreviewNamedTheme {
   return (PREVIEW_THEMES as readonly string[]).includes(value);
 }
 
+function isFilledRole(value: unknown): value is string {
+  return typeof value === "string" && value.trim() !== "";
+}
+
 export function isPreviewCustomTheme(
   value: unknown,
 ): value is PreviewCustomTheme {
@@ -242,12 +246,12 @@ export function isPreviewCustomTheme(
   return (
     roles != null &&
     typeof roles === "object" &&
-    typeof roles.bg === "string" &&
-    typeof roles.card === "string" &&
-    typeof roles.text === "string" &&
-    typeof roles.muted === "string" &&
-    typeof roles.accent === "string" &&
-    typeof roles.border === "string"
+    isFilledRole(roles.bg) &&
+    isFilledRole(roles.card) &&
+    isFilledRole(roles.text) &&
+    isFilledRole(roles.muted) &&
+    isFilledRole(roles.accent) &&
+    isFilledRole(roles.border)
   );
 }
 

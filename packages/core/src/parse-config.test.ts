@@ -1038,4 +1038,61 @@ plugins: {}
     expect(config.output_pair).toBe(true);
     expect(config.theme).toMatchObject({ custom: { pair: "light" } });
   });
+
+  it("accepts a custom pair map of the opposite polarity", () => {
+    const config = parseConfig({
+      yaml: `version: 1
+output_pair: true
+theme:
+  custom:
+    bg: catppuccin-mocha.bg
+    card: catppuccin-mocha.card
+    text: catppuccin-mocha.text
+    muted: catppuccin-mocha.muted
+    accent: catppuccin-mocha.accent
+    border: catppuccin-mocha.border
+    pair:
+      bg: catppuccin-latte.bg
+      card: catppuccin-latte.card
+      text: catppuccin-latte.text
+      muted: catppuccin-latte.muted
+      accent: catppuccin-latte.accent
+      border: catppuccin-latte.border
+plugins: {}
+`,
+    });
+    expect(config.output_pair).toBe(true);
+    expect(config.theme).toMatchObject({
+      custom: {
+        bg: "catppuccin-mocha.bg",
+        pair: { bg: "catppuccin-latte.bg" },
+      },
+    });
+  });
+
+  it("fails when a custom pair map has the same polarity as the mix", () => {
+    expect(() =>
+      parseConfig({
+        yaml: `version: 1
+output_pair: true
+theme:
+  custom:
+    bg: catppuccin-mocha.bg
+    card: catppuccin-mocha.card
+    text: catppuccin-mocha.text
+    muted: catppuccin-mocha.muted
+    accent: catppuccin-mocha.accent
+    border: catppuccin-mocha.border
+    pair:
+      bg: nord.bg
+      card: nord.card
+      text: nord.text
+      muted: nord.muted
+      accent: nord.accent
+      border: nord.border
+plugins: {}
+`,
+      }),
+    ).toThrow(/opposite polarity/);
+  });
 });

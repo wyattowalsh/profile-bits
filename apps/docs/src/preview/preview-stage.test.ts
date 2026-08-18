@@ -36,12 +36,12 @@ function previewFile(overrides: Partial<PreviewFile> = {}): PreviewFile {
 
 const PAIR_FILES: PreviewFile[] = [
   previewFile({
-    id: "stats-dark",
-    filename: "stats-dark.svg",
+    id: "stats",
+    filename: "stats.svg",
   }),
   previewFile({
-    id: "stats-light",
-    filename: "stats-light.svg",
+    id: "stats-dark",
+    filename: "stats-dark.svg",
   }),
 ];
 
@@ -120,10 +120,12 @@ describe("pair mode", () => {
     expect(html).toContain('data-output-pair="true"');
     expect(countSlot(html, "preview-wasm")).toBe(2);
     expect(countSlot(html, "readme-mode-file")).toBe(2);
+    expect(html).toContain("stats.svg");
     expect(html).toContain("stats-dark.svg");
-    expect(html).toContain("stats-light.svg");
-    expect(html).toContain("WASM layout dark");
+    expect(html).not.toContain("stats-light.svg");
     expect(html).toContain("WASM layout light");
+    expect(html).toContain("WASM layout dark");
+    expect(PAIR_CAPTIONS).toEqual(["Light", "Dark"]);
   });
 });
 

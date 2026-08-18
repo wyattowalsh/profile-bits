@@ -31,7 +31,7 @@ export const REDUCED_MOTION_NOTICE =
 export const WASM_PLACEHOLDER_NOTE =
   "Takumi WASM layout preview is unavailable. Empty 480×160 slot until @profile-bits/renderer WASM is wired.";
 
-export const PAIR_CAPTIONS = ["Dark", "Light"] as const;
+export const PAIR_CAPTIONS = ["Light", "Dark"] as const;
 
 const MOTION_FORMATS = new Set<PreviewOutputFormat>(["gif", "apng"]);
 

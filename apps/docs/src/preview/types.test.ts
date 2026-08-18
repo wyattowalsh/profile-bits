@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isPreviewCustomTheme,
   isPreviewPluginId,
   isPreviewWidgetId,
   isTokenQueryKey,
@@ -71,4 +72,36 @@ describe("isTokenQueryKey", () => {
       expect(isTokenQueryKey(token)).toBe(false);
     },
   );
+});
+
+describe("isPreviewCustomTheme", () => {
+  it("rejects incomplete custom role maps", () => {
+    expect(
+      isPreviewCustomTheme({
+        custom: {
+          bg: "",
+          card: "dark.card",
+          text: "dark.text",
+          muted: "dark.muted",
+          accent: "dark.accent",
+          border: "dark.border",
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it("accepts a complete custom mix without tokens", () => {
+    expect(
+      isPreviewCustomTheme({
+        custom: {
+          bg: "catppuccin-mocha.bg",
+          card: "catppuccin-mocha.card",
+          text: "catppuccin-mocha.text",
+          muted: "catppuccin-mocha.muted",
+          accent: "catppuccin-mocha.accent",
+          border: "catppuccin-mocha.border",
+        },
+      }),
+    ).toBe(true);
+  });
 });

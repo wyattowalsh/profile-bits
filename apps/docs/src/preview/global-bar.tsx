@@ -159,7 +159,9 @@ export function GlobalBar({
           </Field>
 
           <Field data-field="theme">
-            <FieldLabel id={themeLabelId}>{THEME_FIELD_LABEL}</FieldLabel>
+            <FieldLabel id={themeLabelId} htmlFor={`${baseId}-theme`}>
+              {THEME_FIELD_LABEL}
+            </FieldLabel>
             <ThemePicker
               id={`${baseId}-theme`}
               value={value.theme}
