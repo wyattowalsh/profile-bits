@@ -1,0 +1,7 @@
+{
+  "label": "ci.yml",
+  "message": "passing",
+  "color": "brightgreen",
+  "name": "GitHub Actions Workflow Status",
+  "value": "passing"
+}
