@@ -1,6 +1,6 @@
 # profile-bits
 
-GitHub profile widget generator. A **plugin** is a pack of widgets plus declared integrations (1..N widgets, 0..N integrations) — not a single card and not a single API. v0 first-party pack is `github` only (`demo`, `stats`, `languages`). Do not invent extra first-party plugins.
+GitHub profile widget generator. A **plugin** is a pack of widgets plus declared integrations (1..N widgets, 0..N integrations) — not a single card and not a single API. First-party packs are `github` (`demo`, `stats`, `languages`), `wakatime` (`coding`), `rss` (`feed`), and `http` (`json`, `chips`). Do not invent extra first-party plugins.
 
 README delivery is the **Action** (commit widget files). The docs playground is layout preview only, not a public embed API.
 
@@ -15,10 +15,11 @@ README delivery is the **Action** (commit widget files). The docs playground is 
 | Vitest | 4 |
 | Biome | 2.5 |
 
-Use **pnpm** for all JS. Do not add npm/yarn scripts or extra first-party plugin packs in v0.
+Use **pnpm** for all JS. Do not add npm/yarn scripts or extra first-party plugin packs beyond `github`, `wakatime`, `rss`, and `http`.
 
 ## OpenSpec is truth
 
+- Visual identity and architecture live in `DESIGN.md`. Requirement contracts live in `openspec/specs/`.
 - After sync: `openspec/specs/` is the contract SSOT.
 - In-flight work: `openspec/changes/<id>/` (one change = one unit of work).
 - Generated `.cursor/skills/openspec-*`, `.claude/skills/openspec-*`, `.agents/skills/openspec-*` are **not** SSOT. `openspec update` regenerates them. Do not hand-edit or treat them as policy.
@@ -36,7 +37,7 @@ pnpm exec openspec list --json
 ## Locks
 
 - Config SSOT: committed `.github/profile-bits.yml` (`additionalProperties: false`).
-- Root `action.yml` is **thin** (`user`, `github_token`, `committer_token`, `config`, `output_action`, `dry_run`, optional format/theme overrides, optional `plugin_github`).
+- Root `action.yml` is **thin** (`user`, `github_token`, `committer_token`, `config`, `output_action`, `dry_run`, optional format/theme overrides, optional `plugin_github`, optional `wakatime_token` with no default, optional `http_token_env` with no default).
 - **No** flattened `plugin_<plugin>_<widget>_<option>` Action inputs.
 - Never REST `/languages`. Languages: REST crawl, **filter forks/archived then cap 500**, GraphQL `nodes(ids:)` batches of 100.
 - Never unauthenticated GitHub (60/h/IP). Empty/`""`/whitespace token **fails the Action**.
