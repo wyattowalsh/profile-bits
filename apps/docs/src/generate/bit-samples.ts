@@ -11,18 +11,15 @@ import {
   Text,
   Theme,
 } from "@profile-bits/bits";
+import type { WidgetTheme } from "@profile-bits/renderer";
 import { createElement, type ReactElement } from "react";
-import {
-  PREVIEW_BIT_IDS,
-  type PreviewBitName,
-  type PreviewTheme,
-} from "../preview/types";
+import { PREVIEW_BIT_IDS, type PreviewBitName } from "../preview/types";
 
 export const BIT_SAMPLE_IDS = PREVIEW_BIT_IDS;
 
 export function bitSampleElement(
   bit: PreviewBitName,
-  theme: PreviewTheme = "dark",
+  theme: WidgetTheme = "dark",
 ): ReactElement {
   const inner = sampleInner(bit);
   return createElement(Theme, { theme }, createElement(Frame, null, inner));

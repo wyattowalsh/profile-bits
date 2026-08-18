@@ -6,10 +6,6 @@ import {
   type HttpChipPreset,
   type HttpChipType,
 } from "@profile-bits/core";
-import {
-  isPreviewTheme,
-  type PreviewTheme,
-} from "@/src/preview/types";
 
 export const HTTP_PLAYGROUND_PLUGIN = "http" as const;
 export const HTTP_PLAYGROUND_WIDGET = "chips" as const;
@@ -18,6 +14,8 @@ export const HTTP_PLAYGROUND_HREF = "/playground/http";
 export const HTTP_PLAYGROUND_README = "![](./profile-bits/chips.svg)";
 export const HTTP_PLAYGROUND_CARD_WIDTH = 480;
 export const HTTP_PLAYGROUND_CARD_HEIGHT = 160;
+export const HTTP_PLAYGROUND_THEMES = ["light", "dark"] as const;
+export type HttpPlaygroundTheme = (typeof HTTP_PLAYGROUND_THEMES)[number];
 export const PRIMARY_CTA = "Copy";
 
 export const HTTP_CHIP_PRESET_IDS = HTTP_CHIP_PRESETS;
@@ -41,21 +39,19 @@ export type HttpPlaygroundState = {
   packageName: string;
   repo: string;
   workflow: string;
-  theme: PreviewTheme;
+  theme: HttpPlaygroundTheme;
 };
 
 export const HTTP_PLAYGROUND_DEFAULTS: HttpPlaygroundState = {
-  preset:      "shieldcn",
-  types:       ["npm"],
+  preset: "shieldcn",
+  types: ["npm"],
   packageName: "react",
-  repo:        "vercel/next.js",
-  workflow:    CHIPS_WORKFLOW_DEFAULT,
-  theme:       "dark",
+  repo: "vercel/next.js",
+  workflow: CHIPS_WORKFLOW_DEFAULT,
+  theme: "dark",
 };
 
-function first(
-  value: string | string[] | undefined,
-): string | undefined {
+function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) {
     const item = value[0];
     return typeof item === "string" ? item : undefined;
@@ -86,6 +82,10 @@ function isChipPreset(value: string): value is HttpChipPreset {
 
 function isChipType(value: string): value is HttpChipType {
   return TYPE_SET.has(value);
+}
+
+function isHttpPlaygroundTheme(value: string): value is HttpPlaygroundTheme {
+  return (HTTP_PLAYGROUND_THEMES as readonly string[]).includes(value);
 }
 
 export function parseHttpPlaygroundSearch(
@@ -119,14 +119,12 @@ export function parseHttpPlaygroundSearch(
         ? packageRaw.trim()
         : HTTP_PLAYGROUND_DEFAULTS.packageName,
     repo:
-      repoRaw !== undefined
-        ? repoRaw.trim()
-        : HTTP_PLAYGROUND_DEFAULTS.repo,
+      repoRaw !== undefined ? repoRaw.trim() : HTTP_PLAYGROUND_DEFAULTS.repo,
     workflow:
       workflowRaw !== undefined && workflowRaw.trim() !== ""
         ? workflowRaw.trim()
         : HTTP_PLAYGROUND_DEFAULTS.workflow,
-    theme: isPreviewTheme(themeRaw)
+    theme: isHttpPlaygroundTheme(themeRaw)
       ? themeRaw
       : HTTP_PLAYGROUND_DEFAULTS.theme,
   };

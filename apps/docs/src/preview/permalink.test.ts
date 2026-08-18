@@ -125,6 +125,30 @@ describe("serialize/parse round-trip", () => {
     expect(roundTrip({ ...PLUGIN_STATE, theme: "dark" }).theme).toBe("dark");
   });
 
+  it("restores a named catalog id", () => {
+    expect(
+      roundTrip({ ...PLUGIN_STATE, theme: "catppuccin-mocha" }).theme,
+    ).toBe("catppuccin-mocha");
+  });
+
+  it("round-trips a custom mix via c* params", () => {
+    const custom = {
+      custom: {
+        bg: "catppuccin-mocha.base",
+        card: "dark.card",
+        text: "dark.text",
+        muted: "dark.muted",
+        accent: "catppuccin-mocha.mauve",
+        border: "dark.border",
+      },
+    } as const;
+    const restored = roundTrip({ ...PLUGIN_STATE, theme: custom });
+    expect(restored.theme).toEqual(custom);
+    const params = serialize({ ...PLUGIN_STATE, theme: custom });
+    expect(params.get("theme")).toBe("custom");
+    expect(params.get("caccent")).toBe("catppuccin-mocha.mauve");
+  });
+
   it("restores output_pair true and false", () => {
     expect(roundTrip({ ...PLUGIN_STATE, output_pair: true }).output_pair).toBe(
       true,

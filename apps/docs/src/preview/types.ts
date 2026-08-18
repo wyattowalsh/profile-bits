@@ -1,8 +1,10 @@
 /**
  * Docs preview POST body, permalink state, and response.
- * Duplicates v0 unions from core (docs does not depend on @profile-bits/core).
- * Never include token fields. Catalog pack is github; playground also lists http.
+ * Named themes come from `@profile-bits/themes`. Never include token fields.
+ * Catalog pack is github; playground also lists http.
  */
+
+import { NAMED_THEME_IDS, type ThemeId } from "@profile-bits/themes";
 
 export const PREVIEW_SCOPES = ["plugin", "widget", "bit"] as const;
 export type PreviewScope = (typeof PREVIEW_SCOPES)[number];
@@ -44,8 +46,21 @@ export const PREVIEW_OUTPUT_FORMATS = [
 ] as const;
 export type PreviewOutputFormat = (typeof PREVIEW_OUTPUT_FORMATS)[number];
 
-export const PREVIEW_THEMES = ["light", "dark"] as const;
-export type PreviewTheme = (typeof PREVIEW_THEMES)[number];
+export const PREVIEW_THEMES = NAMED_THEME_IDS;
+export type PreviewNamedTheme = ThemeId;
+export type PreviewCustomRoles = {
+  bg: string;
+  card: string;
+  text: string;
+  muted: string;
+  accent: string;
+  border: string;
+  pair?: string;
+};
+export type PreviewCustomTheme = {
+  custom: PreviewCustomRoles;
+};
+export type PreviewTheme = PreviewNamedTheme | PreviewCustomTheme;
 
 export const PREVIEW_STATS_INCLUDE_TOKENS = [
   "followers",
@@ -213,8 +228,38 @@ export function isPreviewOutputFormat(
   return (PREVIEW_OUTPUT_FORMATS as readonly string[]).includes(value);
 }
 
-export function isPreviewTheme(value: string): value is PreviewTheme {
+export function isPreviewNamedTheme(value: string): value is PreviewNamedTheme {
   return (PREVIEW_THEMES as readonly string[]).includes(value);
+}
+
+export function isPreviewCustomTheme(
+  value: unknown,
+): value is PreviewCustomTheme {
+  if (value == null || typeof value !== "object" || !("custom" in value)) {
+    return false;
+  }
+  const roles = (value as PreviewCustomTheme).custom;
+  return (
+    roles != null &&
+    typeof roles === "object" &&
+    typeof roles.bg === "string" &&
+    typeof roles.card === "string" &&
+    typeof roles.text === "string" &&
+    typeof roles.muted === "string" &&
+    typeof roles.accent === "string" &&
+    typeof roles.border === "string"
+  );
+}
+
+export function isPreviewTheme(value: unknown): value is PreviewTheme {
+  return (
+    (typeof value === "string" && isPreviewNamedTheme(value)) ||
+    isPreviewCustomTheme(value)
+  );
+}
+
+export function previewThemeParam(theme: PreviewTheme): string {
+  return typeof theme === "string" ? theme : "custom";
 }
 
 export function isPreviewStatsIncludeToken(

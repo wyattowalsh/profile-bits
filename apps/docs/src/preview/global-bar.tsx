@@ -4,11 +4,11 @@ import { type ComponentProps, useId } from "react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
+import { ThemeMixer } from "./theme-mixer";
+import { ThemePicker } from "./theme-picker";
 import {
   isPreviewOutputFormat,
-  isPreviewTheme,
   PREVIEW_OUTPUT_FORMATS,
-  PREVIEW_THEMES,
   type PreviewOutputFormat,
   type PreviewTheme,
 } from "./types";
@@ -160,28 +160,21 @@ export function GlobalBar({
 
           <Field data-field="theme">
             <FieldLabel id={themeLabelId}>{THEME_FIELD_LABEL}</FieldLabel>
-            <ToggleGroup
-              type="single"
+            <ThemePicker
+              id={`${baseId}-theme`}
               value={value.theme}
-              aria-labelledby={themeLabelId}
-              onValueChange={(next) => {
-                const theme = selectedToggleValue(next);
-                if (isPreviewTheme(theme)) {
-                  patch({ theme });
-                }
+              onChange={(theme) => {
+                patch({ theme });
               }}
-            >
-              {PREVIEW_THEMES.map((theme) => (
-                <ToggleGroupItem
-                  key={theme}
-                  value={theme}
-                  data-value={theme}
-                  aria-label={theme}
-                >
-                  {theme}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+            />
+            {typeof value.theme !== "string" ? (
+              <ThemeMixer
+                value={value.theme}
+                onChange={(theme) => {
+                  patch({ theme });
+                }}
+              />
+            ) : null}
           </Field>
 
           <Field data-field="output_pair">

@@ -13,11 +13,7 @@ import {
   THEME_FIELD_LABEL,
   USER_FIELD_LABEL,
 } from "./global-bar";
-import {
-  PREVIEW_OUTPUT_FORMATS,
-  PREVIEW_THEMES,
-  PREVIEW_TOKEN_QUERY_KEYS,
-} from "./types";
+import { PREVIEW_OUTPUT_FORMATS, PREVIEW_TOKEN_QUERY_KEYS } from "./types";
 
 const SOURCE_URL = new URL("./global-bar.tsx", import.meta.url);
 
@@ -79,14 +75,13 @@ describe("GlobalBar", () => {
     );
   });
 
-  it("theme toggle includes light and dark", () => {
-    const html = renderBar({ ...VALUE, theme: "dark" });
-
-    for (const theme of PREVIEW_THEMES) {
-      expect(html).toContain(`data-value="${theme}"`);
-      expect(html).toContain(`aria-label="${theme}"`);
-    }
-    expect(html).toContain('aria-pressed="true"');
+  it("theme picker lists catalog families", () => {
+    const html = renderBar({ ...VALUE, theme: "catppuccin-mocha" });
+    expect(html).toContain('data-slot="theme-picker"');
+    expect(html).toContain('data-value="catppuccin-mocha"');
+    expect(html).toContain('data-family="catppuccin"');
+    expect(html).toContain('data-value="dark"');
+    expect(html).toContain('data-value="custom"');
   });
 
   it("pairs accessible labels with controls", () => {
@@ -128,7 +123,7 @@ describe("GlobalBar", () => {
     );
 
     expect(html).toContain('data-value="apng"');
-    expect(html).toContain('data-value="light"');
+    expect(html).toContain('value="light"');
     expect(html).toContain("checked");
     expect(html).toContain('value="hubot"');
     expect(onChange).not.toHaveBeenCalled();
@@ -144,7 +139,8 @@ describe("global-bar source contract", () => {
     expect(source).toContain('from "@/components/ui/field"');
     expect(source).toContain('from "@/lib/utils"');
     expect(source).toContain("PREVIEW_OUTPUT_FORMATS");
-    expect(source).toContain("PREVIEW_THEMES");
+    expect(source).toContain("ThemePicker");
+    expect(source).toContain("ThemeMixer");
     expect(source).toContain("animated webp");
     expect(source).toContain("output_pair");
     expect(source).not.toContain('from "@/components/ui/tabs"');

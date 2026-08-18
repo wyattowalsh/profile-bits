@@ -1,12 +1,6 @@
-import type { Metadata } from "next";
 import { chipFixture, normalizeBadgeJson } from "@profile-bits/integrations";
-import {
-  renderChipsFromPayloads,
-  renderChipsSvg,
-} from "@profile-bits/plugins";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { CopyButton } from "@/src/preview/copy-button";
-import { FixturePill } from "@/src/preview/fixture-pill";
+import { renderChipsFromPayloads, renderChipsSvg } from "@profile-bits/plugins";
+import type { Metadata } from "next";
 import {
   emitChipsConfigYaml,
   emitChipsReadmeMarkdown,
@@ -18,11 +12,14 @@ import {
   HTTP_PLAYGROUND_PLUGIN,
   HTTP_PLAYGROUND_WIDGET,
   HTTP_PLAYGROUND_WIDGET_IDS,
-  parseHttpPlaygroundSearch,
-  PRIMARY_CTA,
-  svgToDataUrl,
   type HttpPlaygroundSearchParams,
+  PRIMARY_CTA,
+  parseHttpPlaygroundSearch,
+  svgToDataUrl,
 } from "@/app/playground/http/state";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { CopyButton } from "@/src/preview/copy-button";
+import { FixturePill } from "@/src/preview/fixture-pill";
 
 export {
   HTTP_PLAYGROUND_HREF,
@@ -192,16 +189,14 @@ export default async function HttpPlaygroundPage({
   const state = parseHttpPlaygroundSearch(
     await Promise.resolve(searchParams ?? {}),
   );
-  const payloads = state.types.map((type) =>
-    chipFixture(state.preset, type),
-  );
+  const payloads = state.types.map((type) => chipFixture(state.preset, type));
   const layoutSvg = await renderChipsFromPayloads({
     payloads,
     theme: state.theme,
   });
   const readmeSvg = await renderChipsSvg({
     badges: payloads.map((payload) => normalizeBadgeJson(payload)),
-    theme:  state.theme,
+    theme: state.theme,
   });
   const configYml = emitChipsConfigYaml(state);
   const readmeMarkdown = emitChipsReadmeMarkdown();
@@ -306,35 +301,38 @@ export default async function HttpPlaygroundPage({
       <section data-slot="playground-http-stage" aria-label="Preview">
         <p data-slot="playground-http-column-title">Stage</p>
         <div data-slot="playground-http-panes">
-        <figure data-slot="playground-http-pane" data-pane="layout">
-          <div data-slot="playground-http-frame">
-            <img
-              src={layoutDataUrl}
-              alt="chips layout fixture"
-              width={HTTP_PLAYGROUND_CARD_WIDTH}
-              height={HTTP_PLAYGROUND_CARD_HEIGHT}
-            />
-          </div>
-          <figcaption>Layout · baked SVG</figcaption>
-        </figure>
-        <figure data-slot="playground-http-pane" data-pane="readme">
-          <div data-slot="playground-http-frame">
-            <img
-              src={readmeDataUrl}
-              alt="chips README fixture"
-              width={HTTP_PLAYGROUND_CARD_WIDTH}
-              height={HTTP_PLAYGROUND_CARD_HEIGHT}
-            />
-          </div>
-          <figcaption>README mode · baked SVG</figcaption>
-        </figure>
+          <figure data-slot="playground-http-pane" data-pane="layout">
+            <div data-slot="playground-http-frame">
+              <img
+                src={layoutDataUrl}
+                alt="chips layout fixture"
+                width={HTTP_PLAYGROUND_CARD_WIDTH}
+                height={HTTP_PLAYGROUND_CARD_HEIGHT}
+              />
+            </div>
+            <figcaption>Layout · baked SVG</figcaption>
+          </figure>
+          <figure data-slot="playground-http-pane" data-pane="readme">
+            <div data-slot="playground-http-frame">
+              <img
+                src={readmeDataUrl}
+                alt="chips README fixture"
+                width={HTTP_PLAYGROUND_CARD_WIDTH}
+                height={HTTP_PLAYGROUND_CARD_HEIGHT}
+              />
+            </div>
+            <figcaption>README mode · baked SVG</figcaption>
+          </figure>
         </div>
       </section>
       <aside data-slot="playground-http-emit" aria-label="Emit">
         <p data-slot="playground-http-column-title">Emit</p>
         <div data-slot="playground-http-rail">
           <div data-slot="playground-http-rail-toolbar">
-            <CopyButton value={configYml} aria-label={`${PRIMARY_CTA} config`} />
+            <CopyButton
+              value={configYml}
+              aria-label={`${PRIMARY_CTA} config`}
+            />
           </div>
           <h2>Config (.github/profile-bits.yml)</h2>
           <pre data-slot="playground-http-source" data-rail="config">

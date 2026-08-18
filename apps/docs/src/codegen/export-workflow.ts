@@ -186,11 +186,32 @@ function renderWithLines(
   if (state.format !== CONFIG_FORMAT_DEFAULT) {
     lines.push(`format: ${state.format}`);
   }
-  if (state.theme !== CONFIG_THEME_DEFAULT) {
+  if (typeof state.theme === "string" && state.theme !== CONFIG_THEME_DEFAULT) {
     lines.push(`theme: ${state.theme}`);
   }
 
   return lines;
+}
+
+function renderThemeYaml(theme: PreviewTheme): string {
+  if (typeof theme === "string") {
+    return `theme: ${theme}`;
+  }
+  const roles = theme.custom;
+  const lines = [
+    "theme:",
+    "  custom:",
+    `    bg: ${yamlScalar(roles.bg)}`,
+    `    card: ${yamlScalar(roles.card)}`,
+    `    text: ${yamlScalar(roles.text)}`,
+    `    muted: ${yamlScalar(roles.muted)}`,
+    `    accent: ${yamlScalar(roles.accent)}`,
+    `    border: ${yamlScalar(roles.border)}`,
+  ];
+  if (roles.pair !== undefined) {
+    lines.push(`    pair: ${yamlScalar(roles.pair)}`);
+  }
+  return lines.join("\n");
 }
 
 function renderConfigYml(state: ExportWorkflowState): string {
@@ -202,7 +223,7 @@ function renderConfigYml(state: ExportWorkflowState): string {
   const globals: string[] = [
     `version: ${CONFIG_VERSION}`,
     `format: ${state.format}`,
-    `theme: ${state.theme}`,
+    renderThemeYaml(state.theme),
     `output_pair: ${state.output_pair}`,
     `animated: ${state.animated ?? CONFIG_ANIMATED_DEFAULT}`,
     `timezone: ${yamlScalar(state.timezone?.trim() || CONFIG_TIMEZONE_DEFAULT)}`,

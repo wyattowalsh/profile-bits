@@ -1,5 +1,6 @@
 import {
   type BitPreviewRequest,
+  isPreviewNamedTheme,
   isPreviewOutputFormat,
   isPreviewPluginId,
   isPreviewScope,
@@ -9,6 +10,7 @@ import {
   isTokenQueryKey,
   type PluginPreviewRequest,
   type PreviewBitName,
+  type PreviewCustomRoles,
   type PreviewDemoOptions,
   type PreviewLanguagesOptions,
   type PreviewOptions,
@@ -20,6 +22,7 @@ import {
   type PreviewStatsOptions,
   type PreviewTheme,
   type PreviewWidgetId,
+  previewThemeParam,
   type WidgetPreviewRequest,
 } from "./types";
 
@@ -177,8 +180,17 @@ function pickFormat(value: unknown): PreviewOutputFormat | undefined {
     : undefined;
 }
 
+const CUSTOM_ROLE_KEYS = [
+  "bg",
+  "card",
+  "text",
+  "muted",
+  "accent",
+  "border",
+] as const;
+
 function pickTheme(value: unknown): PreviewTheme | undefined {
-  return typeof value === "string" && isPreviewTheme(value) ? value : undefined;
+  return isPreviewTheme(value) ? value : undefined;
 }
 
 /** Drop token keys and keep yaml-shaped option fields only. */
@@ -256,7 +268,7 @@ export function serialize(state: PreviewRequest): URLSearchParams {
 
   params.set(OPTIONS_KEY, JSON.stringify(pickOptions(state.options)));
   params.set("format", state.format);
-  params.set("theme", state.theme);
+  writeThemeParams(params, state.theme);
   params.set("output_pair", state.output_pair ? "true" : "false");
   params.set("user", state.user);
 
@@ -348,8 +360,54 @@ function parseFormatParam(value: string | null): PreviewOutputFormat {
   return "svg";
 }
 
-function parseThemeParam(value: string | null): PreviewTheme {
-  if (value != null && isPreviewTheme(value)) {
+function writeThemeParams(params: URLSearchParams, theme: PreviewTheme): void {
+  params.set("theme", previewThemeParam(theme));
+  if (typeof theme === "string") {
+    return;
+  }
+  const roles = theme.custom;
+  params.set("cbg", roles.bg);
+  params.set("ccard", roles.card);
+  params.set("ctext", roles.text);
+  params.set("cmuted", roles.muted);
+  params.set("caccent", roles.accent);
+  params.set("cborder", roles.border);
+  if (roles.pair !== undefined) {
+    params.set("cpair", roles.pair);
+  }
+}
+
+function readCustomRoles(
+  params: URLSearchParams,
+): PreviewCustomRoles | undefined {
+  const roles: PreviewCustomRoles = {
+    bg: params.get("cbg") ?? "",
+    card: params.get("ccard") ?? "",
+    text: params.get("ctext") ?? "",
+    muted: params.get("cmuted") ?? "",
+    accent: params.get("caccent") ?? "",
+    border: params.get("cborder") ?? "",
+  };
+  if (CUSTOM_ROLE_KEYS.some((key) => roles[key] === "")) {
+    return undefined;
+  }
+  const pair = params.get("cpair");
+  if (pair != null && pair !== "") {
+    roles.pair = pair;
+  }
+  return roles;
+}
+
+function parseThemeParam(params: URLSearchParams): PreviewTheme {
+  const value = params.get("theme");
+  if (value === "custom") {
+    const roles = readCustomRoles(params);
+    if (roles !== undefined) {
+      return { custom: roles };
+    }
+    return "dark";
+  }
+  if (value != null && isPreviewNamedTheme(value)) {
     return value;
   }
   return "dark";
@@ -364,7 +422,7 @@ export function parse(input: string | URLSearchParams | URL): PreviewRequest {
   const params = stripTokens(raw);
   const scope = parseScopeParam(params.get("scope"));
   const format = parseFormatParam(params.get("format"));
-  const theme = parseThemeParam(params.get("theme"));
+  const theme = parseThemeParam(params);
   const output_pair = parseBooleanParam(params.get("output_pair"));
   const user = params.get("user") ?? "";
   const options = parseOptionsParam(params.get(OPTIONS_KEY));

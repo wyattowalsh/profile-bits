@@ -5,7 +5,15 @@
  */
 
 import { createHash } from "node:crypto";
+import {
+  classifyGithubHttp,
+  decideIncludePrivate,
+  isMissingToken,
+  type ThemeConfig,
+  themeMembersFor,
+} from "@profile-bits/core";
 import { githubPreviewNode } from "@profile-bits/plugins";
+import type { WidgetTheme } from "@profile-bits/renderer";
 import {
   assertTakumiTree,
   fromJsx,
@@ -14,11 +22,6 @@ import {
   renderAnimation,
   renderSvg,
 } from "@profile-bits/renderer";
-import {
-  classifyGithubHttp,
-  decideIncludePrivate,
-  isMissingToken,
-} from "../../../../../packages/core/src/auth-policy";
 import { bitSampleElement } from "../../generate/bit-samples";
 import type {
   PreviewBitName,
@@ -78,7 +81,7 @@ export type PreviewRenderInput = {
   widget?: PreviewWidgetId;
   bit?: PreviewBitName;
   format: PreviewOutputFormat;
-  theme: PreviewTheme;
+  theme: WidgetTheme;
   motion: boolean;
   payload: unknown;
   options: PreviewOptions;
@@ -396,15 +399,18 @@ async function filesForTarget(
   host: RenderPreviewHost,
 ): Promise<PreviewFile[]> {
   const files: PreviewFile[] = [];
-  for (const theme of themesFor(body)) {
+  for (const member of themeMembersFor({
+    theme: toThemeConfig(body.theme),
+    output_pair: body.output_pair,
+  })) {
     const motion = isMotion(body.format, body.options, target.widget);
-    const id = fileId(target, theme, body.output_pair);
-    const filename = fileName(body, target, theme);
+    const id = fileId(target, member.polarity, body.output_pair);
+    const filename = fileName(body, target, member.polarity);
     const mime = mimeFor(body.format);
     const input: PreviewRenderInput = {
       id,
       format: body.format,
-      theme,
+      theme: member.theme,
       motion,
       payload,
       options: body.options,
@@ -560,8 +566,8 @@ function includeArchivedFor(
   return false;
 }
 
-function themesFor(body: PreviewRequest): PreviewTheme[] {
-  return body.output_pair ? ["dark", "light"] : [body.theme];
+function toThemeConfig(theme: PreviewTheme): ThemeConfig {
+  return theme;
 }
 
 function isMotion(
@@ -596,22 +602,22 @@ function animateFor(
 
 function fileId(
   target: { widget?: PreviewWidgetId; bit?: PreviewBitName },
-  theme: PreviewTheme,
+  polarity: "light" | "dark",
   outputPair: boolean,
 ): string {
   const base =
     target.widget ??
     (target.bit !== undefined ? String(target.bit) : "preview");
-  return outputPair ? `${base}-${theme}` : base;
+  return outputPair && polarity === "dark" ? `${base}-dark` : base;
 }
 
 function fileName(
   body: PreviewRequest,
   target: { widget?: PreviewWidgetId; bit?: PreviewBitName },
-  theme: PreviewTheme,
+  polarity: "light" | "dark",
 ): string {
   const stem = filenameStem(body, target);
-  const name = body.output_pair ? `${stem}-${theme}` : stem;
+  const name = body.output_pair && polarity === "dark" ? `${stem}-dark` : stem;
   return `${name}${extensionFor(body.format)}`;
 }
 

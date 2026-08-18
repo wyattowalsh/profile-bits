@@ -565,6 +565,41 @@ describe("renderPreview", () => {
     assertNoUnauthGithub(fetchMock);
   });
 
+  it("passes mocha as the resolved theme and keeps Primer off the request", async () => {
+    const themes: unknown[] = [];
+    const result = await renderPreview(
+      { ...STATS_REQUEST, theme: "catppuccin-mocha" },
+      {
+        now: () => FIXED_NOW,
+        renderStill: async (input) => {
+          themes.push(input.theme);
+          return STILL_BYTES;
+        },
+      },
+    );
+    expect(themes).toEqual(["catppuccin-mocha"]);
+    expect(result.files[0]?.filename).toBe("stats.svg");
+  });
+
+  it("writes polarity files when output_pair is true", async () => {
+    const themes: unknown[] = [];
+    const result = await renderPreview(
+      { ...STATS_REQUEST, theme: "catppuccin-mocha", output_pair: true },
+      {
+        now: () => FIXED_NOW,
+        renderStill: async (input) => {
+          themes.push(input.theme);
+          return STILL_BYTES;
+        },
+      },
+    );
+    expect(themes).toEqual(["catppuccin-latte", "catppuccin-mocha"]);
+    expect(result.files.map((file) => file.filename)).toEqual([
+      "stats.svg",
+      "stats-dark.svg",
+    ]);
+  });
+
   it("source does not construct GitHub URLs, zip, embeds, or log tokens", async () => {
     const source = await readFile(
       new URL("./render-preview.ts", import.meta.url),

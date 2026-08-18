@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PREVIEW_PLUGIN_IDS, PREVIEW_WIDGET_IDS } from "@/src/preview/types";
 import HttpPlaygroundPage, {
   HTTP_PLAYGROUND_HREF,
   HTTP_PLAYGROUND_PLUGIN,
@@ -16,6 +15,7 @@ import {
   HTTP_PLAYGROUND_README,
   parseHttpPlaygroundSearch,
 } from "@/app/playground/http/state";
+import { PREVIEW_PLUGIN_IDS, PREVIEW_WIDGET_IDS } from "@/src/preview/types";
 
 const PAGE_URL = new URL("./page.tsx", import.meta.url);
 const STATE_URL = new URL("./state.ts", import.meta.url);
