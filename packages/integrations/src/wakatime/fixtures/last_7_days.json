@@ -1,0 +1,69 @@
+{
+  "data": {
+    "total_seconds": 12345.67,
+    "human_readable_total": "3 hrs 25 mins",
+    "is_up_to_date": true,
+    "languages": [
+      {
+        "name": "TypeScript",
+        "total_seconds": 8000.0,
+        "percent": 64.8,
+        "text": "2 hrs 13 mins"
+      },
+      {
+        "name": "Python",
+        "total_seconds": 3000.0,
+        "percent": 24.3,
+        "text": "50 mins"
+      },
+      {
+        "name": "Go",
+        "total_seconds": 1345.67,
+        "percent": 10.9,
+        "text": "22 mins"
+      }
+    ],
+    "editors": [
+      {
+        "name": "VS Code",
+        "total_seconds": 10000.0,
+        "percent": 81.0,
+        "text": "2 hrs 46 mins"
+      },
+      {
+        "name": "Neovim",
+        "total_seconds": 2345.67,
+        "percent": 19.0,
+        "text": "39 mins"
+      }
+    ],
+    "projects": [
+      {
+        "name": "profile-bits",
+        "total_seconds": 9000.0,
+        "percent": 72.9,
+        "text": "2 hrs 30 mins"
+      },
+      {
+        "name": "other",
+        "total_seconds": 3345.67,
+        "percent": 27.1,
+        "text": "55 mins"
+      }
+    ],
+    "operating_systems": [
+      {
+        "name": "Mac",
+        "total_seconds": 11000.0,
+        "percent": 89.1,
+        "text": "3 hrs 3 mins"
+      },
+      {
+        "name": "Linux",
+        "total_seconds": 1345.67,
+        "percent": 10.9,
+        "text": "22 mins"
+      }
+    ]
+  }
+}
