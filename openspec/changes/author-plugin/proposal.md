@@ -1,33 +1,32 @@
 ## Why
 
-The three-layer contract is synced (`plugin-contract`, `widget-contract`, `integration-contract`), but authors still have no packaged Agent Plugin that routes “new data source / new card / new pack” onto those layers. Without that lock, a later skill tree can invent flattened Action inputs, a first-party `wakatime` pack, MCP in v0, or a second skills SSOT under `.agents/skills`.
+T320/T321 packaged Agent Plugin 1.0.0 and four authoring skills, but the in-flight contract still pins the plugin root at `agent-plugin/profile-bits`, documents dest paths without `src/`, omits pack-level `bitsUsed`, and still says v0 github-only / never a wakatime pack. Live `packages/core/src/types.ts` already lists `github`, `wakatime`, `rss`, and `http`. Without a follow-up delta, migrate, dest, catalog, and ideate will fight the spec.
 
 ## What Changes
 
-- Add capability `author-plugin`: package Agent Plugin 1.0.0 at `agent-plugin/profile-bits` (`plugin.json` named `profile-bits`) with skills that generate integrations, widgets, and packs from the three-layer contract.
-- Lock skills: `author` (umbrella router), `author-integration`, `author-widget`, `author-plugin`.
-- Lock routing: new data source → integration first; new card → widget on an existing pack unless the author asked for a new pack; new pack → `author-plugin`.
-- Forbid inventing Action input names; yaml (`.github/profile-bits.yml`) remains SSOT; never `plugin_<plugin>_<widget>_<option>`.
-- Lock templates inside the plugin root (no `../` paths). T321 harness trees `.agents/skills` and `.claude/skills` are relative symlinks, not a second skills SSOT. Do not write `.cursor/skills/`.
-- Lock public-API changes (yaml schema, thin Action inputs, first-party pack ids) to an OpenSpec delta first. Fail closed on stale codegen (`generate-action --check`; tell the author to run `just generate-action` and `just generate-docs` when those exist).
-- Lock WakaTime-class work as a new **integration** on existing architecture (client, auth, scopes, inputs, mocked HTTP). Do not invent a first-party `wakatime` pack or a new integration stack. v0 first-party pack remains `github` only.
-- Lock evals: WakaTime integration; languages option (OpenSpec delta, no flattened input); new pack using github+static; CSS animation for gif/apng; drop-in `widget.mdx` with no `source`; Tailwind stylesheet widget; exclusive `md.families.code` swap. Umbrella evals cover all seven as routing; specialized skills own deep assertions.
-- Lock validate: `plugin.json` against Agent Plugins 1.0.0; reject `mcp.json` if present; `skills-ref validate` on each skill; `just generate-action --check` from repo root when that recipe exists; fail if any template path contains `../`. No MCP in v0 (`mcp.json` omitted).
+- Keep capability `author-plugin` (no three-layer rewrite). Canonical plugin root is `.agents/profile-bits` (real files). `agent-plugin/` MUST NOT exist as a directory, alias, or copy. Install is `npx skills add ./.agents/profile-bits --all`.
+- Harness projections are `.agents/skills/<id>` relative symlinks to `.agents/profile-bits/skills/<id>` only — not a second SSOT. Do not write `.cursor/skills/`. Do not require, create, or document `.claude/` or `.claude/skills` as authoring-skill projections.
+- Dest examples: `packages/integrations/src/<id>/` and `packages/plugins/src/<pack>/widgets/<id>/`. Templates stay inside the plugin root (no `../`).
+- ADD pack-level `bitsUsed`: `{{ID}}_BITS_USED` on `{{id}}Plugin`; widget skill unions into that array. Not yaml. Do not edit `packages/core`.
+- Four skills only. Ideate/next/brainstorm is an `author` mode. Empty-args is gallery (ideate as item 0) then stop — it MUST NOT inventory. No `author-bit`.
+- Catalog SSOT is live `FIRST_PARTY_*` in `packages/core/src/types.ts`. Completing an id already in those lists is allowed. Adding a new id requires OpenSpec first. Do not silently expand the lists. Do not create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`. WakaTime-class **client shape** (client, auth, scopes, inputs, mocked HTTP) is unchanged.
+- Portable-core frontmatter on all four skills (`name`, `description`, `license: MIT`, `compatibility`, `metadata.author: profile-bits`, `metadata.version: "0.1.0"`).
+- Engine JSON is a **subcommand flag**: `pnpm exec openspec status --change author-plugin --json`. Never `openspec --json`.
 
-This change is planning only. Do not implement `agent-plugin/**`. Do not rewrite `plugin-contract`, `widget-contract`, or `integration-contract`.
+T320/T321 (plugin tree + `.agents/skills` projections) are **applied**. Remaining work is follow-up: SSOT migrate, `src/` dest, pack-level `bitsUsed`, frontmatter, live catalog, and umbrella ideate. Do not write live `packages/**` from this change. Do not rewrite `plugin-contract`, `widget-contract`, or `integration-contract`. Do not sync, apply, or archive in this planning edit.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `author-plugin`: Agent Plugin 1.0.0 at `agent-plugin/profile-bits` — `plugin.json` named `profile-bits`, no `mcp.json`, four skills with umbrella routing, yaml-SSOT (no invented Action inputs), contained templates, T321 harness symlinks not a second skills tree, OpenSpec-delta-first for public API, fail-closed stale codegen, WakaTime-class integration without new architecture, no extra first-party packs in v0, locked evals, and `generate-action --check` plus `skills-ref validate`.
+- (none — `author-plugin` already exists. This change’s original ADDED capability stays; follow-up is MODIFIED/RENAMED/ADDED on the same capability.)
 
 ### Modified Capabilities
 
-- (none — three-layer contracts stay as synced; this change ADDED-specs the authoring plugin as a dedicated capability so archive stays clean. Do not MODIFIED-delta `plugin-contract`, `widget-contract`, `integration-contract`, `action-public-api`, `github-api-fetch-policy`, or `playground`.)
+- `author-plugin`: plugin root `.agents/profile-bits`; `.agents/skills/<id>` projections only; dest `src/` paths; pack-level `bitsUsed`; live-catalog + no silent expand + no duplicate pack; ideate/next on umbrella `author`; empty-args does not ideate; four skills; WakaTime-class client shape unchanged.
 
 ## Impact
 
-- Specs: new `openspec/specs/author-plugin/spec.md` after archive/sync. No edits to `plugin-contract`, `widget-contract`, `integration-contract`, `action-public-api`, `github-api-fetch-policy`, or `playground` in this change.
-- Code (later, not this change): `agent-plugin/profile-bits/` T320a–e (`plugin.json`, `scripts/validate.sh`, `references/contract.md`, four skills + templates + evals) and T321 harness symlinks. Templates generate *into* `packages/**` only when those skills run; this change does not write live package source.
-- Out of scope: `agent-plugin/**` / `packages/**` / `apps/**` implementation in this workflow, `marketplace-release` (T036 after T400), extra first-party plugins, MCP, archiving, git commit, plan/README edits.
+- Specs: delta only under `openspec/changes/author-plugin/specs/author-plugin/spec.md`. Synced `openspec/specs/author-plugin/` is updated later (O1s after S0), not in this edit. No edits to `plugin-contract`, `widget-contract`, `integration-contract`, `action-public-api`, `github-api-fetch-policy`, or `playground`.
+- Code: after S0 the plugin files live at `.agents/profile-bits/`. `agent-plugin/` is removed. Templates generate *into* `packages/**` only when those skills run; this change does not write live package source.
+- Out of scope: live `packages/**` / `apps/**` implementation, `.claude/` or `.claude/skills` creation, three-layer contract rewrites, MCP, Marketplace, `dist/`, tagging `v1` at `main`, archive, git commit, `openspec` sync/validate as a completion gate.
