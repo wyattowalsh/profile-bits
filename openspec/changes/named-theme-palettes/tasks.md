@@ -60,4 +60,4 @@ Exclusive: `apps/docs/src/preview/{types,permalink,global-bar,schema-form}.ts(x)
 
 ## 8. Wave 7 — gate (after Wave 6)
 
-- [ ] 8.1 `just lint`. Focused vitest on `themes`, `core`, `renderer`, `bits`, `plugins`, `action`, `docs`. `just generate-action --check`. `just generate-docs --check` if the recipe cares about theme enums. Verify: unknown id / unknown swatch / custom missing role / custom+pair missing fail parse; mocha stats SVG contains mocha `bg` hex not Primer `#0d1117`; rss/coding/json/github/bit samples change together; baked SVG has no `<style>` / `@keyframes` / SMIL / `foreignObject`. Do not commit unless asked. Do not tag `v1`.
+- [x] 8.1 `just lint`. Focused vitest on `themes`, `core`, `renderer`, `bits`, `plugins`, `action`, `docs`. `just generate-action --check`. `just generate-docs --check` if the recipe cares about theme enums. Verify: unknown id / unknown swatch / custom missing role / custom+pair missing fail parse; mocha stats SVG contains mocha `bg` hex not Primer `#0d1117`; rss/coding/json/github/bit samples change together; baked SVG has no `<style>` / `@keyframes` / SMIL / `foreignObject`. Do not commit unless asked. Do not tag `v1`.
