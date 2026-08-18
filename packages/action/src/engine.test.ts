@@ -1202,16 +1202,15 @@ describe("runEngine wakatime coding", () => {
 
 describe("themesFor and output_pair polarity files", () => {
   it("returns the selected flavor only when output_pair is false", () => {
-    expect(themesFor({ theme: "catppuccin-mocha", output_pair: false })).toEqual(
-      ["catppuccin-mocha"],
-    );
+    expect(
+      themesFor({ theme: "catppuccin-mocha", output_pair: false }),
+    ).toEqual(["catppuccin-mocha"]);
   });
 
   it("returns light then dark members when output_pair is true", () => {
-    expect(themesFor({ theme: "catppuccin-mocha", output_pair: true })).toEqual([
-      "catppuccin-latte",
-      "catppuccin-mocha",
-    ]);
+    expect(themesFor({ theme: "catppuccin-mocha", output_pair: true })).toEqual(
+      ["catppuccin-latte", "catppuccin-mocha"],
+    );
   });
 
   it("writes filename and filename-dark when output_pair is true", async () => {
