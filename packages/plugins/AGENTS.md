@@ -17,3 +17,4 @@ A new widget is not a new plugin. A new integration is not a new plugin. Do not 
 - Do **not** edit `packages/core/**` except the authorized schema exceptions in `packages/core/src/types.ts` and `packages/core/src/wakatime-schema.ts` (wakatime/`coding`, rss/`feed`, and http/`json`+`chips` ids and yaml schemas). Do not add further first-party ids.
 - Do **not** edit root `action.yml` (thin codegen owns it).
 - Do **not** add flattened `plugin_*_*_*` Action inputs. No `plugin_wakatime`, `plugin_rss`, or `plugin_http` bool.
+- Do **not** delete `src/author-skill-templates.test.ts`; it greps `.agents` templates + `ci.yml` via `import.meta.url`.
