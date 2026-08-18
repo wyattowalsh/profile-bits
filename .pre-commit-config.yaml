@@ -22,3 +22,9 @@ repos:
         entry: just generate-action -- --check
         pass_filenames: false
         always_run: true
+      - id: generate-docs
+        name: generate-docs --check
+        language: system
+        entry: just generate-docs -- --check
+        pass_filenames: false
+        always_run: true

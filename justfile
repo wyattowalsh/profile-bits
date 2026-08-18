@@ -24,6 +24,7 @@ render *args:
 generate-action *args:
     pnpm generate-action {{ args }}
 
+# Playground-fields snapshot. Pass `--check` in pre-commit/CI.
 generate-docs *args:
     pnpm generate-docs {{ args }}
 
