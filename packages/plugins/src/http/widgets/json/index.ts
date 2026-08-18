@@ -2,7 +2,7 @@ import type { HttpClient } from "@profile-bits/integrations";
 import { renderSvg } from "@profile-bits/renderer";
 import type { ThemePalette } from "@profile-bits/themes";
 import { isEmptyJsonResult, JsonJmesError, searchJson } from "./jmes.js";
-import { jsonTemplate, NO_JSON_DATA } from "./template.js";
+import { jsonTemplate } from "./template.js";
 
 export class JsonWidgetError extends Error {
   override readonly name = "JsonWidgetError";
