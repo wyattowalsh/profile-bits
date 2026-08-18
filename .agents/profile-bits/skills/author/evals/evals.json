@@ -1,0 +1,184 @@
+{
+  "skill_name": "author",
+  "evals": [
+    {
+      "id": "route-wakatime-integration",
+      "prompt": "Add a WakaTime integration so profile widgets can show coding time stats.",
+      "expected_output": "Routes to author-integration to complete the existing wakatime data source. Does not create a second wakatime pack. Does not silently expand FIRST_PARTY_* without OpenSpec.",
+      "assertions": [
+        "Routes to author-integration",
+        "Treats WakaTime as an integration / data source to complete, not a second plugin pack",
+        "Does not create a second wakatime pack",
+        "Does not expand FIRST_PARTY_PLUGIN_IDS or FIRST_PARTY_INTEGRATION_IDS without OpenSpec",
+        "Does not route the primary work to author-plugin",
+        "Does not invent flattened Action inputs for WakaTime"
+      ]
+    },
+    {
+      "id": "route-languages-option",
+      "prompt": "Add a new option to the languages widget.",
+      "expected_output": "Routes to author-widget on the existing github pack. Requires an OpenSpec delta for the yaml schema first. Does not add a flattened Action input.",
+      "assertions": [
+        "Routes to author-widget",
+        "Keeps the option on the existing github pack (not a new pack)",
+        "Requires an OpenSpec delta first because yaml schema is public API",
+        "Does not invent a plugin_github_languages_* or other flattened Action input",
+        "Does not route to author-integration"
+      ]
+    },
+    {
+      "id": "route-new-pack-github-static",
+      "prompt": "Create a new plugin pack that uses the github and static integrations.",
+      "expected_output": "Routes to author-plugin for pack registry and derived integration union. Requires OpenSpec before expanding first-party plugin ids.",
+      "assertions": [
+        "Routes to author-plugin",
+        "Treats this as a new pack, not a silent catalog add",
+        "Requires OpenSpec before expanding FIRST_PARTY_PLUGIN_IDS",
+        "References existing github and static integrations rather than inventing new first-party packs for them",
+        "Does not treat github+static as a WakaTime-class data-source-only request"
+      ]
+    },
+    {
+      "id": "route-css-animation-gif-apng",
+      "prompt": "Add a widget with CSS animation for gif and apng output.",
+      "expected_output": "Routes to author-widget on an existing pack. CSS @keyframes are authoring input; APNG files use .png; default SVG stays a baked still.",
+      "assertions": [
+        "Routes to author-widget",
+        "Does not create a new pack or new integration for animation",
+        "Treats CSS @keyframes as authoring input to renderAnimation, not GitHub SVG runtime",
+        "Notes APNG output is named .png",
+        "Keeps default SVG as a baked still"
+      ]
+    },
+    {
+      "id": "route-widget-mdx-no-source",
+      "prompt": "Drop in a widget.mdx file with no source field.",
+      "expected_output": "Routes to author-widget. Prefer omit source; canonical filename widget.mdx.",
+      "assertions": [
+        "Routes to author-widget",
+        "Prefers omitting the source field",
+        "Uses canonical widget.mdx rather than inventing a source path",
+        "Does not route to author-plugin",
+        "Does not route to author-integration"
+      ]
+    },
+    {
+      "id": "route-tailwind-stylesheets",
+      "prompt": "Make a Tailwind stylesheets widget.",
+      "expected_output": "Routes to author-widget. Takumi-safe tw/className on bits composition. Not a new pack or renderer change.",
+      "assertions": [
+        "Routes to author-widget",
+        "Requires Takumi-safe tw and/or className (not react-dom or Radix/shadcn DOM)",
+        "Composes bits rather than putting bits in yaml",
+        "Does not route to renderer internals or docs playground",
+        "Does not create a new first-party pack for Tailwind"
+      ]
+    },
+    {
+      "id": "route-md-families-code-starry-night",
+      "prompt": "Swap md.families.code to starry-night.",
+      "expected_output": "Routes to author-widget. Exclusive family swap; do not stack rehype-pretty-code with starry-night.",
+      "assertions": [
+        "Routes to author-widget",
+        "Treats this as an exclusive md.families.code swap",
+        "Does not stack pretty-code and starry-night",
+        "Does not route to author-integration",
+        "Does not invent a flattened Action input for the family"
+      ]
+    },
+    {
+      "id": "ideate-next-best",
+      "prompt": "What should I add next?",
+      "expected_output": "Loads next.md. Inventories live FIRST_PARTY_* plus on-disk holes. Ranks one kind with why/target/openspec/handoff, then 1-2 runners-up. Writes no files and copies no templates.",
+      "assertions": [
+        "Enters ideate/next mode (not empty-args gallery stop)",
+        "Reads packages/core/src/types.ts FIRST_PARTY_* registries",
+        "Produces one ranked kind plus handoff",
+        "Includes an output table with kind, why, target, openspec, handoff",
+        "Does not write files or copy templates"
+      ]
+    },
+    {
+      "id": "ideate-bit-vs-widget",
+      "prompt": "What should I add next? Should we start with bits?",
+      "expected_output": "Ranks bit only if the frozen 11 primitives are missing AND no typed-id hole ranks higher. packages/bits absence is a runner-up behind a missing github pack implementation when that typed hole exists.",
+      "assertions": [
+        "Does not always pick packages/bits first",
+        "Ranks a typed-id hole (missing packages/plugins/src/<pack>/) above an absent bits tree",
+        "Uses handoff bit-checklist only when kind=bit wins",
+        "Does not create an author-bit skill",
+        "Writes no files"
+      ]
+    },
+    {
+      "id": "ideate-existing-wakatime",
+      "prompt": "What next? Maybe another WakaTime pack?",
+      "expected_output": "Ids already include wakatime. No second pack. Prefer complete an existing pack or integration hole. Does not silently append FIRST_PARTY_*.",
+      "assertions": [
+        "Notes wakatime is already in FIRST_PARTY_PLUGIN_IDS and/or FIRST_PARTY_INTEGRATION_IDS",
+        "Refuses a second wakatime pack",
+        "Prefers completing an existing pack or integration",
+        "Does not silently append FIRST_PARTY_*",
+        "Writes no files"
+      ]
+    },
+    {
+      "id": "ideate-needs-integration",
+      "prompt": "I want a card for a brand-new time-tracker API we do not have yet. What first?",
+      "expected_output": "Named/inferred kind needs a new API → author-integration first. Does not start at author-widget. OpenSpec if the integration id is new.",
+      "assertions": [
+        "Hands off to author-integration first",
+        "Does not start by scaffolding a widget or a new pack",
+        "Treats a missing API as an integration hole",
+        "Notes OpenSpec before adding an id not in FIRST_PARTY_INTEGRATION_IDS",
+        "Writes no files from author ideate"
+      ]
+    },
+    {
+      "id": "ideate-empty-args-not-run",
+      "prompt": "/author",
+      "expected_output": "Empty-args gallery including ideate as item 0. Does not inventory live holes. Does not write files. Does not load next.md.",
+      "assertions": [
+        "Shows the empty-args gallery",
+        "Lists ideate/next/brainstorm as gallery item 0",
+        "Does not inventory types.ts holes",
+        "Does not load next.md",
+        "Does not write files"
+      ]
+    },
+    {
+      "id": "ideate-named-kind-honor",
+      "prompt": "Add a widget on rss",
+      "expected_output": "Named kind is widget. Routes to author-widget on the existing rss pack even if a github pack dir is missing.",
+      "assertions": [
+        "Routes to author-widget",
+        "Honors the named widget kind",
+        "Targets the existing rss pack",
+        "Does not redirect to complete a missing github pack first",
+        "Does not create a second rss pack"
+      ]
+    },
+    {
+      "id": "ideate-refuse-mcp",
+      "prompt": "Add an MCP server so agents can generate widgets over MCP.",
+      "expected_output": "Refuse. No mcp.json. Does not inventory a substitute add.",
+      "assertions": [
+        "Refuses MCP",
+        "Does not create mcp.json",
+        "Does not route to author-integration, author-widget, or author-plugin for MCP",
+        "Does not inventory the next product add as a consolation"
+      ]
+    },
+    {
+      "id": "ideate-refuse-flatten",
+      "prompt": "Add Action input plugin_github_stats_include so Marketplace users can set include without yaml.",
+      "expected_output": "Refuse flattened plugin_*_*_* input. Thin Action only. Yaml remains SSOT.",
+      "assertions": [
+        "Refuses plugin_github_stats_include",
+        "Refuses plugin_<plugin>_<widget>_<option> names",
+        "Keeps thin Action inputs from ActionInputsSchema",
+        "Does not edit action.yml to add the flattened input"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+# {{WIDGET_TITLE}}
+
+{{WIDGET_DESCRIPTION}}
+
+Do not put `import` / `export` or JSX (`<PascalCase`) in this file — those
+markers promote `.md` to `mdx`. Keep CommonMark/GFM only.
+
+Canonical filename: `widget.md`. Omit `source`. Pipeline: remark/rehype →
+`fromHtml` via `@profile-bits/renderer`.
+
+- Stat: count
+- Chip: label
+
+```text
+md.presets: default
+md.families.code: pretty-code   # exclusive; do not also enable starry-night
+md.families.math: katex
+md.families.mermaid: rehype-mermaid
+md.allow_network: false         # Kroki / plantuml.com stay off
+```

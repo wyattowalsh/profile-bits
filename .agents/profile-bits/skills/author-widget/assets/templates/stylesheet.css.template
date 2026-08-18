@@ -1,0 +1,39 @@
+/*
+ * Takumi-safe stylesheet companion.
+ *
+ * tw prop: built-in Tailwind subset on bits / div / span / img (no Preflight).
+ * Full Tailwind or any CSS: compile (e.g. Vite ?inline) into stylesheets[] and
+ * match via className / id. Extra plugin CSS (KaTeX, pretty-code, starry-night)
+ * also lands in stylesheets — not in renderSvg() <style>.
+ *
+ * Not allowed: react-dom, Radix/shadcn DOM, "use client", canvas/WebGL.
+ * Card 480×160. Root width/height 100%.
+ */
+
+.pb-frame {
+  width: 100%;
+  height: 100%;
+}
+
+.pb-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.pb-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pb-muted {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.pb-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+}

@@ -1,0 +1,104 @@
+{
+  "skill_name": "author-widget",
+  "evals": [
+    {
+      "id": "empty-args",
+      "prompt": "/author-widget",
+      "expected_output": "Empty-args gallery listing add/option/animation/mdx/stylesheet/families/discover modes and the refuse routes to author-integration and author-plugin. Does not write files.",
+      "assertions": [
+        "Dispatches to the empty-args gallery",
+        "Lists add, option, animation, mdx, stylesheet, families, and discover",
+        "Names author-integration for new data sources and author-plugin for new packs",
+        "Does not copy templates or write packages/plugins",
+        "Does not invent a mutating default"
+      ]
+    },
+    {
+      "id": "languages-option",
+      "prompt": "Add a new option to the languages widget so users can hide the percentage labels.",
+      "expected_output": "Treats this as a yaml-schema public API change on the existing github languages widget. Requires an OpenSpec delta first, then LanguagesOptionsSchema / .github/profile-bits.yml. Does not add plugin_github_languages_* or any flattened Action input. Fetch still consumes the cached github payload with no HTTP. Tells the user to run just generate-action and just generate-docs.",
+      "assertions": [
+        "Stays on the existing github pack languages widget (not a new pack or new integration)",
+        "Requires an OpenSpec delta first because LanguagesOptionsSchema / yaml options are public API",
+        "Does not add plugin_github_languages_hide_pct or any plugin_<plugin>_<widget>_<option> Action input",
+        "Does not invent Action input names; options live in .github/profile-bits.yml",
+        "Does not put the option on thin action.yml; yaml present still beats plugin_github",
+        "Keeps widget fetch HTTP-free (consume cached github payload; never REST /languages)",
+        "Tells the user to run just generate-action and just generate-docs",
+        "Unions changed bit names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin; does not set bitsUsed on a widget entry; bits are not yaml keys"
+      ]
+    },
+    {
+      "id": "css-animation-gif-apng",
+      "prompt": "Add a widget with CSS animation for gif and apng output.",
+      "expected_output": "Copies keyframes.css.template as animation.css. CSS @keyframes are authoring input to renderAnimation via @profile-bits/renderer (takumi-js 2.9.2). Formats allow-list includes gif and apng. APNG files are named .png. Default SVG remains a baked still with no <style>, @keyframes, SMIL, or foreignObject in renderSvg() output. Card 480×160 on the existing github pack.",
+      "assertions": [
+        "Copies assets/templates/keyframes.css.template into the widget dir (animation.css)",
+        "Treats CSS @keyframes as authoring input to render / renderAnimation, not GitHub SVG runtime",
+        "Includes gif and apng on the formats allow-list with default format svg",
+        "Names APNG output with a .png extension",
+        "Keeps default SVG as a baked still (no <style>, @keyframes, SMIL, or foreignObject in renderSvg output)",
+        "Renders through @profile-bits/renderer only (no direct takumi-js / @takumi-rs/* import in the widget)",
+        "Uses card size 480×160 and root width/height 100%",
+        "Does not create a new pack or new integration just to add animation"
+      ]
+    },
+    {
+      "id": "widget-mdx-no-source",
+      "prompt": "Drop in a widget.mdx file with no source field.",
+      "expected_output": "Writes canonical widget.mdx and omits the source field so discoverSource maps .mdx → mdx. Does not also write widget.md or widget.tsx. MDX components map is the bits index. Pipeline is @mdx-js/mdx → fromJsx. Sets md.presets / md.families for md/mdx. Ambiguous dual canonical files without source would fail.",
+      "assertions": [
+        "Copies assets/templates/widget.mdx.template as widget.mdx",
+        "Omits the source field (prefer omit when the file is named correctly)",
+        "Relies on discoverSource extension .mdx → mdx (no explicit source override)",
+        "Does not emit a second canonical widget.md or widget.tsx in the same dir",
+        "Maps MDX components to bits (Theme, Frame, Stack, Row, Text, Muted, Stat, Bar, Chip, Avatar, Divider)",
+        "Uses remark/rehype via @mdx-js/mdx then fromJsx (not remark-mdx + remark-html)",
+        "Declares md.presets and md.families for the md/mdx widget",
+        "Would fail closed on ambiguous widget.md + widget.tsx without source"
+      ]
+    },
+    {
+      "id": "tailwind-stylesheets",
+      "prompt": "Make a Tailwind stylesheets widget.",
+      "expected_output": "Generates a bits-composed Takumi-safe template using tw and/or className, copies stylesheet.css.template, and unions bit names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin. No react-dom, useEffect, portals, or Radix/shadcn DOM. Bits are not yaml keys. Takumi via @profile-bits/renderer. Card 480×160.",
+      "assertions": [
+        "Copies assets/templates/stylesheet.css.template and a bits-based widget.tsx (or html) template",
+        "Uses Takumi-safe tw and/or className on div/span/img or bits (Theme, Frame, Stack, Row, Text, Muted, Stat, Bar, Chip, Avatar, Divider)",
+        "Unions bit names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin in plugin.ts, not a widget-entry field, not in .github/profile-bits.yml",
+        "Does not import react-dom, useEffect, portals, @radix-ui/*, or shadcn DOM primitives",
+        "Does not import takumi-js or @takumi-rs/* from the widget (renderer only)",
+        "Root node is width 100% height 100% at card 480×160",
+        "Treats compiled CSS as stylesheets[] passed to Takumi, not as <style> inside renderSvg()",
+        "Does not create a new first-party pack for Tailwind"
+      ]
+    },
+    {
+      "id": "md-families-code-starry-night",
+      "prompt": "Swap md.families.code to starry-night.",
+      "expected_output": "Exclusive family swap: md.families.code becomes starry-night (rehype-starry-night) and rehype-pretty-code+shiki is not also used. Does not stack highlighters. rehype-twoslash only with starry-night. No flattened Action input. Kroki/plantuml.com stay off unless md.allow_network. No Playwright.",
+      "assertions": [
+        "Sets md.families.code to starry-night as a replacement, not an additional plugin",
+        "Does not stack rehype-pretty-code + shiki with rehype-starry-night",
+        "Does not .use() two members of the code family on one processor",
+        "Allows rehype-twoslash only together with starry-night",
+        "Does not invent a plugin_github_* Action input for the family (yaml md.families only)",
+        "Leaves mermaid on rehype-mermaid inline-svg via isomorphic-mermaid (no Playwright in the Action)",
+        "Keeps Kroki / plantuml.com disabled unless md.allow_network is explicitly true",
+        "Keeps remark-html xor remark-rehype (does not combine serializers)"
+      ]
+    },
+    {
+      "id": "bits-used-pack-union",
+      "prompt": "Register bitsUsed for a new card that composes Theme, Frame, Stack, Row, Text, and Stat.",
+      "expected_output": "Unions those names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin. Does not set bitsUsed on a widget registry entry. Does not put bits in yaml. Does not edit packages/core PluginIdentitySchema.",
+      "assertions": [
+        "Unions Theme, Frame, Stack, Row, Text, Stat into {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin",
+        "Does not set bitsUsed on a widget entry",
+        "Does not put bitsUsed or bits keys in .github/profile-bits.yml",
+        "Does not add bitsUsed to PluginIdentitySchema in packages/core",
+        "Does not create a second pack for an id already in FIRST_PARTY_PLUGIN_IDS"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+import { describe, expect, it } from "vitest";
+import {
+  deriveIntegrationUnion,
+  {{PLUGIN_ID}}Plugin,
+  {{PLUGIN_ID_UPPER}}_BITS_USED,
+  WIDGET_INTEGRATIONS,
+} from "./plugin.js";
+
+describe("{{PLUGIN_ID}}Plugin pack registry", () => {
+  it("derives integrations as the sorted union of listed widgets", () => {
+    expect({{PLUGIN_ID}}Plugin.integrations).toEqual(
+      deriveIntegrationUnion(WIDGET_INTEGRATIONS, {{PLUGIN_ID}}Plugin.widgets),
+    );
+  });
+
+  it("declares at least one widget and docsPath from the DOCS_PATH placeholder", () => {
+    expect({{PLUGIN_ID}}Plugin.widgets.length).toBeGreaterThanOrEqual(1);
+    expect({{PLUGIN_ID}}Plugin.docsPath).toBe("{{DOCS_PATH}}");
+    expect({{PLUGIN_ID}}Plugin.id).toBe("{{PLUGIN_ID}}");
+  });
+
+  it("keeps demo out of pack defaults", () => {
+    expect({{PLUGIN_ID}}Plugin.defaults.widgets).not.toContain("demo");
+    for (const widgetId of {{PLUGIN_ID}}Plugin.defaults.widgets) {
+      expect({{PLUGIN_ID}}Plugin.widgets).toContain(widgetId);
+    }
+  });
+
+  it("exposes pack-level bitsUsed on {{PLUGIN_ID}}Plugin", () => {
+    expect({{PLUGIN_ID}}Plugin.bitsUsed).toEqual({{PLUGIN_ID_UPPER}}_BITS_USED);
+    expect({{PLUGIN_ID}}Plugin.bitsUsed).toEqual([
+      "Theme",
+      "Frame",
+      "Stack",
+      "Row",
+      "Text",
+      "Muted",
+    ]);
+  });
+
+  it("does not invent integrations the widgets do not consume", () => {
+    const consumed = new Set(
+      {{PLUGIN_ID}}Plugin.widgets.flatMap((widgetId) => {
+        const ids = WIDGET_INTEGRATIONS[widgetId as keyof typeof WIDGET_INTEGRATIONS];
+        return ids === undefined ? [] : [...ids];
+      }),
+    );
+    for (const integrationId of {{PLUGIN_ID}}Plugin.integrations) {
+      expect(consumed.has(integrationId)).toBe(true);
+    }
+  });
+});

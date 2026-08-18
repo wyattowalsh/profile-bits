@@ -1,0 +1,75 @@
+import type { PluginIdentity } from "@profile-bits/core";
+
+/**
+ * Pack registry for {{PLUGIN_ID}}.
+ *
+ * Copy to packages/plugins/src/{{PLUGIN_ID}}/plugin.ts (path is in SKILL.md).
+ *
+ * Completing an id already in FIRST_PARTY_PLUGIN_IDS is allowed. Do not
+ * create a second pack for an existing id. Do not silently append
+ * FIRST_PARTY_PLUGIN_IDS — a new id needs OpenSpec first, then types.ts.
+ *
+ * integrations MUST equal deriveIntegrationUnion(WIDGET_INTEGRATIONS, widgets).
+ * defaults.widgets MUST omit demo.
+ * bitsUsed is pack-level {{PLUGIN_ID_UPPER}}_BITS_USED on {{PLUGIN_ID}}Plugin.
+ * PluginIdentitySchema has no bitsUsed — do not edit packages/core.
+ * docsPath is "{{DOCS_PATH}}" — do not hardcode /generate/<id>/.
+ */
+
+export const WIDGET_INTEGRATIONS = {
+  {{WIDGET_INTEGRATION_ENTRIES}}
+} as const;
+
+export function deriveIntegrationUnion(
+  widgetIntegrations: Readonly<Record<string, readonly string[]>>,
+  widgetIds:          readonly string[],
+): string[] {
+  const union = new Set<string>();
+  for (const widgetId of widgetIds) {
+    const ids = widgetIntegrations[widgetId];
+    if (ids === undefined) {
+      throw new Error(
+        `Pack widget "${widgetId}" has no integrations list; declare the integrations that widget consumes.`,
+      );
+    }
+    if (ids.length < 1) {
+      throw new Error(
+        `Pack widget "${widgetId}" must declare at least one integration.`,
+      );
+    }
+    for (const integrationId of ids) {
+      union.add(integrationId);
+    }
+  }
+  return [...union].sort();
+}
+
+const widgets = [
+  {{WIDGET_IDS}}
+] as const;
+
+const defaultWidgets = [
+  {{DEFAULT_WIDGET_IDS}}
+] as const;
+
+/** Pack-level union. author-widget adds names this pack's templates import. Not yaml. Not a widget entry. */
+export const {{PLUGIN_ID_UPPER}}_BITS_USED = [
+  "Theme",
+  "Frame",
+  "Stack",
+  "Row",
+  "Text",
+  "Muted",
+] as const;
+
+export const {{PLUGIN_ID}}Plugin = {
+  id:           "{{PLUGIN_ID}}",
+  title:        "{{PLUGIN_TITLE}}",
+  docsPath:     "{{DOCS_PATH}}",
+  widgets,
+  integrations: deriveIntegrationUnion(WIDGET_INTEGRATIONS, widgets),
+  defaults:     {
+    widgets: defaultWidgets,
+  },
+  bitsUsed:     {{PLUGIN_ID_UPPER}}_BITS_USED,
+} as const satisfies PluginIdentity & { bitsUsed: typeof {{PLUGIN_ID_UPPER}}_BITS_USED };

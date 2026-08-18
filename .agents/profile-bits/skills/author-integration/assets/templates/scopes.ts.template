@@ -1,0 +1,8 @@
+/**
+ * Destination: packages/integrations/src/{{id}}/scopes.ts
+ * Declared scopes for this integration. Empty is valid for public REST.
+ * Do not invent Marketplace / Action inputs from this list.
+ */
+export const {{ID}}_SCOPES = [] as const;
+
+export type {{Id}}Scope = (typeof {{ID}}_SCOPES)[number];

@@ -1,0 +1,50 @@
+import * as z from "zod";
+
+/** Option schema for plugins.{{PACK_ID}}.widgets.{{WIDGET_ID}} (yaml SSOT).
+ *  Not Action inputs. Never plugin_{{PACK_ID}}_{{WIDGET_ID}}_* names.
+ *  Bits are not yaml keys. Public API change → OpenSpec delta first.
+ *  bitsUsed: union names into pack-level {{PACK_ID_UPPER}}_BITS_USED on
+ *  {{PACK_ID}}Plugin. Not a widget-entry field. Not yaml. */
+
+export const {{WIDGET_PASCAL}}OptionsSchema = z.strictObject({
+  filename: z.string().default("{{WIDGET_ID}}"),
+  animate:  z.boolean().default(false),
+  // md/mdx only — omit on react/html widgets:
+  // md: z.strictObject({
+  //   presets: z.enum(["default"]).default("default"),
+  //   families: z.strictObject({
+  //     code:    z.enum(["pretty-code", "starry-night"]).default("pretty-code"),
+  //     math:    z.enum(["katex"]).default("katex"),
+  //     mermaid: z.enum(["rehype-mermaid"]).default("rehype-mermaid"),
+  //     slug:    z.enum(["rehype-slug"]).default("rehype-slug"),
+  //     section: z.enum(["rehype-sectionize"]).default("rehype-sectionize"),
+  //   }).optional(),
+  //   allow_network: z.boolean().default(false),
+  // }).optional(),
+});
+
+export const {{WIDGET_PASCAL}}Formats = [
+  "svg",
+  "png",
+  "jpeg",
+  "webp",
+  "ico",
+  "gif",
+  "apng",
+] as const;
+
+export const {{WIDGET_PASCAL}}Size = { width: 480, height: 160 } as const;
+
+export const {{WIDGET_PASCAL}}Examples = [
+  {
+    filename: "{{WIDGET_ID}}",
+    animate:  false,
+  },
+] as const;
+
+/** Registry fields (plugin.ts) — not this schema file:
+ *  id, title, description, integrations: ["{{INTEGRATION_ID}}"],
+ *  size: {{WIDGET_PASCAL}}Size, formats: {{WIDGET_PASCAL}}Formats,
+ *  bitsUsed: ["Theme","Frame","Stack","Row","Text","Muted","Stat","Bar","Chip","Avatar","Divider"],
+ *  source omitted when canonical widget.tsx|widget.md|widget.mdx|widget.html exists.
+ */

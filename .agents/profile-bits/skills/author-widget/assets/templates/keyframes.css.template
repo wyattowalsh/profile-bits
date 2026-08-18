@@ -1,0 +1,38 @@
+/*
+ * CSS @keyframes are authoring input to render() / renderAnimation().
+ * They are NOT GitHub SVG runtime.
+ *
+ * Default svg remains a baked still: renderSvg() must not contain <style>,
+ * @keyframes, SMIL, or foreignObject.
+ *
+ * Formats: gif | apng | animated webp via @profile-bits/renderer.
+ * APNG files are named .png (format: apng → .png extension).
+ * Card 480×160. Takumi 2.9.2. No Playwright.
+ */
+
+@keyframes pb-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pb-bar {
+  from {
+    transform: scaleX(0.15);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.pb-pulse {
+  animation: pb-pulse 1.2s ease-in-out infinite alternate;
+}
+
+.pb-bar-fill {
+  transform-origin: left center;
+  animation: pb-bar 1.6s ease-out infinite alternate;
+}

@@ -1,0 +1,50 @@
+/**
+ * Destination: packages/integrations/src/{{id}}/auth.ts
+ * Auth floor for this integration. Widget options may fail closed above it.
+ * github: types may say optional; the Action still requires a non-empty token.
+ * static: none. WakaTime-class: required.
+ */
+import type { AuthRequirement } from "@profile-bits/core";
+import { decideActionToken, isMissingToken } from "@profile-bits/core";
+
+export const {{ID}}_AUTH = "{{auth}}" as const satisfies AuthRequirement;
+
+export type {{Id}}Token = string;
+
+export function is{{Id}}TokenMissing(
+  token: string | undefined | null,
+): boolean {
+  return isMissingToken(token);
+}
+
+/**
+ * Action surface: empty / "" / whitespace fails the job and MUST NOT send
+ * unauthenticated requests (never 60/h/IP). static (none) skips the check.
+ */
+export function assert{{Id}}ActionToken(
+  token: string | undefined | null,
+): void {
+  if ({{ID}}_AUTH === "none") {
+    return;
+  }
+  if (decideActionToken(token) === "fail_job") {
+    throw new Error(
+      "{{id}}: missing token — Action fails the job; refusing unauthenticated requests",
+    );
+  }
+}
+
+export function {{id}}AuthorizationHeader(
+  token: string | undefined | null,
+): Readonly<Record<string, string>> {
+  if ({{ID}}_AUTH === "none") {
+    return {};
+  }
+  assert{{Id}}ActionToken(token);
+  const trimmed = token?.trim() ?? "";
+  return { Authorization: `Bearer ${trimmed}` };
+}
+
+export function {{id}}RequiresAuthorization(): boolean {
+  return {{ID}}_AUTH !== "none";
+}

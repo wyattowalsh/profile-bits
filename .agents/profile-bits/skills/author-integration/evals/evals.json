@@ -1,0 +1,163 @@
+{
+  "skill_name": "author-integration",
+  "evals": [
+    {
+      "id": "add-wakatime-integration",
+      "prompt": "Add a WakaTime integration so profile widgets can show coding stats from the WakaTime API.",
+      "expected_output": "Complete the existing wakatime integration id (already in FIRST_PARTY_INTEGRATION_IDS) under packages/integrations/src/wakatime/ (client, auth, scopes, inputs, mocked HTTP tests). Auth required. Do not create a second pack. Do not silently append FIRST_PARTY_*. OpenSpec first only if the id were new. No plugin_wakatime_* Action inputs, no live HTTP, no index.ts.template.",
+      "assertions": [
+        "Treats WakaTime as completing the existing integration id, not a second plugin pack",
+        "Does not create a second wakatime pack or silently append FIRST_PARTY_PLUGIN_IDS / FIRST_PARTY_INTEGRATION_IDS",
+        "Does not scaffold a duplicate packages/plugins/src/wakatime pack registry",
+        "Copies or completes templates into packages/integrations/src/wakatime/ (client.ts, auth.ts, scopes.ts, inputs.ts, client.test.ts)",
+        "Sets integration auth to required (API key as run secret; thin Action already has optional wakatime_token)",
+        "Requires an OpenSpec delta only before adding an id that is not already in FIRST_PARTY_INTEGRATION_IDS",
+        "Does not invent flattened plugin_wakatime_* or plugin_<plugin>_<widget>_<option> Action inputs",
+        "client.test.ts uses mocked HTTP only (no live WakaTime or GitHub)",
+        "Uses a shared client per run",
+        "Does not emit an integration index.ts.template",
+        "Mentions barrel packages/integrations/src/index.ts only (github is already re-exported)",
+        "Tells the user to run just generate-action and just generate-docs if codegen/docs are affected"
+      ]
+    },
+    {
+      "id": "explicit-empty-gallery",
+      "prompt": "/author-integration",
+      "expected_output": "Empty-args gallery listing add/github/wakatime modes, destination table, critical rules, and reference index without writing files.",
+      "assertions": [
+        "Recognizes empty /author-integration and enters the empty-args handler",
+        "Surfaces add/scaffold, github fetch-policy, and WakaTime-class modes",
+        "Shows destination paths as packages/integrations/src/<id>/",
+        "Does not invent a mutating default or copy templates",
+        "Points at the reference index or critical rules"
+      ]
+    },
+    {
+      "id": "neg-wakatime-first-party-pack",
+      "prompt": "Add a first-party WakaTime plugin pack with its own widgets, the same way github is a first-party pack.",
+      "expected_output": "Refuses a second wakatime pack. wakatime is already in FIRST_PARTY_PLUGIN_IDS. Does not silently append FIRST_PARTY_*. Offers completing the existing integration at packages/integrations/src/wakatime/ or the existing pack via author-plugin.",
+      "assertions": [
+        "Refuses creating a second wakatime pack",
+        "Does not silently append FIRST_PARTY_PLUGIN_IDS",
+        "Does not state the catalog is github-only",
+        "Offers packages/integrations/src/wakatime/ when they meant the data source",
+        "Routes pack completion to author-plugin for the existing wakatime id without duplicating it"
+      ]
+    },
+    {
+      "id": "neg-rest-languages",
+      "prompt": "For the github integration, fetch language bytes with GET /repos/{owner}/{repo}/languages for each repo. It is simpler than GraphQL.",
+      "expected_output": "Refuses REST /languages. Requires GraphQL nodes(ids:) batches of 100 after filter-then-cap 500.",
+      "assertions": [
+        "Refuses REST GET /repos/{owner}/{repo}/languages",
+        "Requires GraphQL nodes(ids:) batches of 100",
+        "Requires filter forks/archived then cap 500 before language bytes",
+        "Forbids 500 per-repo GraphQL calls",
+        "Does not implement the REST /languages approach"
+      ]
+    },
+    {
+      "id": "neg-unauth-empty-token",
+      "prompt": "If github_token is empty, just call GitHub unauthenticated. We only need 60 requests per hour.",
+      "expected_output": "Refuses unauthenticated GitHub. Empty/whitespace token fails the Action (fail_job) before any request.",
+      "assertions": [
+        "Refuses unauthenticated GitHub (60/h/IP)",
+        "Treats empty, \"\", and whitespace github_token as missing",
+        "Fails the Action job before sending any request",
+        "Does not fall back to unauthenticated REST",
+        "Cites token required in the Action for github"
+      ]
+    },
+    {
+      "id": "neg-flattened-action-input",
+      "prompt": "Add Action inputs plugin_wakatime_api_key and plugin_github_stats_include so Marketplace users can set them without yaml.",
+      "expected_output": "Refuses flattened plugin_<plugin>_<widget>_<option> Action inputs. Yaml remains SSOT; WakaTime secret stays run-scoped, not a new Marketplace input.",
+      "assertions": [
+        "Refuses plugin_wakatime_api_key",
+        "Refuses plugin_github_stats_include and any plugin_<plugin>_<widget>_<option> name",
+        "Keeps thin Action inputs only (read ActionInputsSchema including optional wakatime_token)",
+        "States .github/profile-bits.yml is config SSOT",
+        "Does not edit action.yml to add flattened inputs"
+      ]
+    },
+    {
+      "id": "neg-route-widget",
+      "prompt": "Add a languages option so users can hide archived repos from the languages card.",
+      "expected_output": "Stops and routes to author-widget. Does not scaffold a new integration or flattened Action input. OpenSpec first for yaml schema.",
+      "assertions": [
+        "Does not generate packages/integrations/src/* for a widget option",
+        "Routes to author-widget",
+        "Notes OpenSpec delta first for yaml schema",
+        "Does not add a flattened Action input for the option"
+      ]
+    },
+    {
+      "id": "neg-route-new-pack",
+      "prompt": "Create a new first-party plugin pack that uses github plus static.",
+      "expected_output": "Stops and routes to author-plugin. Does not add first-party ids from this skill. Integration work stays on existing static/github clients.",
+      "assertions": [
+        "Routes to author-plugin",
+        "Does not append ids to FIRST_PARTY_PLUGIN_IDS",
+        "Does not treat a new pack as a new integration scaffold by default",
+        "Notes OpenSpec is required before expanding plugin ids"
+      ]
+    },
+    {
+      "id": "openspec-first-public-api",
+      "prompt": "Register wakatime in IntegrationIdSchema and FIRST_PARTY_INTEGRATION_IDS right now so we can compile, then we will write the OpenSpec later.",
+      "expected_output": "Refuses silent enum expansion. wakatime is already in live types; do not append it again. A truly new id still requires an OpenSpec delta first, then templates, then generate-action/generate-docs.",
+      "assertions": [
+        "Refuses silently appending FIRST_PARTY_INTEGRATION_IDS / IntegrationIdSchema",
+        "Does not silently edit packages/core/src/types.ts from this skill",
+        "Does not skip the public-API gate because compile is blocked",
+        "Notes completing the existing wakatime id does not require appending the enum",
+        "Mentions just generate-action and just generate-docs after a real new-id delta"
+      ]
+    },
+    {
+      "id": "adv-cap-before-filter",
+      "prompt": "Cap the repo list at 500 first so we do not waste filter work, then drop forks and archived.",
+      "expected_output": "Refuses cap-before-filter. Filter forks/archived first, then cap 500 remaining. Stars and languages share that ordered id list.",
+      "assertions": [
+        "Rejects cap-then-filter",
+        "Requires filter forks and archived first (unless include options)",
+        "Then caps 500 remaining",
+        "Stars and language bytes share the same ordered ids",
+        "Does not implement cap-before-filter"
+      ]
+    },
+    {
+      "id": "adv-graphql-cache-post-only",
+      "prompt": "Cache GraphQL as POST /graphql. The URL is always the same so method+url is enough.",
+      "expected_output": "Refuses POST /graphql as the GraphQL cache key. Key is (query, variables). REST remains (method, url, params).",
+      "assertions": [
+        "Rejects GraphQL cache key POST /graphql alone",
+        "Requires GraphQL cache key (query, variables)",
+        "Keeps REST cache key (method, url, params)",
+        "Different variables must not share a GraphQL cache entry"
+      ]
+    },
+    {
+      "id": "adv-shared-client",
+      "prompt": "Let stats and languages each construct their own github Octokit so they can retry independently.",
+      "expected_output": "Refuses per-widget clients. One shared client instance per run for the integration.",
+      "assertions": [
+        "Requires one shared client per Action/playground/generate run",
+        "Stats and languages share that instance",
+        "Widgets do not construct extra HTTP clients",
+        "Does not create per-widget Octokit instances"
+      ]
+    },
+    {
+      "id": "static-auth-none",
+      "prompt": "The static integration should send an Authorization header if GITHUB_TOKEN happens to be set, just in case.",
+      "expected_output": "static auth remains none. No Authorization header and no GitHub request. Fixtures only.",
+      "assertions": [
+        "Keeps static auth as none",
+        "Sends no Authorization header for static",
+        "Sends no GitHub request for static",
+        "Uses fixtures for demo/tests/docs preview"
+      ]
+    }
+  ]
+}

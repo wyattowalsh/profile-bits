@@ -1,0 +1,50 @@
+{
+  "skill_name": "author-plugin",
+  "evals": [
+    {
+      "id": "new-pack-github-static",
+      "prompt": "Add a new pack that uses the github and static integrations. Scaffold the pack registry with docsPath, defaults, and a derived integration union. Do not flatten widget options into Action inputs.",
+      "expected_output": "OpenSpec delta and types.ts widen before expanding FIRST_PARTY_PLUGIN_IDS (no silent catalog add). Pack registry at packages/plugins/src/<id>/ from templates, exporting <id>Plugin with pack-level bitsUsed, integrations derived as the union of widgets that consume github and static, docsPath from {{DOCS_PATH}} (not hardcoded /generate/<id>/), demo omitted from defaults. No plugin_<plugin>_<widget>_<option> inputs. User told to run just generate-action and just generate-docs; fail closed on stale codegen.",
+      "assertions": [
+        "Reads openspec/specs/plugin-contract/spec.md and packages/core/src/types.ts before writing",
+        "Treats a new pack id as an OpenSpec + types change, not a silent append to FIRST_PARTY_PLUGIN_IDS",
+        "Does not add a new first-party id to FIRST_PARTY_PLUGIN_IDS without that OpenSpec+types gate",
+        "Scaffolds pack registry (plugin.ts) exporting <id>Plugin with docsPath {{DOCS_PATH}}, defaults.widgets, widgets, and pack-level bitsUsed",
+        "Does not hardcode docsPath to /generate/<id>/",
+        "Sets integrations to the derived union of listed widgets, including both github and static",
+        "Does not invent a hand-maintained integrations list that disagrees with widget declarations",
+        "Does not add flattened Action inputs of the form plugin_<plugin>_<widget>_<option>",
+        "Does not add plugin_github_stats_include or other flattened option names",
+        "Keeps yaml additionalProperties false / does not loosen unknown-key parse",
+        "Does not create a second pack for an id already in FIRST_PARTY_PLUGIN_IDS",
+        "Copies skill templates into packages/plugins/src/<id>/ without ../ in template paths",
+        "Tells the user to run just generate-action and just generate-docs",
+        "Fails closed on stale codegen (does not hand-edit action.yml)"
+      ]
+    },
+    {
+      "id": "empty-args",
+      "prompt": "author-plugin",
+      "expected_output": "Empty-args gallery: dispatch table, live FIRST_PARTY_* catalog (read types.ts; not github-only), sibling skills, template destinations, codegen commands. No file writes.",
+      "assertions": [
+        "Recognizes empty args / help and does not invent a mutating default pack",
+        "Surfaces the dispatch table (pack vs author-widget vs author-integration)",
+        "States catalog SSOT is packages/core/src/types.ts FIRST_PARTY_* (not github-only)",
+        "Does not write packages/plugins or types.ts",
+        "Mentions just generate-action and just generate-docs"
+      ]
+    },
+    {
+      "id": "refuse-wakatime-pack",
+      "prompt": "Add a first-party WakaTime plugin pack with a coding widget and put wakatime in FIRST_PARTY_PLUGIN_IDS.",
+      "expected_output": "wakatime is already in live FIRST_PARTY_PLUGIN_IDS. Refuses a second wakatime pack and refuses a silent enum append. Completing the existing wakatime pack at packages/plugins/src/wakatime/ is allowed. Does not invent plugin_wakatime_coding_* inputs.",
+      "assertions": [
+        "Notes wakatime is already in FIRST_PARTY_PLUGIN_IDS",
+        "Refuses creating a second wakatime pack",
+        "Does not silently append FIRST_PARTY_PLUGIN_IDS",
+        "Allows completing the existing wakatime pack rather than duplicating it",
+        "Does not generate plugin_wakatime_coding_* flattened Action inputs"
+      ]
+    }
+  ]
+}

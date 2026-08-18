@@ -1,0 +1,36 @@
+import {
+  Avatar,
+  Bar,
+  Chip,
+  Divider,
+  Frame,
+  Muted,
+  Row,
+  Stack,
+  Stat,
+  Text,
+  Theme,
+} from "@profile-bits/bits";
+
+{/* Canonical widget.mdx. Prefer omit `source`. MDX components = bits index.
+    Pipeline: @mdx-js/mdx → fromJsx via @profile-bits/renderer.
+    Exclusive md.families — do not stack pretty-code + starry-night.
+    Mermaid: rehype-mermaid strategy inline-svg via isomorphic-mermaid (no Playwright). */}
+
+<Theme>
+  <Frame tw="h-full w-full">
+    <Stack tw="h-full w-full gap-2 p-3">
+      <Row tw="items-center gap-2">
+        <Avatar tw="h-8 w-8" />
+        <Text tw="text-sm font-semibold">{{WIDGET_TITLE}}</Text>
+        <Muted tw="text-xs">{{WIDGET_DESCRIPTION}}</Muted>
+      </Row>
+      <Divider />
+      <Row tw="gap-3">
+        <Stat label="Count" value="0" />
+        <Chip>ok</Chip>
+      </Row>
+      <Bar tw="w-full" />
+    </Stack>
+  </Frame>
+</Theme>

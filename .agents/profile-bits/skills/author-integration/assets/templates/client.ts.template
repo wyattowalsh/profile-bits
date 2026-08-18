@@ -1,0 +1,207 @@
+/**
+ * Destination: packages/integrations/src/{{id}}/client.ts
+ * Shared client for one Action / playground / generate run.
+ * REST cache key: (method, url, params). GraphQL: (query, variables).
+ * Never REST /languages. GitHub-class: filter forks/archived THEN cap 500;
+ * GraphQL nodes(ids:) batches of 100.
+ */
+import {
+  {{id}}AuthorizationHeader,
+  {{id}}RequiresAuthorization,
+  assert{{Id}}ActionToken,
+} from "./auth.js";
+import type { {{Id}}Inputs } from "./inputs.js";
+import { {{ID}}_SCOPES } from "./scopes.js";
+
+export type {{Id}}Fetch = (
+  input: string | URL | Request,
+  init?: RequestInit,
+) => Promise<Response>;
+
+export type {{Id}}RunContext = {
+  token?: string;
+  fetch: {{Id}}Fetch;
+  inputs?: {{Id}}Inputs;
+};
+
+export type RestCacheParts = {
+  method: string;
+  url: string;
+  params: Readonly<Record<string, string>>;
+};
+
+export type GraphqlCacheParts = {
+  query: string;
+  variables: unknown;
+};
+
+const REST_LANGUAGES = /\/repos\/[^/]+\/[^/]+\/languages(?:\?|$)/i;
+const GRAPHQL_BATCH = 100;
+const REPO_CAP = 500;
+
+/** github: https://api.github.com/graphql — replace per provider. */
+export const {{ID}}_GRAPHQL_URL = "https://example.invalid/graphql";
+
+const clients = new WeakMap<object, {{Id}}Client>();
+
+export function restCacheKey(parts: RestCacheParts): string {
+  return JSON.stringify({
+    method: parts.method,
+    url:   parts.url,
+    params: parts.params,
+  });
+}
+
+export function graphqlCacheKey(parts: GraphqlCacheParts): string {
+  return JSON.stringify({
+    query:     parts.query,
+    variables: parts.variables ?? {},
+  });
+}
+
+export function assertNotRestLanguages(url: string): void {
+  if (REST_LANGUAGES.test(url)) {
+    throw new Error(
+      "{{id}}: REST /languages is forbidden; use GraphQL nodes(ids:) batches of 100",
+    );
+  }
+}
+
+export function filterThenCap<
+  T extends { fork?: boolean; archived?: boolean },
+>(
+  repos: readonly T[],
+  options: { includeForks: boolean; includeArchived: boolean },
+  cap = REPO_CAP,
+): T[] {
+  const filtered = repos.filter((repo) => {
+    if (!options.includeForks && repo.fork === true) {
+      return false;
+    }
+    if (!options.includeArchived && repo.archived === true) {
+      return false;
+    }
+    return true;
+  });
+  return filtered.slice(0, cap);
+}
+
+export function batchNodeIds(
+  ids: readonly string[],
+  size = GRAPHQL_BATCH,
+): string[][] {
+  const batches: string[][] = [];
+  for (let index = 0; index < ids.length; index += size) {
+    batches.push([...ids.slice(index, index + size)]);
+  }
+  return batches;
+}
+
+export function getShared{{Id}}Client(
+  run: object,
+  context: {{Id}}RunContext,
+): {{Id}}Client {
+  const existing = clients.get(run);
+  if (existing !== undefined) {
+    return existing;
+  }
+  const created = new {{Id}}Client(context);
+  clients.set(run, created);
+  return created;
+}
+
+export class {{Id}}Client {
+  readonly scopes = {{ID}}_SCOPES;
+  private readonly token: string | undefined;
+  private readonly fetchImpl: {{Id}}Fetch;
+  private readonly restCache     = new Map<string, Promise<unknown>>();
+  private readonly graphqlCache  = new Map<string, Promise<unknown>>();
+
+  constructor(context: {{Id}}RunContext) {
+    this.token     = context.token;
+    this.fetchImpl = context.fetch;
+    if ({{id}}RequiresAuthorization()) {
+      assert{{Id}}ActionToken(this.token);
+    }
+  }
+
+  rest<T>(
+    method: string,
+    url: string,
+    params: Readonly<Record<string, string>> = {},
+  ): Promise<T> {
+    assertNotRestLanguages(url);
+    const key = restCacheKey({ method, url, params });
+    const hit = this.restCache.get(key);
+    if (hit !== undefined) {
+      return hit as Promise<T>;
+    }
+    const target = withSearchParams(url, params);
+    assertNotRestLanguages(target);
+    const pending = this.send<T>(method, target, undefined);
+    this.restCache.set(key, pending);
+    return pending;
+  }
+
+  graphql<T>(query: string, variables: unknown = {}): Promise<T> {
+    const key = graphqlCacheKey({ query, variables });
+    const hit = this.graphqlCache.get(key);
+    if (hit !== undefined) {
+      return hit as Promise<T>;
+    }
+    const pending = this.send<T>("POST", {{ID}}_GRAPHQL_URL, {
+      query,
+      variables,
+    });
+    this.graphqlCache.set(key, pending);
+    return pending;
+  }
+
+  /**
+   * GitHub-class language bytes. Omit live crawl when {{id}} is not github.
+   * NEVER one GraphQL call per repository. NEVER paginate repositories(first:100)
+   * as a second independent 500.
+   */
+  languageNodeBatches(orderedIds: readonly string[]): string[][] {
+    return batchNodeIds(orderedIds, GRAPHQL_BATCH);
+  }
+
+  private async send<T>(
+    method: string,
+    url: string,
+    body: unknown,
+  ): Promise<T> {
+    assertNotRestLanguages(url);
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      ...{{id}}AuthorizationHeader(this.token),
+    };
+    if (body !== undefined) {
+      headers["Content-Type"] = "application/json";
+    }
+    const response = await this.fetchImpl(url, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    if (!response.ok) {
+      throw new Error(`{{id}} HTTP ${response.status} ${method} ${url}`);
+    }
+    return (await response.json()) as T;
+  }
+}
+
+function withSearchParams(
+  url: string,
+  params: Readonly<Record<string, string>>,
+): string {
+  const keys = Object.keys(params);
+  if (keys.length === 0) {
+    return url;
+  }
+  const encoded = keys
+    .sort()
+    .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key] ?? "")}`)
+    .join("&");
+  return url.includes("?") ? `${url}&${encoded}` : `${url}?${encoded}`;
+}

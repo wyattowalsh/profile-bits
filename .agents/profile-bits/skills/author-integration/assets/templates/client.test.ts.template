@@ -1,0 +1,179 @@
+/**
+ * Destination: packages/integrations/src/{{id}}/client.test.ts
+ * Mocked HTTP only. Never live GitHub / WakaTime / network.
+ */
+import { describe, expect, it, vi } from "vitest";
+import { assert{{Id}}ActionToken } from "./auth.js";
+import {
+  batchNodeIds,
+  filterThenCap,
+  getShared{{Id}}Client,
+  graphqlCacheKey,
+  restCacheKey,
+  {{Id}}Client,
+  assertNotRestLanguages,
+} from "./client.js";
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+describe("{{id}} client (mocked HTTP)", () => {
+  it("fails the Action on empty / whitespace token when auth is not none", () => {
+    if ("{{auth}}" === "none") {
+      expect(() => assert{{Id}}ActionToken(undefined)).not.toThrow();
+      return;
+    }
+    expect(() => assert{{Id}}ActionToken("")).toThrow(/missing token/);
+    expect(() => assert{{Id}}ActionToken("   ")).toThrow(/missing token/);
+    expect(() => assert{{Id}}ActionToken(undefined)).toThrow(/missing token/);
+  });
+
+  it("does not send unauthenticated requests when a token is required", async () => {
+    if ("{{auth}}" === "none") {
+      return;
+    }
+    const fetchMock = vi.fn();
+    expect(
+      () =>
+        new {{Id}}Client({
+          token: "",
+          fetch: fetchMock,
+        }),
+    ).toThrow(/missing token/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("shares one client instance per run", () => {
+    const run = {};
+    const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
+    const context = { token: "ghs_test_token", fetch: fetchMock };
+    const first  = getShared{{Id}}Client(run, context);
+    const second = getShared{{Id}}Client(run, context);
+    expect(first).toBe(second);
+  });
+
+  it("keys REST cache on (method, url, params)", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ n: 1 }));
+    const client = new {{Id}}Client({
+      token: "ghs_test_token",
+      fetch: fetchMock,
+    });
+    await client.rest("GET", "https://example.test/v1/user", { page: "1" });
+    await client.rest("GET", "https://example.test/v1/user", { page: "1" });
+    await client.rest("GET", "https://example.test/v1/user", { page: "2" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(restCacheKey({
+      method: "GET",
+      url:    "https://example.test/v1/user",
+      params: { page: "1" },
+    })).not.toBe(
+      restCacheKey({
+        method: "GET",
+        url:    "https://example.test/v1/user",
+        params: { page: "2" },
+      }),
+    );
+  });
+
+  it("keys GraphQL cache on (query, variables), not POST /graphql alone", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ data: {} }));
+    const client = new {{Id}}Client({
+      token: "ghs_test_token",
+      fetch: fetchMock,
+    });
+    const queryA = "query A { viewer { login } }";
+    const queryB = "query B { viewer { id } }";
+    await client.graphql(queryA, { login: "octocat" });
+    await client.graphql(queryA, { login: "octocat" });
+    await client.graphql(queryA, { login: "hubot" });
+    await client.graphql(queryB, { login: "octocat" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(
+      graphqlCacheKey({ query: queryA, variables: { login: "octocat" } }),
+    ).not.toBe("POST /graphql");
+    expect(
+      graphqlCacheKey({ query: queryA, variables: { login: "octocat" } }),
+    ).not.toBe(
+      graphqlCacheKey({ query: queryA, variables: { login: "hubot" } }),
+    );
+  });
+
+  it("never calls REST /languages", () => {
+    expect(() =>
+      assertNotRestLanguages(
+        "https://api.github.com/repos/octocat/hello/languages",
+      ),
+    ).toThrow(/REST \/languages/);
+    const fetchMock = vi.fn();
+    const client = new {{Id}}Client({
+      token: "ghs_test_token",
+      fetch: fetchMock,
+    });
+    expect(() =>
+      client.rest(
+        "GET",
+        "https://api.github.com/repos/octocat/hello/languages",
+      ),
+    ).toThrow(/REST \/languages/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("filters forks/archived then caps 500 (never cap-then-filter)", () => {
+    const repos = [
+      { id: "keep-1", fork: false, archived: false },
+      { id: "fork",   fork: true,  archived: false },
+      { id: "arch",   fork: false, archived: true },
+      { id: "keep-2", fork: false, archived: false },
+    ];
+    const capped = filterThenCap(repos, {
+      includeForks:    false,
+      includeArchived: false,
+    }, 1);
+    expect(capped.map((repo) => repo.id)).toEqual(["keep-1"]);
+    const many = Array.from({ length: 600 }, (_, index) => ({
+      id:       `r${index}`,
+      fork:     index < 50,
+      archived: index >= 550,
+    }));
+    const filtered = filterThenCap(many, {
+      includeForks:    false,
+      includeArchived: false,
+    });
+    expect(filtered).toHaveLength(500);
+    expect(filtered[0]?.id).toBe("r50");
+  });
+
+  it("batches GraphQL nodes(ids:) at 100", () => {
+    const ids = Array.from({ length: 250 }, (_, index) => `id-${index}`);
+    const batches = batchNodeIds(ids);
+    expect(batches).toHaveLength(3);
+    expect(batches[0]).toHaveLength(100);
+    expect(batches[1]).toHaveLength(100);
+    expect(batches[2]).toHaveLength(50);
+  });
+
+  it("sends Authorization on outbound HTTP when auth is not none", async () => {
+    if ("{{auth}}" === "none") {
+      const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
+      const client = new {{Id}}Client({ fetch: fetchMock });
+      await client.rest("GET", "https://example.test/fixture");
+      const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+      const headers = init?.headers as Record<string, string> | undefined;
+      expect(headers?.Authorization).toBeUndefined();
+      return;
+    }
+    const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
+    const client = new {{Id}}Client({
+      token: "ghs_test_token",
+      fetch: fetchMock,
+    });
+    await client.rest("GET", "https://example.test/v1/user");
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const headers = init?.headers as Record<string, string> | undefined;
+    expect(headers?.Authorization).toBe("Bearer ghs_test_token");
+  });
+});

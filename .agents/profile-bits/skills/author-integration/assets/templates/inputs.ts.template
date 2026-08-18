@@ -1,0 +1,13 @@
+/**
+ * Destination: packages/integrations/src/{{id}}/inputs.ts
+ * Integration-level client inputs (run config), NOT Action Marketplace inputs.
+ * Public yaml keys require an OpenSpec delta first.
+ * Never emit plugin_{{id}}_* or plugin_<plugin>_<widget>_<option> inputs.
+ */
+import * as z from "zod";
+
+export const {{Id}}InputsSchema = z.strictObject({});
+
+export type {{Id}}Inputs = z.infer<typeof {{Id}}InputsSchema>;
+
+export const {{ID}}_INPUT_DEFAULTS = {} as const satisfies {{Id}}Inputs;

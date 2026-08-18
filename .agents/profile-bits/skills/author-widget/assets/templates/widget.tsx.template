@@ -1,0 +1,49 @@
+import {
+  Avatar,
+  Bar,
+  Chip,
+  Divider,
+  Frame,
+  Muted,
+  Row,
+  Stack,
+  Stat,
+  Text,
+  Theme,
+} from "@profile-bits/bits";
+import type { ThemeId, ThemePalette } from "@profile-bits/themes";
+
+/**
+ * Takumi-safe React card. Card 480×160. Root width/height 100%.
+ * Render via @profile-bits/renderer only (takumi-js 2.9.2).
+ * No react-dom, useEffect, portals, Radix/shadcn DOM, or HTTP.
+ *
+ * Discover as react from canonical widget.tsx — omit `source`.
+ */
+export function Widget(props: {
+  data: {{WIDGET_PASCAL}}Payload;
+  options: {{WIDGET_PASCAL}}Options;
+  theme: ThemeId | ThemePalette;
+}) {
+  const { data, options, theme } = props;
+
+  return (
+    <Theme theme={theme}>
+      <Frame tw="h-full w-full">
+        <Stack tw="h-full w-full gap-2 p-3">
+          <Row tw="items-center gap-2">
+            <Avatar src={data.avatarUrl} tw="h-8 w-8" />
+            <Text tw="text-sm font-semibold">{data.title}</Text>
+            <Muted tw="text-xs">{options.subtitle ?? data.subtitle}</Muted>
+          </Row>
+          <Divider />
+          <Row tw="gap-3">
+            <Stat label={data.statLabel} value={String(data.statValue)} />
+            <Chip>{data.chip}</Chip>
+          </Row>
+          <Bar value={data.barPct} tw="w-full" />
+        </Stack>
+      </Frame>
+    </Theme>
+  );
+}
