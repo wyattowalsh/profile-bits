@@ -1,0 +1,40 @@
+# profile-bits
+
+> GitHub profile widget generator. A plugin is a pack of widgets plus declared integrations.
+
+README delivery is the Action (commit widget files). The docs playground is layout preview only, not a public embed API.
+
+## Widgets
+
+Widget ids come from plugin/widget option schemas (not a hand-copied option table):
+
+### `github`
+
+- `demo`
+- `stats`
+- `languages`
+
+### `wakatime`
+
+- `coding`
+
+### `rss`
+
+- `feed`
+
+### `http`
+
+- `json`
+- `chips`
+
+## Configuration
+
+Committed `.github/profile-bits.yml` is the config SSOT (`additionalProperties: false`). Widget options live in yaml and may change without a Marketplace input bump.
+
+Root `action.yml` is thin: `user`, `github_token`, `committer_token`, `config`, `output_action`, `dry_run`, optional format/theme overrides, optional `plugin_github`. There are no flattened `plugin_<plugin>_<widget>_<option>` Action inputs (including `plugin_github_stats_include`).
+
+## Docs
+
+- [Docs](/docs): github pack usage
+- [Playground](/playground): codegen (layout preview + YAML/markdown)
+- [Generate](/generate): visual catalog, export, and share

@@ -4,12 +4,26 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "echo 'placeholder: fumadocs dev (T130a)'",
-    "build": "echo 'placeholder: fumadocs build (T130a)'"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@profile-bits/bits": "workspace:*",
+    "@profile-bits/core": "workspace:*",
+    "@profile-bits/integrations": "workspace:*",
+    "@profile-bits/plugins": "workspace:*",
+    "@profile-bits/renderer": "workspace:*",
     "fumadocs-core": "catalog:",
     "fumadocs-ui": "catalog:",
-    "next": "catalog:"
+    "next": "catalog:",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

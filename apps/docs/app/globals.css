@@ -1,0 +1,238 @@
+@import "fumadocs-ui/style.css";
+
+/* Shadcn tokens. Fumadocs UI maps --color-fd-* onto these for the shadcn theme. */
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --color-fd-background: var(--background);
+  --color-fd-foreground: var(--foreground);
+  --color-fd-muted: var(--muted);
+  --color-fd-muted-foreground: var(--muted-foreground);
+  --color-fd-popover: var(--popover);
+  --color-fd-popover-foreground: var(--popover-foreground);
+  --color-fd-card: var(--card);
+  --color-fd-card-foreground: var(--card-foreground);
+  --color-fd-border: var(--border);
+  --color-fd-primary: var(--primary);
+  --color-fd-primary-foreground: var(--primary-foreground);
+  --color-fd-secondary: var(--secondary);
+  --color-fd-secondary-foreground: var(--secondary-foreground);
+  --color-fd-accent: var(--accent);
+  --color-fd-accent-foreground: var(--accent-foreground);
+  --color-fd-ring: var(--ring);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.docs-home {
+  width: min(48rem, 100%);
+  margin-inline: auto;
+  padding: 3rem 1rem 4rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.docs-home h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.docs-home p,
+.docs-home ul {
+  margin: 0;
+  color: var(--color-fd-muted-foreground);
+}
+
+.docs-home a {
+  color: var(--color-fd-primary);
+  text-decoration: underline;
+}
+
+.docs-home code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.875em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  html :where(*, *::before, *::after) {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+  }
+}
+
+[data-slot="badge"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-fd-border);
+  background: var(--color-fd-muted);
+  color: var(--color-fd-foreground);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+[data-slot="skeleton"] {
+  display: block;
+  border-radius: 0.375rem;
+  background: var(--color-fd-muted);
+}
+
+[data-slot="field"] {
+  display: grid;
+  gap: 0.375rem;
+}
+
+[data-slot="field-label"] {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+[data-slot="field-description"] {
+  font-size: 0.75rem;
+  color: var(--color-fd-muted-foreground);
+}
+
+[data-slot="toggle-group"] {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  min-inline-size: 0;
+}
+
+[data-slot="tabs-list"] {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+[data-slot="toggle-group-item"],
+[data-slot="tabs-trigger"] {
+  border: 1px solid var(--color-fd-border);
+  background: var(--color-fd-background);
+  color: var(--color-fd-foreground);
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+[data-slot="toggle-group-item"][aria-pressed="true"],
+[data-slot="tabs-trigger"][aria-selected="true"] {
+  background: var(--color-fd-primary);
+  color: var(--color-fd-primary-foreground);
+}
+
+[data-slot="sheet-content"],
+[data-slot="dropdown-menu-content"] {
+  border: 1px solid var(--color-fd-border);
+  background: var(--color-fd-popover);
+  color: var(--color-fd-popover-foreground);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+[data-slot="dropdown-menu-item"] {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  border-radius: 0.25rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+[data-slot="dropdown-menu-item"]:hover,
+[data-slot="dropdown-menu-item"]:focus {
+  background: var(--color-fd-accent);
+  color: var(--color-fd-accent-foreground);
+}
+
+[data-slot="breadcrumb"] {
+  font-size: 0.875rem;
+}
+
+[data-slot="breadcrumb-list"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+[data-slot="form"] {
+  display: grid;
+  gap: 1rem;
+}
