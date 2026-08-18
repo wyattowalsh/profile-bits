@@ -13,7 +13,7 @@
     "docs-dev": "pnpm --filter @profile-bits/docs dev",
     "render": "echo 'placeholder: render (T100)'",
     "generate-action": "node --experimental-strip-types --disable-warning=ExperimentalWarning packages/core/src/codegen/cli.ts",
-    "generate-docs": "echo 'placeholder: generate-docs'",
+    "generate-docs": "node --experimental-strip-types --disable-warning=ExperimentalWarning packages/core/src/codegen/docs-cli.ts",
     "check": "pnpm lint && pnpm test && pnpm generate-action --check && pnpm generate-docs --check"
   },
   "devDependencies": {

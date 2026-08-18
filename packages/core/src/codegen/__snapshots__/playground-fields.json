@@ -1,0 +1,193 @@
+[
+  {
+    "path": "format",
+    "label": "Format",
+    "type": "string",
+    "default": "svg",
+    "enum": [
+      "svg",
+      "png",
+      "jpeg",
+      "webp",
+      "ico",
+      "gif",
+      "apng"
+    ],
+    "group": "global"
+  },
+  {
+    "path": "theme",
+    "label": "Theme",
+    "type": "string",
+    "default": "dark",
+    "group": "global"
+  },
+  {
+    "path": "output_pair",
+    "label": "Output Pair",
+    "type": "boolean",
+    "default": false,
+    "group": "global"
+  },
+  {
+    "path": "animated",
+    "label": "Animated",
+    "type": "boolean",
+    "default": false,
+    "group": "global"
+  },
+  {
+    "path": "user",
+    "label": "User",
+    "type": "string",
+    "default": "github.repository_owner",
+    "group": "global"
+  },
+  {
+    "path": "demo.text",
+    "label": "Text",
+    "type": "string",
+    "default": "profile-bits",
+    "group": "demo"
+  },
+  {
+    "path": "demo.subtitle",
+    "label": "Subtitle",
+    "type": "string",
+    "group": "demo"
+  },
+  {
+    "path": "demo.animate",
+    "label": "Animate",
+    "type": "boolean",
+    "default": true,
+    "group": "demo"
+  },
+  {
+    "path": "stats.filename",
+    "label": "Filename",
+    "type": "string",
+    "default": "stats",
+    "group": "stats"
+  },
+  {
+    "path": "stats.include",
+    "label": "Include",
+    "type": "array",
+    "default": [
+      "followers",
+      "repos",
+      "stars"
+    ],
+    "enum": [
+      "followers",
+      "following",
+      "repos",
+      "stars",
+      "forks",
+      "gists",
+      "contributions"
+    ],
+    "group": "stats"
+  },
+  {
+    "path": "stats.hide_rank",
+    "label": "Hide Rank",
+    "type": "boolean",
+    "default": true,
+    "group": "stats"
+  },
+  {
+    "path": "stats.avatar",
+    "label": "Avatar",
+    "type": "boolean",
+    "default": true,
+    "group": "stats"
+  },
+  {
+    "path": "stats.animate",
+    "label": "Animate",
+    "type": "boolean",
+    "default": false,
+    "group": "stats"
+  },
+  {
+    "path": "stats.include_private",
+    "label": "Include Private",
+    "type": "boolean",
+    "default": false,
+    "group": "stats"
+  },
+  {
+    "path": "stats.include_forks",
+    "label": "Include Forks",
+    "type": "boolean",
+    "default": false,
+    "group": "stats"
+  },
+  {
+    "path": "stats.include_archived",
+    "label": "Include Archived",
+    "type": "boolean",
+    "default": false,
+    "group": "stats"
+  },
+  {
+    "path": "languages.filename",
+    "label": "Filename",
+    "type": "string",
+    "default": "languages",
+    "group": "languages"
+  },
+  {
+    "path": "languages.limit",
+    "label": "Limit",
+    "type": "integer",
+    "default": 8,
+    "min": 1,
+    "max": 16,
+    "group": "languages"
+  },
+  {
+    "path": "languages.min_pct",
+    "label": "Min Pct",
+    "type": "number",
+    "default": 1,
+    "group": "languages"
+  },
+  {
+    "path": "languages.exclude",
+    "label": "Exclude",
+    "type": "array",
+    "default": [],
+    "group": "languages"
+  },
+  {
+    "path": "languages.animate",
+    "label": "Animate",
+    "type": "boolean",
+    "default": false,
+    "group": "languages"
+  },
+  {
+    "path": "languages.include_private",
+    "label": "Include Private",
+    "type": "boolean",
+    "default": false,
+    "group": "languages"
+  },
+  {
+    "path": "languages.include_forks",
+    "label": "Include Forks",
+    "type": "boolean",
+    "default": false,
+    "group": "languages"
+  },
+  {
+    "path": "languages.include_archived",
+    "label": "Include Archived",
+    "type": "boolean",
+    "default": false,
+    "group": "languages"
+  }
+]
