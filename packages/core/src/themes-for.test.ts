@@ -3,17 +3,16 @@ import { themeMembersFor, themesFor } from "./themes-for.js";
 
 describe("themesFor", () => {
   it("returns the selected named flavor when output_pair is false", () => {
-    expect(themesFor({ theme: "catppuccin-mocha", output_pair: false })).toEqual(
-      ["catppuccin-mocha"],
-    );
+    expect(
+      themesFor({ theme: "catppuccin-mocha", output_pair: false }),
+    ).toEqual(["catppuccin-mocha"]);
     expect(themesFor({ theme: "dark", output_pair: false })).toEqual(["dark"]);
   });
 
   it("returns light then dark members when output_pair is true", () => {
-    expect(themesFor({ theme: "catppuccin-mocha", output_pair: true })).toEqual([
-      "catppuccin-latte",
-      "catppuccin-mocha",
-    ]);
+    expect(themesFor({ theme: "catppuccin-mocha", output_pair: true })).toEqual(
+      ["catppuccin-latte", "catppuccin-mocha"],
+    );
     expect(themesFor({ theme: "nord-light", output_pair: true })).toEqual([
       "nord-light",
       "nord",

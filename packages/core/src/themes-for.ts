@@ -35,11 +35,7 @@ export function themeMembersFor(
     return [selectedMember(config.theme, members)];
   }
   return [...members].sort((left, right) =>
-    left.polarity === right.polarity
-      ? 0
-      : left.polarity === "light"
-        ? -1
-        : 1,
+    left.polarity === right.polarity ? 0 : left.polarity === "light" ? -1 : 1,
   );
 }
 
@@ -98,7 +94,12 @@ function selectedMember(
   if (custom !== undefined) {
     return custom;
   }
-  return members[0] ?? { polarity: "dark", theme: resolveTheme("dark", THEME_REGISTRY) };
+  return (
+    members[0] ?? {
+      polarity: "dark",
+      theme: resolveTheme("dark", THEME_REGISTRY),
+    }
+  );
 }
 
 function resolveRoleMap(roles: CustomRoleMap): ThemePalette {
