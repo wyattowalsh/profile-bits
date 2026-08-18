@@ -7,7 +7,7 @@ Defines Agent Plugin 1.0.0 packaging at `.agents/profile-bits` and the authoring
 ## Requirements
 
 ### Requirement: Agent Plugin 1.0.0 lives at .agents/profile-bits
-The authoring plugin MUST be packaged as an Agent Plugin 1.0.0 at `.agents/profile-bits`. `plugin.json` MUST validate against the Agent Plugins 1.0.0 schema (`additionalProperties: false`). The plugin `name` MUST be `profile-bits`. The plugin MUST NOT declare MCP, a `skills` array, or unknown top-level fields. This capability MUST NOT rewrite `plugin-contract`, `widget-contract`, or `integration-contract`. The plugin root MUST be a real file tree at `.agents/profile-bits` (sibling of `.agents/skills`), MUST NOT live inside `.agents/skills`, MUST NOT be a copied skills tree under `.agents/skills` or `.cursor`, and MUST NOT keep an `agent-plugin/` directory, alias, or copy. Install MUST be `npx skills add ./.agents/profile-bits --all`.
+The authoring plugin MUST be packaged as an Agent Plugin 1.0.0 at `.agents/profile-bits`. `plugin.json` MUST validate against the Agent Plugins 1.0.0 schema (`additionalProperties: false`). The plugin `name` MUST be `profile-bits`. The plugin MUST NOT declare MCP, a `skills` array, or unknown top-level fields. This capability MUST NOT rewrite `plugin-contract`, `widget-contract`, or `integration-contract`. The plugin root MUST be a real file tree at `.agents/profile-bits` (sibling of `.agents/skills`), MUST NOT live inside `.agents/skills`, MUST NOT be a copied skills tree under `.agents/skills` or `.cursor`, and MUST NOT keep an `agent-plugin/` directory, alias, or copy. Install is a documented human command, not an agent step in this repo. Install MUST be `npx skills add ./.agents/profile-bits`. Install MUST NOT pass `--all`. Install MUST NOT pass `-a claude-code` or create `.claude/` / `.claude/skills`. This repo already commits relative symlinks (git `120000`): `.agents/skills/author{,-integration,-widget,-plugin}` → `../profile-bits/skills/<id>`. Agents MUST NOT run `skills add` here.
 
 #### Scenario: plugin.json validates as Agent Plugins 1.0.0
 - **WHEN** `.agents/profile-bits/plugin.json` is validated
@@ -19,7 +19,7 @@ The authoring plugin MUST be packaged as an Agent Plugin 1.0.0 at `.agents/profi
 
 #### Scenario: agent-plugin is not a live path
 - **WHEN** the authoring plugin is installed or validated after SSOT migrate
-- **THEN** `agent-plugin/` MUST NOT exist as a directory, alias, or copy and install MUST be `npx skills add ./.agents/profile-bits --all`
+- **THEN** `agent-plugin/` MUST NOT exist as a directory, alias, or copy and install MUST be `npx skills add ./.agents/profile-bits`. Install MUST NOT pass `--all`. Install MUST NOT pass `-a claude-code` or create `.claude/` / `.claude/skills`. Agents MUST NOT run `skills add` here.
 
 ### Requirement: mcp.json is forbidden
 The plugin MUST NOT include `mcp.json`. Validation MUST fail if `mcp.json` is present under the plugin root. v0 MUST NOT ship MCP.
@@ -33,7 +33,7 @@ The plugin MUST NOT include `mcp.json`. Validation MUST fail if `mcp.json` is pr
 - **THEN** `mcp.json` MUST be omitted and MCP MUST NOT be required for the plugin to be valid
 
 ### Requirement: Four skills plus umbrella author routing
-The plugin MUST ship four skills whose frontmatter `name` matches the skill directory: `author` (umbrella router), `author-integration`, `author-widget`, and `author-plugin`. Each skill MUST declare portable-core frontmatter: `name`, `description`, `license: MIT`, `compatibility`, `metadata.author: profile-bits`, and `metadata.version: "0.1.0"`. Compatibility MUST be: `Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.` The plugin MUST NOT ship a fifth skill (including `author-bit` or `author-ideate`). The umbrella skill MUST read the OpenSpec contracts (`plugin-contract`, `widget-contract`, `integration-contract`, and this capability when present) plus `packages/core/src/types.ts` before routing. A new data source MUST route to `author-integration` first. A new card MUST route to `author-widget` on an existing pack unless the author asked for a new pack. A new pack MUST route to `author-plugin`, referencing existing or new integrations. Ideate/next/brainstorm MUST be an `author` mode (not a separate skill). Empty arguments MUST show a gallery that lists ideate as item 0 and MUST then stop; empty arguments MUST NOT inventory, rank, or write files. A named kind MUST be honored unless a lock fires (MCP, flattened `plugin_*_*_*` inputs, unauthenticated GitHub, REST `/languages`, a second pack for an existing first-party id, or an invented Action input).
+The plugin MUST ship four skills whose frontmatter `name` matches the skill directory: `author` (umbrella router), `author-integration`, `author-widget`, and `author-plugin`. Each skill MUST declare portable-core frontmatter: `name`, `description`, `license: MIT`, `compatibility`, `metadata.author: profile-bits`, and `metadata.version: "0.1.0"`. Compatibility MUST be: `Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.` The plugin MUST NOT ship a fifth skill (including `author-bit` or `author-ideate`). The umbrella skill MUST read the OpenSpec contracts (`plugin-contract`, `widget-contract`, `integration-contract`, and this capability when present) plus `packages/core/src/types.ts` before routing, except empty arguments and help, which MUST skip Before routing (MUST NOT read those contracts or `types.ts`). A new data source MUST route to `author-integration` first. A new card MUST route to `author-widget` on an existing pack unless the author asked for a new pack. A new pack MUST route to `author-plugin`, referencing existing or new integrations. Ideate/next/brainstorm MUST be an `author` mode (not a separate skill). Empty arguments MUST show a gallery that lists ideate as item 0 (items 0–3 only) and MUST then stop; empty arguments MUST NOT inventory, rank, or write files. A named kind MUST be honored unless a lock fires (MCP, flattened `plugin_*_*_*` inputs, unauthenticated GitHub, REST `/languages`, a second pack for an existing first-party id, or an invented Action input).
 
 #### Scenario: New data source routes to author-integration
 - **WHEN** the author asks to add a new data source such as WakaTime
@@ -51,6 +51,10 @@ The plugin MUST ship four skills whose frontmatter `name` matches the skill dire
 - **WHEN** the umbrella skill is invoked with empty arguments
 - **THEN** it MUST show a gallery that includes ideate as item 0 and MUST stop without inventorying or writing files
 
+#### Scenario: Empty arguments and help skip Before routing
+- **WHEN** the umbrella skill is invoked with empty arguments or help
+- **THEN** it MUST skip Before routing, MUST NOT read `packages/core/src/types.ts` or the OpenSpec contracts, MUST show a gallery that includes ideate as item 0 (items 0–3 only), and MUST stop without inventorying, ranking, or writing files
+
 #### Scenario: Ideate mode ranks one next without writing
 - **WHEN** the author asks `ideate`, `next`, `brainstorm`, or what to add next
 - **THEN** the umbrella skill MUST inventory live `FIRST_PARTY_*` plus on-disk holes, MUST rank one next kind with handoff, and MUST NOT write files
@@ -60,7 +64,7 @@ The plugin MUST ship four skills whose frontmatter `name` matches the skill dire
 - **THEN** the umbrella skill MUST route to that kind unless a lock fires and MUST NOT ignore the named kind solely because another hole ranks higher
 
 ### Requirement: Templates stay in the plugin root
-Skill templates MUST live under the plugin root (skill-local `assets/templates/` or equivalent inside `.agents/profile-bits`). Template paths MUST NOT contain `../`. Destination paths MUST be documented as repo-root paths in the skill body, not as plugin-relative escapes. Documented dest examples MUST include `packages/integrations/src/<id>/` and `packages/plugins/src/<pack>/widgets/<id>/`. Pack registry dest MUST be `packages/plugins/src/<pack>/plugin.ts`. Validation MUST fail if any template path contains `../`. Skills MUST NOT add a new `index.ts.template`.
+Skill templates MUST live under the plugin root (skill-local `assets/templates/` or equivalent inside `.agents/profile-bits`). Template paths MUST NOT contain `../`. Destination paths MUST be documented as repo-root paths in the skill body, not as plugin-relative escapes. Documented dest examples MUST include `packages/integrations/src/<id>/` and `packages/plugins/src/<pack>/widgets/<id>/`. Pack registry dest MUST be `packages/plugins/src/<pack>/plugin.ts`. Validation MUST fail if any template path contains `../`. Skills MUST NOT add a new integration `index.ts.template`. Pack skills MUST NOT ship a per-pack `index.ts.template` (live packs have no per-pack `index.ts`). The integrations barrel `packages/integrations/src/index.ts` is mention-only.
 
 #### Scenario: Template path with parent segments fails validation
 - **WHEN** a skill template path contains `../`
@@ -69,6 +73,14 @@ Skill templates MUST live under the plugin root (skill-local `assets/templates/`
 #### Scenario: Templates generate into packages only when skills run
 - **WHEN** authoring skills copy templates
 - **THEN** the template files MUST remain inside the plugin root and live package source MUST be written only as the documented repo-root destination of a skill run (`packages/integrations/src/<id>/` or `packages/plugins/src/<pack>/widgets/<id>/`)
+
+#### Scenario: Complete-existing does not clobber live files
+- **WHEN** authoring skills run against a pack, widget, or integration that already exists on disk
+- **THEN** they MUST inventory live files, MUST extend rather than overwrite complete existing sources, MUST keep `githubWidgetRegistry` on the github pack, MUST NOT shrink live `WAKATIME_BITS_USED`, and MUST copy templates only into empty or new directories
+
+#### Scenario: Placeholder dialects stay pack widget and integration local
+- **WHEN** authoring templates are substituted
+- **THEN** pack templates MUST use `{{PLUGIN_ID}}` / `{{PLUGIN_ID_UPPER}}` (emitting `<id>Plugin` / `<ID>_BITS_USED`), widget templates MUST use `{{PACK_ID}}` / `{{WIDGET_*}}`, integration templates MUST use `{{id}}` / `{{Id}}` / `{{ID}}` / `{{auth}}` / `{{scheme}}`, dialects MUST NOT be unified, and substituted ids MUST match `^[a-z][a-z0-9-]*$` with no `..` and no `/`
 
 ### Requirement: Harness trees are relative symlinks not a second skills SSOT
 `.agents/skills/author`, `.agents/skills/author-integration`, `.agents/skills/author-widget`, and `.agents/skills/author-plugin` MUST be relative symlinks to `.agents/profile-bits/skills/<id>`. Those harness trees MUST NOT be a copied or hand-edited second skills SSOT. Generated OpenSpec skill trees (`openspec-*`) under `.agents/skills` MUST NOT be rewritten by this capability. `.cursor/skills/` MUST NOT be written as a second authoring-skills tree. This capability MUST NOT require `.claude/skills/<id>` to exist, and MUST NOT create or document `.claude/` or `.claude/skills` as authoring-skill projections.
@@ -153,7 +165,7 @@ Catalog SSOT MUST be `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`, `FI
 - **THEN** the skills MUST generate or complete a pack registry with a derived integration union, MUST require an OpenSpec delta before expanding first-party plugin ids, and MUST NOT create a second pack for an existing id
 
 ### Requirement: Author-widget source discovery and Takumi-safe output
-`author-widget` MUST generate a widget that consumes a cached integration payload and MUST NOT perform HTTP. Source discovery MUST prefer omitting explicit `source`: extension, then MIME, then sniff. `.md` that contains import, export, or JSX MUST promote to `mdx`. An explicit `source` MUST match the file bytes or fail. Ambiguous `widget.md` plus `widget.tsx` without `source` MUST fail. Canonical drop-in MDX without `source` MUST be `widget.mdx`. Stylesheets MUST use Takumi-safe `tw` / `className` on `div` / `span` / `img` and MUST compose bits. CSS `@keyframes` MUST be authoring input to animation render; APNG files MUST be named `.png`; default SVG MUST remain a baked still.
+`author-widget` MUST generate a widget that consumes a cached integration payload and MUST NOT perform HTTP. Source discovery MUST prefer omitting explicit `source`: extension, then MIME, then sniff. `.md` that contains import, export, or JSX MUST promote to `mdx`. An explicit `source` MUST match the file bytes or fail. Ambiguous `widget.md` plus `widget.tsx` without `source` MUST fail. Canonical drop-in MDX without `source` MUST be `widget.mdx`. Stylesheets MUST use Takumi-safe `tw` / `className` on `div` / `span` / `img` and MUST compose bits imported from `@profile-bits/bits` with typed props (bits MUST NOT be yaml). CSS `@keyframes` MUST be authoring input to animation render; APNG files MUST be named `.png`; default SVG MUST remain a baked still.
 
 #### Scenario: Drop-in widget.mdx omits source
 - **WHEN** the author drops in `widget.mdx` with no explicit `source`
@@ -169,7 +181,11 @@ Catalog SSOT MUST be `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`, `FI
 
 #### Scenario: Tailwind stylesheet stays Takumi-safe
 - **WHEN** the author asks for a Tailwind stylesheet widget
-- **THEN** the skill MUST use Takumi-safe `tw` / `className` composition with bits and MUST NOT require `react-dom`, `useEffect`, portals, or DOM component libraries
+- **THEN** the skill MUST use Takumi-safe `tw` / `className` only on `div` / `span` / `img`, MUST compose bits with typed props, MUST NOT pass `tw` / `className` / `style` to bits, and MUST NOT require `react-dom`, `useEffect`, portals, or DOM component libraries
+
+#### Scenario: Widget bits import from @profile-bits/bits
+- **WHEN** `author-widget` generates a React or MDX card
+- **THEN** it MUST import bits from `@profile-bits/bits` with typed props, MUST NOT treat bits as yaml, and MUST NOT pass `tw` / `className` / `style` to bits
 
 ### Requirement: Exclusive markdown family swaps
 When `md` or `mdx` widgets declare `md.families`, each family MUST be exclusive (do not stack). A swap of `md.families.code` MUST replace the previous code family rather than stacking highlighters.
@@ -188,7 +204,7 @@ Each skill MUST ship Agent Skills evals (`evals/evals.json`) with `skill_name` a
 | New pack using github + static | author-plugin | Pack registry + derived union; OpenSpec before expanding plugin ids; no duplicate pack |
 | Widget with CSS animation for gif/apng | author-widget | `@keyframes` authoring; APNG `.png`; SVG still remains baked |
 | Drop in `widget.mdx` with no `source` | author-widget | Prefer omit `source`; canonical `widget.mdx` |
-| Tailwind stylesheets widget | author-widget | Takumi-safe `tw`/`className`; bits composition |
+| Tailwind stylesheets widget | author-widget | Takumi-safe `tw`/`className` on div/span/img only; typed bit props; bits composition |
 | Swap `md.families.code` to starry-night | author-widget | Exclusive family swap, do not stack pretty-code + starry-night |
 | Ideate next best | author | Inventory + one ranked kind + handoff; no files written |
 | Empty-args does not ideate | author | Gallery including ideate; does not inventory or write |
@@ -206,27 +222,39 @@ Each skill MUST ship Agent Skills evals (`evals/evals.json`) with `skill_name` a
 - **THEN** they MUST include an ideate case that ranks without writing and an empty-args case that galleries and does not inventory
 
 ### Requirement: Plugin validation suite
-The plugin MUST ship a validate script that (1) validates `plugin.json` against Agent Plugins 1.0.0, (2) rejects `mcp.json` if present, (3) runs `skills-ref validate` on each `skills/<id>` (name MUST match directory), (4) runs `just generate-action --check` from the repo root when that recipe exists, and (5) fails if any template path contains `../`.
+The plugin MUST ship a validate script (`scripts/validate.sh`) that (1) validates `plugin.json` against Agent Plugins 1.0.0, (2) rejects `mcp.json` if present anywhere under the plugin root (recursive), (3) runs `pnpm dlx skills-ref@0.1.5 validate skills/<id>` on each `skills/<id>` (name MUST match directory) with no `agentskills` fallback, (4) runs `just generate-action --check` from the repo root when that recipe exists, (5) fails if any template path contains `../`, (6) contains template paths with Node 24 `fs.realpathSync` plus `path.relative` and MUST fail if the relative path starts with `..`, and (7) asserts `plugin.json` identity: `name` MUST equal `profile-bits`, `version` MUST equal `0.1.0`, `license` MUST equal `MIT`.
 
 #### Scenario: Validate script fails on mcp.json or parent template paths
-- **WHEN** `mcp.json` is present or a template path contains `../`
+- **WHEN** `mcp.json` is present anywhere under the plugin root or a template path contains `../` or resolves outside the plugin root via `realpathSync`
 - **THEN** the validate script MUST fail
 
 #### Scenario: skills-ref validate runs on each skill
 - **WHEN** plugin validation runs
-- **THEN** `skills-ref validate` MUST run on `author`, `author-integration`, `author-widget`, and `author-plugin` and MUST require each skill `name` to match its directory
+- **THEN** `pnpm dlx skills-ref@0.1.5 validate` MUST run on `author`, `author-integration`, `author-widget`, and `author-plugin`, MUST require each skill `name` to match its directory, and MUST NOT fall back to `agentskills`
+
+#### Scenario: plugin.json identity is asserted
+- **WHEN** plugin validation runs
+- **THEN** it MUST assert `plugin.json` `name` is `profile-bits`, `version` is `0.1.0`, and `license` is `MIT`
+
+#### Scenario: Template containment uses realpathSync
+- **WHEN** plugin validation checks template paths
+- **THEN** it MUST resolve with Node `fs.realpathSync` and `path.relative` and MUST fail if the relative path starts with `..`
 
 ### Requirement: Pack-level bitsUsed on the pack plugin object
-Authoring skills MUST treat `bitsUsed` as pack-level. Pack templates MUST export `{{id}}Plugin` and `{{ID}}_BITS_USED`, and MUST set `bitsUsed` on that pack object using `satisfies PluginIdentity & { bitsUsed: typeof … }` because `PluginIdentitySchema` has no `bitsUsed`. The widget skill MUST union widget bits into that pack-level array. `bitsUsed` MUST NOT be yaml, MUST NOT live on a widget-entry-only SSOT, and MUST NOT require a `widget-bits.ts` module in `packages/core`. Skills MUST NOT edit `packages/core` to add `bitsUsed` to the core schema. Pack templates MUST use `docsPath: "{{DOCS_PATH}}"` and MUST NOT hardcode `/generate/<id>/`. Pack templates MUST NOT `export const plugin` as the pack identity.
+Authoring skills MUST treat `bitsUsed` as pack-level. Pack templates MUST use `{{PLUGIN_ID}}` / `{{PLUGIN_ID_UPPER}}` and MUST export `<id>Plugin` and `<ID>_BITS_USED`, and MUST set `bitsUsed` on that pack object using `satisfies PluginIdentity & { bitsUsed: typeof … }` because `PluginIdentitySchema` has no `bitsUsed`. Starter `BITS_USED` MUST be Theme, Frame, Stack, Row, Text, and Muted. Frozen 11 is a membership allow-list only. The widget skill MUST union widget bits into that pack-level array. `bitsUsed` MUST NOT be yaml, MUST NOT live on a widget-entry-only SSOT, and MUST NOT require a `widget-bits.ts` module in `packages/core`. Skills MUST NOT edit `packages/core` to add `bitsUsed` to the core schema. Pack templates MUST use `docsPath: "{{DOCS_PATH}}"` and MUST NOT hardcode `/generate/<id>/`. Pack templates MUST NOT `export const plugin` as the pack identity.
 
 #### Scenario: Pack registry exports pack-level bitsUsed
 - **WHEN** `author-plugin` generates a pack registry
-- **THEN** it MUST export `{{id}}Plugin` with pack-level `{{ID}}_BITS_USED` and MUST NOT export `const plugin` as the pack identity
+- **THEN** it MUST export `{{PLUGIN_ID}}Plugin` with pack-level `{{PLUGIN_ID_UPPER}}_BITS_USED` and MUST NOT export `const plugin` as the pack identity
 
 #### Scenario: Widget skill unions bits into the pack array
 - **WHEN** `author-widget` records bits for a new card
-- **THEN** it MUST union those names into the pack’s `{{ID}}_BITS_USED` on `{{id}}Plugin` and MUST NOT treat a widget yaml field as the `bitsUsed` SSOT
+- **THEN** it MUST union those names into the pack’s `{{PLUGIN_ID_UPPER}}_BITS_USED` on `{{PLUGIN_ID}}Plugin` and MUST NOT treat a widget yaml field as the `bitsUsed` SSOT
 
 #### Scenario: Core schema is not extended for bitsUsed
 - **WHEN** authoring skills emit pack `bitsUsed`
 - **THEN** they MUST NOT edit `packages/core` and MUST NOT add a `widget-bits.ts` module there
+
+#### Scenario: Starter bitsUsed is six names
+- **WHEN** `author-plugin` generates a new pack registry
+- **THEN** `{{PLUGIN_ID_UPPER}}_BITS_USED` MUST start as Theme, Frame, Stack, Row, Text, and Muted, and frozen 11 MUST be a membership allow-list only
