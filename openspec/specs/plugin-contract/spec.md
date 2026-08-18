@@ -18,11 +18,11 @@ A plugin SHALL be a collection of widgets plus a derived union of integrations, 
 - **THEN** the system MUST register it as a widget on that plugin rather than creating a new plugin
 
 ### Requirement: First-party github plugin catalog
-The first plugin id MUST be `github`. That plugin MUST include widgets `demo`, `stats`, and `languages`. The `github` plugin MUST declare integrations used by those widgets (`static` for `demo`, `github` for `stats` and `languages`). v0 MUST NOT add extra first-party plugins.
+The first plugin id MUST be `github`. That plugin MUST include widgets `demo`, `stats`, and `languages`. The `github` plugin MUST declare integrations used by those widgets (`static` for `demo`, `github` for `stats` and `languages`). First-party plugin ids MUST be `github`, `wakatime`, `rss`, and `http`. The github v0 widget set MUST remain `demo`, `stats`, and `languages`. The system MUST NOT describe the catalog as `github` and `rss` only.
 
 #### Scenario: github plugin widgets
 - **WHEN** the `github` plugin is enabled
-- **THEN** widgets `demo`, `stats`, and `languages` MUST be available on that pack and no other first-party plugin ids MUST exist in v0
+- **THEN** widgets `demo`, `stats`, and `languages` MUST be available on that pack, github v0 widgets MUST remain unchanged, and first-party plugin ids MUST be `github`, `wakatime`, `rss`, and `http`
 
 ### Requirement: Default widget list when plugin is on
 When the `github` plugin is on and no widget list is specified, the system MUST enable `stats` and `languages`. Widget `demo` MUST be opt-in (playground smoke / explicit yaml), not part of pack defaults.
@@ -39,7 +39,7 @@ Committed `.github/profile-bits.yml` MUST be the configuration source of truth f
 - **THEN** plugin, widget, and option configuration MUST be taken from that file rather than from flattened Action inputs
 
 ### Requirement: Yaml document shape
-A valid yaml document MUST accept exactly this shape (unknown keys fail parse). Root fields MUST be `version`, `format`, `theme`, `output_pair`, `animated`, `timezone`, `output_dir`, and `plugins`. Default values MUST match:
+A valid yaml document MUST accept this github-only default shape, and MAY additionally include optional `plugins.rss` as a sibling of `plugins.github` (unknown keys fail parse). The document MUST NOT forbid other optional plugin siblings (`wakatime`, `http`). Root fields MUST be `version`, `format`, `theme`, `output_pair`, `animated`, `timezone`, `output_dir`, and `plugins`. Default values MUST match:
 
 ```yaml
 version: 1
@@ -72,7 +72,7 @@ plugins:
         include_archived: false
 ```
 
-`theme` MUST be `light` or `dark` (default `dark`). `output_pair: true` MUST write `filename` plus `filename-dark` under `output_dir`. `format: apng` MUST use a `.png` extension. Tokens, `user`, `output_action`, `dry_run`, `allow_skipped`, `committer_*`, `output_condition`, and `config` path MUST stay in thin `action.yml`, not in this yaml document.
+When `plugins.rss` is present, its widget tree MUST follow the first-party rss plugin pack requirement. The default example document MUST remain github-only. `theme` MUST be `light` or `dark` (default `dark`). `output_pair: true` MUST write `filename` plus `filename-dark` under `output_dir`. `format: apng` MUST use a `.png` extension. Tokens, `user`, `output_action`, `dry_run`, `allow_skipped`, `committer_*`, `output_condition`, and `config` path MUST stay in thin `action.yml`, not in this yaml document.
 
 #### Scenario: Default yaml shape
 - **WHEN** a consumer commits the default `.github/profile-bits.yml`
@@ -81,6 +81,10 @@ plugins:
 #### Scenario: output_pair writes paired files
 - **WHEN** yaml `output_pair` is true
 - **THEN** the Action MUST write both `filename` and `filename-dark` under `output_dir`
+
+#### Scenario: Optional plugins.rss sibling
+- **WHEN** yaml includes `plugins.rss` as a sibling of `plugins.github` with a valid `widgets.feed.url`
+- **THEN** parse MUST succeed and MUST keep the github widget tree; unknown keys MUST still fail parse
 
 ### Requirement: Thin root action.yml
 Root `action.yml` MUST be thin. Allowed inputs MUST be: `user` (default `github.repository_owner`); `github_token` (API; default `${{ github.token }}` when omitted); `committer_token` (git; default `${{ github.token }}`); `config` (path, default `.github/profile-bits.yml`); `output_action`; `dry_run`; optional `format` / `theme` / `output_pair` / `animated` overrides; optional `plugin_github` bool; plus `committer_branch`, `committer_gist`, `output_condition` (`always` | `data-changed`), `timezone`, and `allow_skipped` (default false). Empty / `""` / whitespace `github_token` MUST be treated as missing (not as omitted default). Breaking a thin input MUST be semver major.
@@ -94,10 +98,14 @@ Root `action.yml` MUST be thin. Allowed inputs MUST be: `user` (default `github.
 - **THEN** the Action MUST treat the token as missing and MUST fail the job rather than substituting `${{ github.token }}` or calling GitHub unauthenticated
 
 ### Requirement: No flattened plugin option inputs
-The system MUST NOT generate Action inputs of the form `plugin_<plugin>_<widget>_<option>` (including `plugin_github_stats_include`, `plugin_github_widgets` CSV, and `plugin_github_filename_*`). Codegen `--check` MUST fail if a generated input matches `plugin_github_stats_include` or a similar flattened option name.
+The system MUST NOT generate Action inputs of the form `plugin_<plugin>_<widget>_<option>` (including `plugin_github_stats_include`, `plugin_github_widgets` CSV, `plugin_github_filename_*`, and `plugin_rss_feed_url`). Codegen `--check` MUST fail if a generated input matches `plugin_github_stats_include`, `plugin_rss_feed_url`, or a similar flattened option name.
 
 #### Scenario: Codegen check rejects flattened include
 - **WHEN** generated `action.yml` contains an input named `plugin_github_stats_include` or another `plugin_<plugin>_<widget>_<option>` name
+- **THEN** `generate-action --check` MUST fail
+
+#### Scenario: Codegen check rejects plugin_rss_feed_url
+- **WHEN** generated `action.yml` contains an input named `plugin_rss_feed_url`
 - **THEN** `generate-action --check` MUST fail
 
 ### Requirement: Config precedence yaml over plugin_github
@@ -157,3 +165,43 @@ If every github widget is skipped and `allow_skipped` is false, the Action MUST 
 #### Scenario: all github widgets skipped and allow_skipped false
 - **WHEN** every github widget is skipped and `allow_skipped` is false
 - **THEN** the job MUST fail
+
+### Requirement: First-party rss plugin pack
+The plugin id `rss` MUST be a first-party pack with widgets `[feed]` and integrations `[rss]`. The pack MUST be off unless yaml `plugins.rss` is present. The Action MUST NOT expose a `plugin_rss` bool input. The Action MUST NOT expose flattened `plugin_rss_*` inputs. `widgets.feed.url` MUST be required; `plugins: { rss: {} }` MUST fail parse. Defaults MUST be `filename: feed`, `limit: 5` (range 1–8), `animate: false`. `widgets.feed.url` MUST be https without username or password.
+
+Example:
+
+```yaml
+plugins:
+  rss:
+    widgets:
+      feed:
+        filename: feed
+        url: https://example.com/feed.xml
+        limit: 5
+        animate: false
+```
+
+#### Scenario: rss pack off unless yaml present
+- **WHEN** committed yaml omits `plugins.rss`
+- **THEN** the rss pack MUST be disabled and no feed widget MUST run
+
+#### Scenario: empty rss plugin fails parse
+- **WHEN** yaml contains `plugins.rss` without `widgets.feed.url`
+- **THEN** parse MUST fail
+
+#### Scenario: no plugin_rss Action input
+- **WHEN** root `action.yml` is generated
+- **THEN** it MUST NOT contain `plugin_rss` or any `plugin_rss_*` input and MUST still contain `plugin_github`
+
+#### Scenario: rss does not join github all-skipped rule
+- **WHEN** an rss feed widget fails or is skipped and github widgets are not all skipped
+- **THEN** the Action MUST NOT fail the job solely because of the rss widget and MUST NOT treat rss as a github widget for the all-github-widgets-skipped rule
+
+#### Scenario: rss fail_widget does not fail the job when other widgets rendered
+- **WHEN** an rss feed widget ends in `fail_widget` and at least one other enabled widget rendered or skipped without failing the job
+- **THEN** the Action MUST NOT fail the job because of that rss widget, MUST NOT write that rss widget’s output, and MUST NOT treat rss as a github widget for the all-github-widgets-skipped rule
+
+#### Scenario: rss-only 404 does not fail the job
+- **WHEN** yaml enables rss `feed` and no github widgets, and the feed URL returns HTTP 404
+- **THEN** the Action MUST succeed with no rss output files and MUST NOT fail the job solely because of the rss widget
