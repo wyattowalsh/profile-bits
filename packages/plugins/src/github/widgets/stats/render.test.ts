@@ -40,4 +40,17 @@ describe("stats widget", () => {
     });
     expect(svg).toMatch(/<svg\b/);
   });
+
+  it("bakes mocha bg hex instead of Primer dark", async () => {
+    const svg = await renderStatsSvg({
+      payload: {
+        user: { login: "octocat" },
+        stats: { followers: 1, repos: 2, stars: 3 },
+      },
+      theme: "catppuccin-mocha",
+    });
+    expect(svg).toContain("#1e1e2e");
+    expect(svg).not.toContain("#0d1117");
+    expect(svg).not.toMatch(/<style\b|@keyframes|<animate\b|foreignObject/i);
+  });
 });
