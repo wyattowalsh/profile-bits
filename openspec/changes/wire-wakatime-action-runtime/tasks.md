@@ -52,8 +52,8 @@ Stop for review before apply. Do not implement Action product code in this propo
 
 ## 8. Wave T — verify (serial)
 
-- [ ] T1 `pnpm exec vitest run packages/action packages/core packages/integrations/src/wakatime packages/plugins/src/wakatime packages/renderer`
-- [ ] T2 `pnpm generate-action --check` (must still reject `plugin_wakatime_coding_*`; `wakatime_token` remains thin)
-- [ ] T3 `just lint && just test` — if docs regress, do not “fix” `apps/docs/src/**` in this change; file against docs-playground.
+- [x] T1 `pnpm exec vitest run packages/action packages/core packages/integrations/src/wakatime packages/plugins/src/wakatime packages/renderer` (494 passed)
+- [x] T2 `pnpm generate-action --check` (must still reject `plugin_wakatime_coding_*`; `wakatime_token` remains thin)
+- [x] T3 `just lint && just test`
 
 Forbidden globs this change: `packages/integrations/src/github/**`, REST `/languages`, `apps/docs/src/**`, consumer README.md, rss/http engine ids, T112 `graphql.ts`. No commit unless asked.

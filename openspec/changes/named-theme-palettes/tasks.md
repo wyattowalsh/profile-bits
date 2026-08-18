@@ -53,10 +53,10 @@ Each task exclusive `packages/themes/src/families/<family>.ts` plus colocated te
 
 Exclusive: `apps/docs/src/preview/{types,permalink,global-bar,schema-form}.ts(x)`, `apps/docs/src/generate/**` theme plumbing, `apps/docs/src/codegen/export-workflow.ts`, `apps/docs/src/preview/server/render-preview.ts`, preview route tests. Do **not** rewrite `openspec/changes/docs-playground/`.
 
-- [ ] 7.1 Import host catalog; drop `PREVIEW_THEMES = ["light","dark"]`. Widen permalink/types so `theme` is named id or custom refs. `POST /api/preview` body `theme` widens the same way; still no token fields; still fixtures when no App token.
-- [ ] 7.2 Family-grouped combobox + customize mixer (`apps/docs/src/preview/theme-picker.tsx`, `theme-mixer.tsx`) after types/permalink land. Shared GlobalBar on `/generate/*` and `/playground/*`. Contrast warning below 4.5:1 (text-on-bg, muted-on-bg) does not block render. Live 480×160 preview.
-- [ ] 7.3 Permalink: named `theme=<id>`; custom `theme=custom` plus `cbg` / `ccard` / `ctext` / `cmuted` / `caccent` / `cborder` / `cpair`. Cross-link `/playground` ↔ `/generate` keeps these params and still strips tokens. Generate export yaml emits named id or `theme.custom`. Playground codegen uses the same exporter. Bit isolator / pack stage / preview POST pass resolved palette. `output_pair` preview renders the resolved pair.
-- [ ] 7.4 Playwright: `/generate/github` pick mocha → card hex; mix mauve accent → permalink round-trip; `output_pair` shows two figures. `/generate/bits/Bar` and `/generate/github/languages` share permalink `theme`.
+- [x] 7.1 Import host catalog; drop `PREVIEW_THEMES = ["light","dark"]`. Widen permalink/types so `theme` is named id or custom refs. `POST /api/preview` body `theme` widens the same way; still no token fields; still fixtures when no App token.
+- [x] 7.2 Family-grouped combobox + customize mixer (`apps/docs/src/preview/theme-picker.tsx`, `theme-mixer.tsx`) after types/permalink land. Shared GlobalBar on `/generate/*` and `/playground/*`. Contrast warning below 4.5:1 (text-on-bg, muted-on-bg) does not block render. Live 480×160 preview.
+- [x] 7.3 Permalink: named `theme=<id>`; custom `theme=custom` plus `cbg` / `ccard` / `ctext` / `cmuted` / `caccent` / `cborder` / `cpair`. Cross-link `/playground` ↔ `/generate` keeps these params and still strips tokens. Generate export yaml emits named id or `theme.custom`. Playground codegen uses the same exporter. Bit isolator / pack stage / preview POST pass resolved palette. `output_pair` preview renders the resolved pair.
+- [x] 7.4 Playwright: `/generate/github` pick mocha → card hex; mix mauve accent → permalink round-trip; `output_pair` shows two figures. `/generate/bits/Bar` and `/generate/github/languages` share permalink `theme`.
 
 ## 8. Wave 7 — gate (after Wave 6)
 
