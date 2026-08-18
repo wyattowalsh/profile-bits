@@ -11,11 +11,7 @@ import {
   type WidgetTheme,
 } from "@profile-bits/renderer";
 import { createElement } from "react";
-import {
-  ChipsWidgetError,
-  loadChipsPayloads,
-  toChipsWidgetError,
-} from "./load.js";
+import { loadChipsPayloads, toChipsWidgetError } from "./load.js";
 import { ChipsWidget } from "./widget.js";
 
 export { ChipsWidgetError, loadChipsPayloads } from "./load.js";
