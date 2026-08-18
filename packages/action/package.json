@@ -6,8 +6,17 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "@profile-bits/core": "workspace:*",
+    "@profile-bits/integrations": "workspace:*",
+    "@profile-bits/plugins": "workspace:*",
+    "@profile-bits/renderer": "workspace:*"
+  },
   "optionalDependencies": {
     "@takumi-rs/core-linux-x64-gnu": "catalog:"
+  },
+  "scripts": {
+    "build": "ncc build src/main.ts -o dist --external @takumi-rs/core"
   },
   "devDependencies": {
     "@vercel/ncc": "catalog:"

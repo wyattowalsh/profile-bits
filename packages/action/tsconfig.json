@@ -11,7 +11,14 @@
     "isolatedModules": true,
     "allowImportingTsExtensions": true,
     "noUncheckedSideEffectImports": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@profile-bits/core": ["../core/src/index.ts"],
+      "@profile-bits/integrations": ["../integrations/src/index.ts"],
+      "@profile-bits/plugins": ["../plugins/src/index.ts"],
+      "@profile-bits/renderer": ["../renderer/src/index.ts"]
+    }
   },
   "include": ["src", "tests"]
 }
