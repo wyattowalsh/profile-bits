@@ -47,7 +47,7 @@ Each task exclusive `packages/themes/src/families/<family>.ts` plus colocated te
 
 ## 6. Wave 5 — Action pairing (after Wave 4)
 
-- [ ] 6.1 Exclusive: Action engine render port + tests. When `output_pair` is true, call `renderWidget` per polarity and write `{stem}` (light) / `{stem}-dark` (dark). When false, write `{stem}` only in the selected flavor. Gist remains SVG-only. No GitHub HTTP in engine. Implement pure `themesFor(config): ThemeId[]` used by engine tests. Docs twin `apps/docs/src/preview/server/render-preview.ts` is Wave 6-owned — do not edit it here. FORBIDDEN: `action.yml` flattened color inputs; live GitHub in engine.
+- [x] 6.1 Exclusive: Action engine render port + tests. When `output_pair` is true, call `renderWidget` per polarity and write `{stem}` (light) / `{stem}-dark` (dark). When false, write `{stem}` only in the selected flavor. Gist remains SVG-only. No GitHub HTTP in engine. Implement pure `themesFor(config): ThemeId[]` used by engine tests. Docs twin `apps/docs/src/preview/server/render-preview.ts` is Wave 6-owned — do not edit it here. FORBIDDEN: `action.yml` flattened color inputs; live GitHub in engine.
 
 ## 7. Wave 6 — generate / playground chrome (serialized; after Wave 5)
 
