@@ -1,0 +1,65 @@
+/**
+ * Destination: packages/integrations/src/{{id}}/auth.ts
+ * Scheme http-optional. Construct never throws. Unset / null sends no
+ * Authorization (`{}`). Empty / whitespace is `{ kind: "missing" }` and
+ * send/fetchJson throws fail_widget before fetch — not fail_job.
+ */
+import type { AuthRequirement } from "@profile-bits/core";
+import { isMissingToken } from "@profile-bits/core";
+
+export const {{ID}}_AUTH = "{{auth}}" as const satisfies AuthRequirement;
+
+export type {{Id}}Token = string;
+
+export type {{Id}}Authorization =
+  | { kind: "none" }
+  | { kind: "missing" }
+  | { kind: "header"; value: string };
+
+const SCHEME_PREFIX = /^(Bearer|token|Basic)\s/i;
+
+export function is{{Id}}TokenMissing(
+  token: string | undefined | null,
+): boolean {
+  return isMissingToken(token);
+}
+
+/** Optional token: construct never throws. Empty is fail_widget at send. */
+export function assert{{Id}}ActionToken(
+  _token: string | undefined | null,
+): void {}
+
+export function {{id}}AuthorizationFromToken(
+  token: string | undefined | null,
+): {{Id}}Authorization {
+  if (token == null) {
+    return { kind: "none" };
+  }
+  if (isMissingToken(token)) {
+    return { kind: "missing" };
+  }
+  const value = token.trim();
+  if (SCHEME_PREFIX.test(value)) {
+    return { kind: "header", value };
+  }
+  return { kind: "header", value: `Bearer ${value}` };
+}
+
+export function {{id}}AuthorizationHeader(
+  token: string | undefined | null,
+): Readonly<Record<string, string>> {
+  const authorization = {{id}}AuthorizationFromToken(token);
+  if (authorization.kind === "none") {
+    return {};
+  }
+  if (authorization.kind === "missing") {
+    throw new Error(
+      "{{id}}: missing token — fail_widget; empty optional token is not omit",
+    );
+  }
+  return { Authorization: authorization.value };
+}
+
+export function {{id}}RequiresAuthorization(): boolean {
+  return false;
+}

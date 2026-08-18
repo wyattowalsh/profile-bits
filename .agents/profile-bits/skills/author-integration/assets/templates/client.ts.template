@@ -4,6 +4,9 @@
  * REST cache key: (method, url, params). GraphQL: (query, variables).
  * Never REST /languages. GitHub-class: filter forks/archived THEN cap 500;
  * GraphQL nodes(ids:) batches of 100.
+ * Constructor asserts the token iff {{id}}RequiresAuthorization() — scheme
+ * files own that flag (none/http-optional false; github-bearer/wakatime-basic
+ * true). Do not compare catalog auth here. Spread {{id}}AuthorizationHeader.
  */
 import {
   {{id}}AuthorizationHeader,

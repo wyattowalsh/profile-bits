@@ -1,0 +1,47 @@
+/**
+ * Destination: packages/integrations/src/{{id}}/auth.ts
+ * Scheme wakatime-basic. Catalog auth required. Missing api_key fails the job.
+ * RFC Basic encoding of `api_key + ":"`. Never query-string api_key.
+ */
+import type { AuthRequirement } from "@profile-bits/core";
+import { isMissingToken } from "@profile-bits/core";
+
+export const {{ID}}_AUTH = "{{auth}}" as const satisfies AuthRequirement;
+
+export type {{Id}}Token = string;
+
+export function is{{Id}}TokenMissing(
+  token: string | undefined | null,
+): boolean {
+  return isMissingToken(token);
+}
+
+/**
+ * Missing api_key fails construct (fail_job). Do not send without Authorization.
+ */
+export function assert{{Id}}ActionToken(
+  token: string | undefined | null,
+): void {
+  if (is{{Id}}TokenMissing(token)) {
+    throw new Error(
+      "{{id}}: missing token — fail_job; refusing requests without Authorization",
+    );
+  }
+}
+
+/** RFC Basic `base64(api_key + ":")`. Never query-string api_key. */
+function encodeBasicAuthorization(token: string): string {
+  return `Basic ${Buffer.from(`${token}:`, "utf8").toString("base64")}`;
+}
+
+export function {{id}}AuthorizationHeader(
+  token: string | undefined | null,
+): Readonly<Record<string, string>> {
+  assert{{Id}}ActionToken(token);
+  const trimmed = token?.trim() ?? "";
+  return { Authorization: encodeBasicAuthorization(trimmed) };
+}
+
+export function {{id}}RequiresAuthorization(): boolean {
+  return true;
+}

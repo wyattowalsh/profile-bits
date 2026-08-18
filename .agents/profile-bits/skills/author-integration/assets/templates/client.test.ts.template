@@ -1,6 +1,8 @@
 /**
  * Destination: packages/integrations/src/{{id}}/client.test.ts
  * Mocked HTTP only. Never live GitHub / WakaTime / network.
+ * Header / fail policy is "{{scheme}}" (none | github-bearer | wakatime-basic |
+ * http-optional).
  */
 import { describe, expect, it, vi } from "vitest";
 import { assert{{Id}}ActionToken } from "./auth.js";
@@ -21,30 +23,82 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function authorizationOf(
+  fetchMock: ReturnType<typeof vi.fn>,
+): string | undefined {
+  const init    = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+  const headers = init?.headers as Record<string, string> | undefined;
+  return headers?.Authorization;
+}
+
 describe("{{id}} client (mocked HTTP)", () => {
-  it("fails the Action on empty / whitespace token when auth is not none", () => {
-    if ("{{auth}}" === "none") {
-      expect(() => assert{{Id}}ActionToken(undefined)).not.toThrow();
-      return;
+  it("asserts tokens according to {{scheme}}", () => {
+    switch ("{{scheme}}") {
+      case "none":
+        expect(() => assert{{Id}}ActionToken(undefined)).not.toThrow();
+        expect(() => assert{{Id}}ActionToken("")).not.toThrow();
+        expect(() => assert{{Id}}ActionToken("   ")).not.toThrow();
+        return;
+      case "http-optional":
+        expect(() => assert{{Id}}ActionToken(undefined)).not.toThrow();
+        expect(() => assert{{Id}}ActionToken("")).not.toThrow();
+        expect(() => assert{{Id}}ActionToken("   ")).not.toThrow();
+        return;
+      case "github-bearer":
+      case "wakatime-basic":
+        expect(() => assert{{Id}}ActionToken("")).toThrow(/missing token|fail_job/);
+        expect(() => assert{{Id}}ActionToken("   ")).toThrow(/missing token|fail_job/);
+        expect(() => assert{{Id}}ActionToken(undefined)).toThrow(
+          /missing token|fail_job/,
+        );
+        return;
+      default:
+        throw new Error("{{id}}: unexpected scheme {{scheme}}");
     }
-    expect(() => assert{{Id}}ActionToken("")).toThrow(/missing token/);
-    expect(() => assert{{Id}}ActionToken("   ")).toThrow(/missing token/);
-    expect(() => assert{{Id}}ActionToken(undefined)).toThrow(/missing token/);
   });
 
-  it("does not send unauthenticated requests when a token is required", async () => {
-    if ("{{auth}}" === "none") {
-      return;
+  it("does not send unauthenticated requests when {{scheme}} requires a token", async () => {
+    switch ("{{scheme}}") {
+      case "none":
+        return;
+      case "http-optional": {
+        const unsetFetch = vi.fn();
+        expect(
+          () =>
+            new {{Id}}Client({
+              fetch: unsetFetch,
+            }),
+        ).not.toThrow();
+        expect(unsetFetch).not.toHaveBeenCalled();
+        for (const token of ["", "   "]) {
+          const fetchMock = vi.fn();
+          const client = new {{Id}}Client({
+            token,
+            fetch: fetchMock,
+          });
+          await expect(
+            client.rest("GET", "https://example.test/v1/user"),
+          ).rejects.toThrow(/fail_widget/);
+          expect(fetchMock).not.toHaveBeenCalled();
+        }
+        return;
+      }
+      case "github-bearer":
+      case "wakatime-basic": {
+        const fetchMock = vi.fn();
+        expect(
+          () =>
+            new {{Id}}Client({
+              token: "",
+              fetch: fetchMock,
+            }),
+        ).toThrow(/missing token|fail_job/);
+        expect(fetchMock).not.toHaveBeenCalled();
+        return;
+      }
+      default:
+        throw new Error("{{id}}: unexpected scheme {{scheme}}");
     }
-    const fetchMock = vi.fn();
-    expect(
-      () =>
-        new {{Id}}Client({
-          token: "",
-          fetch: fetchMock,
-        }),
-    ).toThrow(/missing token/);
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("shares one client instance per run", () => {
@@ -156,24 +210,54 @@ describe("{{id}} client (mocked HTTP)", () => {
     expect(batches[2]).toHaveLength(50);
   });
 
-  it("sends Authorization on outbound HTTP when auth is not none", async () => {
-    if ("{{auth}}" === "none") {
-      const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
-      const client = new {{Id}}Client({ fetch: fetchMock });
-      await client.rest("GET", "https://example.test/fixture");
-      const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
-      const headers = init?.headers as Record<string, string> | undefined;
-      expect(headers?.Authorization).toBeUndefined();
-      return;
+  it("sends Authorization according to {{scheme}}", async () => {
+    switch ("{{scheme}}") {
+      case "none": {
+        const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
+        const client = new {{Id}}Client({ fetch: fetchMock });
+        await client.rest("GET", "https://example.test/fixture");
+        expect(authorizationOf(fetchMock)).toBeUndefined();
+        return;
+      }
+      case "github-bearer": {
+        const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
+        const client = new {{Id}}Client({
+          token: "ghs_test_token",
+          fetch: fetchMock,
+        });
+        await client.rest("GET", "https://example.test/v1/user");
+        expect(authorizationOf(fetchMock)).toBe("Bearer ghs_test_token");
+        return;
+      }
+      case "wakatime-basic": {
+        const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
+        const client = new {{Id}}Client({
+          token: "ghs_test_token",
+          fetch: fetchMock,
+        });
+        await client.rest("GET", "https://example.test/v1/user");
+        const expected = `Basic ${Buffer.from("ghs_test_token:", "utf8").toString("base64")}`;
+        expect(authorizationOf(fetchMock)).toBe(expected);
+        expect(authorizationOf(fetchMock)).not.toBe("Bearer ghs_test_token");
+        return;
+      }
+      case "http-optional": {
+        const unsetFetch = vi.fn(async () => jsonResponse({ ok: true }));
+        const unsetClient = new {{Id}}Client({ fetch: unsetFetch });
+        await unsetClient.rest("GET", "https://example.test/fixture");
+        expect(authorizationOf(unsetFetch)).toBeUndefined();
+
+        const tokenFetch = vi.fn(async () => jsonResponse({ ok: true }));
+        const tokenClient = new {{Id}}Client({
+          token: "ghs_test_token",
+          fetch: tokenFetch,
+        });
+        await tokenClient.rest("GET", "https://example.test/v1/user");
+        expect(authorizationOf(tokenFetch)).toBe("Bearer ghs_test_token");
+        return;
+      }
+      default:
+        throw new Error("{{id}}: unexpected scheme {{scheme}}");
     }
-    const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
-    const client = new {{Id}}Client({
-      token: "ghs_test_token",
-      fetch: fetchMock,
-    });
-    await client.rest("GET", "https://example.test/v1/user");
-    const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
-    const headers = init?.headers as Record<string, string> | undefined;
-    expect(headers?.Authorization).toBe("Bearer ghs_test_token");
   });
 });

@@ -1,0 +1,32 @@
+/**
+ * Destination: packages/integrations/src/{{id}}/auth.ts
+ * Scheme none (static/rss-class). No Authorization. Assert is a no-op.
+ */
+import type { AuthRequirement } from "@profile-bits/core";
+import { isMissingToken } from "@profile-bits/core";
+
+export const {{ID}}_AUTH = "{{auth}}" as const satisfies AuthRequirement;
+
+export type {{Id}}Token = string;
+
+export function is{{Id}}TokenMissing(
+  token: string | undefined | null,
+): boolean {
+  return isMissingToken(token);
+}
+
+/** Auth none: empty / missing tokens are ignored (no Action token check). */
+export function assert{{Id}}ActionToken(
+  _token: string | undefined | null,
+): void {}
+
+/** Auth none never emits Authorization — always `{}`, never Authorization: "". */
+export function {{id}}AuthorizationHeader(
+  _token: string | undefined | null,
+): Readonly<Record<string, string>> {
+  return {};
+}
+
+export function {{id}}RequiresAuthorization(): boolean {
+  return false;
+}
