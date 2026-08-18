@@ -7,6 +7,6 @@ export default defineConfig({
     include:         ["packages/**/*.test.ts", "**/*.spec.ts"],
     // `packages/*/vitest.config.ts` throws while those files are absent
     // (T030b / T100). Folder globs still load nested vitest.config.ts.
-    projects:        ["packages/*"],
+    projects:        ["packages/*", "apps/*"],
   },
 });

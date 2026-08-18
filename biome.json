@@ -14,17 +14,38 @@
       "!!**/.next",
       "!!**/coverage",
       "!**/pnpm-lock.yaml",
-      "!**/.agents/skills"
+      "!**/.agents/skills",
+      "!**/__snapshots__"
     ]
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
-    "includes": ["**", "!vitest.config.ts"]
+    "includes": ["**", "!vitest.config.ts", "!**/__snapshots__"]
   },
   "linter": {
     "enabled": true
   },
+  "overrides": [
+    {
+      "includes": ["packages/bits/**", "packages/plugins/**/widgets/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react-dom": "Takumi-safe JSX only. No react-dom.",
+                  "next/image": "Takumi-safe JSX only."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "assist": {
     "enabled": true,
     "actions": {
