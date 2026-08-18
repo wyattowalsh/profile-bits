@@ -1,0 +1,58 @@
+import { THEME_FONT, type ThemeFlavor } from "../types.js";
+
+export const NIGHT_OWL_FLAVORS: readonly ThemeFlavor[] = [
+  {
+    id: "night-owl",
+    family: "night-owl",
+    label: "Night Owl",
+    polarity: "dark",
+    pair: "light-owl",
+    license: "MIT",
+    sourceUrl: "https://github.com/sdras/night-owl-vscode-theme",
+    swatches: {
+      background: "#011627",
+      foreground: "#d6deeb",
+      widget: "#021320",
+      comment: "#637777",
+      blue: "#82aaff",
+      focus: "#122d42",
+      "line-number": "#4b6479",
+    },
+    roles: {
+      bg: "background",
+      card: "widget",
+      text: "foreground",
+      muted: "comment",
+      accent: "blue",
+      border: "focus",
+      font: THEME_FONT,
+    },
+  },
+  {
+    id: "light-owl",
+    family: "night-owl",
+    label: "Light Owl",
+    polarity: "light",
+    pair: "night-owl",
+    license: "MIT",
+    sourceUrl: "https://github.com/sdras/night-owl-vscode-theme",
+    swatches: {
+      background: "#fbfbfb",
+      foreground: "#403f53",
+      widget: "#f0f0f0",
+      comment: "#989fb1",
+      cyan: "#2aa298",
+      focus: "#93a1a1",
+      "line-number": "#90a7b2",
+    },
+    roles: {
+      bg: "background",
+      card: "widget",
+      text: "foreground",
+      muted: "comment",
+      accent: "cyan",
+      border: "focus",
+      font: THEME_FONT,
+    },
+  },
+];
