@@ -55,13 +55,24 @@ export const THIN_ACTION_INPUTS: readonly ActionInputSpec[] = [
       "Enable the github pack (stats, languages) only when the config file is absent. Ignored when the config file exists.",
   },
   {
+    name: "wakatime_token",
+    description:
+      "WakaTime API key. Required when the wakatime pack is enabled. Empty or whitespace fails the job.",
+  },
+  {
+    name: "http_token_env",
+    description:
+      "Name of the environment variable holding an optional HTTP Bearer token. Unset sends no Authorization.",
+  },
+  {
     name: "format",
     description:
       "Optional output format override (svg, png, jpeg, webp, ico, gif, apng).",
   },
   {
     name: "theme",
-    description: "Optional theme override (light or dark).",
+    description:
+      "Optional named theme id override. theme: custom as an Action input fails.",
   },
   {
     name: "output_pair",

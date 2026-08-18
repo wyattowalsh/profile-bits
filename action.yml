@@ -19,10 +19,14 @@ inputs:
     default: .github/profile-bits.yml
   plugin_github:
     description: "Enable the github pack (stats, languages) only when the config file is absent. Ignored when the config file exists."
+  wakatime_token:
+    description: "WakaTime API key. Required when the wakatime pack is enabled. Empty or whitespace fails the job."
+  http_token_env:
+    description: "Name of the environment variable holding an optional HTTP Bearer token. Unset sends no Authorization."
   format:
     description: "Optional output format override (svg, png, jpeg, webp, ico, gif, apng)."
   theme:
-    description: "Optional theme override (light or dark)."
+    description: "Optional named theme id override. theme: custom as an Action input fails."
   output_pair:
     description: "Optional override to write both filename and filename-dark."
   animated:

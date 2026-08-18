@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@profile-bits/themes": "workspace:*",
     "yaml": "catalog:",
     "zod": "catalog:"
   },

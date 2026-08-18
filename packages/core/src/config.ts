@@ -1,15 +1,20 @@
 import {
+  type ActionInputs,
   CONFIG_DEFAULTS,
   CONFIG_VERSION_DEFAULT,
+  CodingOptionsSchema,
+  type Config,
   ConfigSchema,
   DEMO_OPTION_DEFAULTS,
+  dedupePreserveOrder,
   GITHUB_PACK_DEFAULT_WIDGETS,
+  type GithubWidgetsConfig,
   LANGUAGES_OPTION_DEFAULTS,
   LanguagesOptionsSchema,
   STATS_OPTION_DEFAULTS,
   StatsOptionsSchema,
+  type WakatimeWidgetsConfig,
 } from "./types.js";
-import type { ActionInputs, Config, GithubWidgetsConfig } from "./types.js";
 
 export {
   CONFIG_DEFAULTS,
@@ -62,7 +67,7 @@ export const DEFAULT_YAML_OBJECT = {
   plugins: {
     github: {
       widgets: {
-        stats:     { ...STATS_OPTION_DEFAULTS },
+        stats: { ...STATS_OPTION_DEFAULTS },
         languages: { ...LANGUAGES_OPTION_DEFAULTS },
       },
     },
@@ -71,7 +76,7 @@ export const DEFAULT_YAML_OBJECT = {
 
 export function githubPackDefaultWidgets(): GithubWidgetsConfig {
   return {
-    stats:     StatsOptionsSchema.parse({}),
+    stats: StatsOptionsSchema.parse({}),
     languages: LanguagesOptionsSchema.parse({}),
   };
 }
@@ -80,8 +85,8 @@ export function widgetListSpecified(
   widgets: GithubWidgetsConfig | undefined,
 ): boolean {
   return (
-    widgets?.demo      !== undefined ||
-    widgets?.stats     !== undefined ||
+    widgets?.demo !== undefined ||
+    widgets?.stats !== undefined ||
     widgets?.languages !== undefined
   );
 }
@@ -104,17 +109,81 @@ export function applyGithubPackDefaults(config: Config): Config {
   };
 }
 
+/** Enable `coding` when wakatime is on and no widget list is set. */
+export function wakatimePackDefaultWidgets(): WakatimeWidgetsConfig {
+  return {
+    coding: CodingOptionsSchema.parse({}),
+  };
+}
+
+export function wakatimeWidgetListSpecified(
+  widgets: WakatimeWidgetsConfig | undefined,
+): boolean {
+  return widgets?.coding !== undefined;
+}
+
+export function applyWakatimePackDefaults(config: Config): Config {
+  const wakatime = config.plugins.wakatime;
+  if (wakatime === undefined || wakatimeWidgetListSpecified(wakatime.widgets)) {
+    return normalizeWakatimeIncludes(config);
+  }
+  return normalizeWakatimeIncludes({
+    ...config,
+    plugins: {
+      ...config.plugins,
+      wakatime: {
+        ...wakatime,
+        widgets: wakatimePackDefaultWidgets(),
+      },
+    },
+  });
+}
+
+function normalizeWakatimeIncludes(config: Config): Config {
+  const coding = config.plugins.wakatime?.widgets?.coding;
+  if (coding === undefined) {
+    return config;
+  }
+  const include = dedupePreserveOrder(coding.include);
+  if (include.length === coding.include.length) {
+    return config;
+  }
+  const wakatime = config.plugins.wakatime;
+  if (wakatime === undefined) {
+    return config;
+  }
+  return {
+    ...config,
+    plugins: {
+      ...config.plugins,
+      wakatime: {
+        ...wakatime,
+        widgets: {
+          ...wakatime.widgets,
+          coding: { ...coding, include },
+        },
+      },
+    },
+  };
+}
+
 export function applyActionOverrides(
-  config:    Config,
+  config: Config,
   overrides: ConfigOverrides = {},
 ): Config {
   return {
     ...config,
-    ...(overrides.format      !== undefined ? { format:      overrides.format      } : {}),
-    ...(overrides.theme       !== undefined ? { theme:       overrides.theme       } : {}),
-    ...(overrides.output_pair !== undefined ? { output_pair: overrides.output_pair } : {}),
-    ...(overrides.animated    !== undefined ? { animated:    overrides.animated    } : {}),
-    ...(overrides.timezone    !== undefined ? { timezone:    overrides.timezone    } : {}),
+    ...(overrides.format !== undefined ? { format: overrides.format } : {}),
+    ...(overrides.theme !== undefined ? { theme: overrides.theme } : {}),
+    ...(overrides.output_pair !== undefined
+      ? { output_pair: overrides.output_pair }
+      : {}),
+    ...(overrides.animated !== undefined
+      ? { animated: overrides.animated }
+      : {}),
+    ...(overrides.timezone !== undefined
+      ? { timezone: overrides.timezone }
+      : {}),
   };
 }
 

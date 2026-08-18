@@ -11,6 +11,10 @@ export const FLATTENED_ACTION_INPUT_NAME =
 /** Must fail --check even if a fixture/template adds this key. */
 export const BANNED_FLATTENED_INPUT_NAMES = [
   "plugin_github_stats_include",
+  "plugin_wakatime_coding_range",
+  "plugin_rss_feed_url",
+  "plugin_http_json_url",
+  "plugin_http_chips_preset",
 ] as const;
 
 const FLATTENED_YAML_KEY =

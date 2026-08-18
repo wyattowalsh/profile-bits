@@ -1,13 +1,32 @@
+import { resolveColorRef, THEME_REGISTRY } from "@profile-bits/themes";
 import { parse as parseYaml } from "yaml";
 import * as z from "zod";
 import {
   applyActionOverrides,
   applyGithubPackDefaults,
+  applyWakatimePackDefaults,
+  type ConfigOverrides,
   createEmptyPluginsConfig,
   createGithubPackDefaultConfig,
-  type ConfigOverrides,
 } from "./config.js";
-import { ConfigSchema, type ActionInputs, type Config } from "./types.js";
+import {
+  type ActionInputs,
+  type Config,
+  ConfigSchema,
+  type CustomRoleMap,
+  customThemeMissingPair,
+  isCustomThemeConfig,
+  ThemeSchema,
+} from "./types.js";
+
+const CUSTOM_COLOR_ROLES = [
+  "bg",
+  "card",
+  "text",
+  "muted",
+  "accent",
+  "border",
+] as const satisfies readonly (keyof CustomRoleMap)[];
 
 export class ConfigParseError extends Error {
   override readonly name = "ConfigParseError";
@@ -17,10 +36,12 @@ export class ConfigParseError extends Error {
   }
 }
 
-export type ParseConfigInput = ConfigOverrides &
+export type ParseConfigInput = Omit<ConfigOverrides, "theme"> &
   Pick<ActionInputs, "plugin_github"> & {
     /** YAML file contents. Presence (including `""`) means the config file exists. */
     yaml?: string;
+    /** Thin Action theme override. Named catalog id only; `custom` fails. */
+    theme?: string;
   };
 
 export function parseYamlConfig(yaml: string): Config {
@@ -37,7 +58,9 @@ export function parseYamlConfig(yaml: string): Config {
       cause: result.error,
     });
   }
-  return applyGithubPackDefaults(result.data);
+  return applyWakatimePackDefaults(
+    applyGithubPackDefaults(assertCustomThemePair(result.data)),
+  );
 }
 
 /**
@@ -54,11 +77,58 @@ export function parseConfig(input: ParseConfigInput = {}): Config {
     config = createEmptyPluginsConfig();
   }
 
-  return applyActionOverrides(config, {
-    format:      input.format,
-    theme:       input.theme,
-    output_pair: input.output_pair,
-    animated:    input.animated,
-    timezone:    input.timezone,
-  });
+  let themeOverride: ConfigOverrides["theme"];
+  if (input.theme !== undefined) {
+    const theme = ThemeSchema.safeParse(input.theme);
+    if (!theme.success) {
+      throw new ConfigParseError(z.prettifyError(theme.error), {
+        cause: theme.error,
+      });
+    }
+    themeOverride = theme.data;
+  }
+
+  return assertCustomThemePair(
+    applyActionOverrides(config, {
+      format: input.format,
+      theme: themeOverride,
+      output_pair: input.output_pair,
+      animated: input.animated,
+      timezone: input.timezone,
+    }),
+  );
+}
+
+function resolveCustomRoleMap(roles: CustomRoleMap): void {
+  for (const role of CUSTOM_COLOR_ROLES) {
+    try {
+      resolveColorRef(roles[role], THEME_REGISTRY);
+    } catch (cause) {
+      throw new ConfigParseError(
+        cause instanceof Error ? cause.message : "Invalid color ref",
+        { cause },
+      );
+    }
+  }
+}
+
+function assertThemeRefs(config: Config): Config {
+  if (!isCustomThemeConfig(config.theme)) {
+    return config;
+  }
+  resolveCustomRoleMap(config.theme.custom);
+  const pair = config.theme.custom.pair;
+  if (pair !== undefined && typeof pair !== "string") {
+    resolveCustomRoleMap(pair);
+  }
+  return config;
+}
+
+function assertCustomThemePair(config: Config): Config {
+  if (config.output_pair && customThemeMissingPair(config.theme)) {
+    throw new ConfigParseError(
+      "Custom theme requires pair when output_pair is true",
+    );
+  }
+  return assertThemeRefs(config);
 }

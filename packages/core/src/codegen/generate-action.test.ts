@@ -32,6 +32,15 @@ describe("thin action.yml codegen", () => {
     expect(yml).toContain("using: node24");
     expect(yml).toContain("main: dist/index.js");
     expect(yml).toContain("plugin_github:");
+    expect(yml).toContain("wakatime_token:");
+    expect(yml).toContain("http_token_env:");
+    expect(yml).not.toContain("plugin_http");
+    expect(yml).not.toContain("plugin_http_json_");
+    expect(yml).not.toContain("plugin_http_chips_");
+    expect(yml).not.toContain("plugin_http_chips_preset");
+    expect(yml).not.toContain("plugin_rss");
+    expect(yml).not.toContain("plugin_wakatime:");
+    expect(yml).not.toContain("plugin_wakatime_coding_");
     expect(yml).not.toContain("plugin_github_stats_include");
     expect(yml).not.toContain("plugin_github_widgets");
     expect(yml).not.toContain("plugin_github_filename_");
@@ -46,6 +55,16 @@ describe("thin action.yml codegen", () => {
 
   it("does not treat plugin_github as flattened", () => {
     expect(isFlattenedActionInputName("plugin_github")).toBe(false);
+    expect(isFlattenedActionInputName("plugin_wakatime")).toBe(false);
+    expect(isFlattenedActionInputName("plugin_rss")).toBe(false);
+    expect(isFlattenedActionInputName("plugin_rss_feed_url")).toBe(true);
+    expect(isFlattenedActionInputName("plugin_http_json_url")).toBe(true);
+    expect(isFlattenedActionInputName("plugin_http_chips_preset")).toBe(true);
+    expect(isFlattenedActionInputName("plugin_http")).toBe(false);
+    expect(THIN_ACTION_INPUT_NAMES).not.toContain("plugin_http");
+    expect(Object.keys(ActionInputsSchema.shape)).not.toContain("plugin_http");
+    expect(THIN_ACTION_INPUT_NAMES).not.toContain("plugin_rss");
+    expect(Object.keys(ActionInputsSchema.shape)).not.toContain("plugin_rss");
     expect(() =>
       assertNoFlattenedActionInputs(generateActionYml()),
     ).not.toThrow();
@@ -77,6 +96,51 @@ describe("assertNoFlattenedActionInputs", () => {
       /plugin_github_filename_stats/,
     );
   });
+
+  it("fails plugin_wakatime_coding_filename", () => {
+    const yaml =
+      "inputs:\n  plugin_wakatime_coding_filename:\n    description: x\n";
+    expect(() => assertNoFlattenedActionInputs(yaml)).toThrow(
+      /plugin_wakatime_coding_filename/,
+    );
+  });
+
+  it("fails banned plugin_wakatime_coding_range", () => {
+    const yaml =
+      "inputs:\n  plugin_wakatime_coding_range:\n    description: x\n";
+    expect(findFlattenedActionInputs(yaml)).toContain(
+      "plugin_wakatime_coding_range",
+    );
+    expect(() => assertNoFlattenedActionInputs(yaml)).toThrow(
+      /plugin_wakatime_coding_range/,
+    );
+  });
+
+  it("fails plugin_rss_feed_url", () => {
+    const yaml = "inputs:\n  plugin_rss_feed_url:\n    description: x\n";
+    expect(findFlattenedActionInputs(yaml)).toEqual(["plugin_rss_feed_url"]);
+    expect(() => assertNoFlattenedActionInputs(yaml)).toThrow(
+      /plugin_rss_feed_url/,
+    );
+  });
+
+  it("fails plugin_http_json_url", () => {
+    const yaml = "inputs:\n  plugin_http_json_url:\n    description: x\n";
+    expect(findFlattenedActionInputs(yaml)).toEqual(["plugin_http_json_url"]);
+    expect(() => assertNoFlattenedActionInputs(yaml)).toThrow(
+      /plugin_http_json_url/,
+    );
+  });
+
+  it("fails plugin_http_chips_preset", () => {
+    const yaml = "inputs:\n  plugin_http_chips_preset:\n    description: x\n";
+    expect(findFlattenedActionInputs(yaml)).toEqual([
+      "plugin_http_chips_preset",
+    ]);
+    expect(() => assertNoFlattenedActionInputs(yaml)).toThrow(
+      /plugin_http_chips_preset/,
+    );
+  });
 });
 
 describe("generate-action --check", () => {
@@ -93,6 +157,54 @@ describe("generate-action --check", () => {
       return;
     }
     expect(result.errors.join("\n")).toMatch(/plugin_github_stats_include/);
+  });
+
+  it("fails --check when current yaml has plugin_rss_feed_url", () => {
+    const poisoned = [
+      "name: poisoned",
+      "inputs:",
+      "  plugin_rss_feed_url:",
+      "    description: flattened rss feed url",
+      "",
+    ].join("\n");
+    const result = checkActionYml(poisoned, generateActionYml());
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.join("\n")).toMatch(/plugin_rss_feed_url/);
+  });
+
+  it("fails --check when current yaml has plugin_http_chips_preset", () => {
+    const poisoned = [
+      "name: poisoned",
+      "inputs:",
+      "  plugin_http_chips_preset:",
+      "    description: flattened http chips preset",
+      "",
+    ].join("\n");
+    const result = checkActionYml(poisoned, generateActionYml());
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.join("\n")).toMatch(/plugin_http_chips_preset/);
+  });
+
+  it("fails --check when current yaml has plugin_wakatime_coding_filename", () => {
+    const poisoned = [
+      "name: poisoned",
+      "inputs:",
+      "  plugin_wakatime_coding_filename:",
+      "    description: flattened filename",
+      "",
+    ].join("\n");
+    const result = checkActionYml(poisoned, generateActionYml());
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.errors.join("\n")).toMatch(/plugin_wakatime_coding_filename/);
   });
 
   it("fails --check when a would-be generated input is flattened", () => {

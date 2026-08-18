@@ -53,6 +53,20 @@ export function decideActionToken(
   return isMissingToken(token) ? "fail_job" : "render";
 }
 
+/**
+ * WakaTime token is required only when the pack is on. Pack absent does not
+ * require `wakatime_token`. Do not change {@link decideActionToken}.
+ */
+export function decideWakatimeToken(input: {
+  token: string | undefined | null;
+  packEnabled: boolean;
+}): AuthDecision {
+  if (!input.packEnabled) {
+    return "render";
+  }
+  return isMissingToken(input.token) ? "fail_job" : "render";
+}
+
 export function loginsMatch(
   probeLogin: string,
   configuredUser: string,
@@ -102,6 +116,11 @@ export function restrictCapabilitiesForUser(
 export function usesGithubIntegration(widgetId: WidgetId): boolean {
   const integrations: readonly IntegrationId[] = WIDGET_INTEGRATIONS[widgetId];
   return integrations.includes("github");
+}
+
+export function usesHttpIntegration(widgetId: WidgetId): boolean {
+  const integrations: readonly IntegrationId[] = WIDGET_INTEGRATIONS[widgetId];
+  return integrations.includes("http");
 }
 
 /** `include_private: true` without `canPrivate` fails the widget (no silent public chart). */
@@ -165,6 +184,84 @@ export function decideAllGithubWidgetsSkipped(input: {
   const allSkipped = github.every((widget) => widget.outcome === "skip_widget");
   const allowSkipped = input.allowSkipped ?? ACTION_ALLOW_SKIPPED_DEFAULT;
   return allSkipped && !allowSkipped ? "fail_job" : "render";
+}
+
+/**
+ * When json is the only enabled widget, a non-render outcome fails the job
+ * unless `allow_skipped` is true. Does not fold http into github skip-all.
+ */
+export function decideHttpOnlyRunFailed(input: {
+  widgets: readonly GithubWidgetOutcome[];
+  allowSkipped?: boolean;
+}): AuthDecision {
+  if (input.widgets.length === 0) {
+    return "render";
+  }
+  const allHttp = input.widgets.every((widget) =>
+    usesHttpIntegration(widget.id),
+  );
+  if (!allHttp) {
+    return "render";
+  }
+  const anyRendered = input.widgets.some(
+    (widget) => widget.outcome === "render",
+  );
+  if (anyRendered) {
+    return "render";
+  }
+  const allowSkipped = input.allowSkipped ?? ACTION_ALLOW_SKIPPED_DEFAULT;
+  return allowSkipped ? "render" : "fail_job";
+}
+
+export type HttpTokenEnvDecision =
+  | { outcome: "render"; authorization: string | undefined }
+  | { outcome: "fail_widget" };
+
+const HTTP_SCHEME_PREFIX = /^(Bearer|token|Basic)\s/i;
+
+/**
+ * `http_token_env` is an env name. Unset/whitespace name → no Authorization.
+ * Name set + empty/whitespace value → fail_widget. Name set + value → Bearer
+ * unless the value already has a scheme prefix.
+ */
+export function decideHttpTokenEnv(input: {
+  envName: string | undefined | null;
+  envValue: string | undefined | null;
+}): HttpTokenEnvDecision {
+  if (isMissingToken(input.envName)) {
+    return { outcome: "render", authorization: undefined };
+  }
+  const envValue = input.envValue;
+  if (envValue == null || envValue.trim() === "") {
+    return { outcome: "fail_widget" };
+  }
+  const value = envValue.trim();
+  const authorization = HTTP_SCHEME_PREFIX.test(value)
+    ? value
+    : `Bearer ${value}`;
+  return { outcome: "render", authorization };
+}
+
+export type HttpClassificationInput = {
+  status: number;
+};
+
+/**
+ * HTTP JSON skip/fail matrix. Never reuse classifyGithubHttp.
+ * 401/404 → fail_widget (no retry). 403/429/5xx → fail_after_backoff.
+ */
+export function classifyHttp(input: HttpClassificationInput): SkipFailOutcome {
+  const { status } = input;
+  if (status === 401 || status === 404) {
+    return "fail_widget";
+  }
+  if (status === 403 || status === 429 || (status >= 500 && status <= 599)) {
+    return "fail_after_backoff";
+  }
+  if (status >= 200 && status < 300) {
+    return "render";
+  }
+  return "fail_widget";
 }
 
 /** Skipped widgets must not write files and must not count as `data-changed`. */

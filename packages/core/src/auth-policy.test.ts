@@ -3,13 +3,19 @@ import {
   CONTRIBUTIONS_SKIP_ID,
   capabilitiesFromProbe,
   classifyGithubHttp,
+  classifyHttp,
   decideActionToken,
   decideAllGithubWidgetsSkipped,
   decideContributionsField,
   decideGistOutput,
+  decideHttpOnlyRunFailed,
+  decideHttpTokenEnv,
   decideIncludePrivate,
+  decideWakatimeToken,
   isMissingToken,
   restrictCapabilitiesForUser,
+  usesGithubIntegration,
+  usesHttpIntegration,
   widgetOutputFlags,
 } from "./auth-policy.js";
 
@@ -48,6 +54,35 @@ describe("decideActionToken", () => {
 
   it("allows the run to proceed when a token is present", () => {
     expect(decideActionToken("ghs_example")).toBe("render");
+  });
+});
+
+describe("decideWakatimeToken", () => {
+  it("fails the job when the pack is on and the token is missing", () => {
+    expect(decideWakatimeToken({ token: undefined, packEnabled: true })).toBe(
+      "fail_job",
+    );
+    expect(decideWakatimeToken({ token: "", packEnabled: true })).toBe(
+      "fail_job",
+    );
+    expect(decideWakatimeToken({ token: "  \n", packEnabled: true })).toBe(
+      "fail_job",
+    );
+  });
+
+  it("does not require a token when the pack is absent", () => {
+    expect(decideWakatimeToken({ token: undefined, packEnabled: false })).toBe(
+      "render",
+    );
+    expect(decideWakatimeToken({ token: "", packEnabled: false })).toBe(
+      "render",
+    );
+  });
+
+  it("allows the run when the pack is on and a token is present", () => {
+    expect(
+      decideWakatimeToken({ token: "waka_example", packEnabled: true }),
+    ).toBe("render");
   });
 });
 
@@ -205,6 +240,30 @@ describe("decideAllGithubWidgetsSkipped", () => {
       }),
     ).toBe("render");
   });
+
+  it("does not treat a failed feed widget as a github skip", () => {
+    expect(
+      decideAllGithubWidgetsSkipped({
+        widgets: [
+          { id: "stats", outcome: "render" },
+          { id: "feed", outcome: "fail_widget" },
+        ],
+        allowSkipped: false,
+      }),
+    ).toBe("render");
+  });
+
+  it("does not treat a failed coding widget as a github skip", () => {
+    expect(
+      decideAllGithubWidgetsSkipped({
+        widgets: [
+          { id: "stats", outcome: "render" },
+          { id: "coding", outcome: "fail_widget" },
+        ],
+        allowSkipped: false,
+      }),
+    ).toBe("render");
+  });
 });
 
 describe("widgetOutputFlags", () => {
@@ -279,6 +338,155 @@ describe("classifyGithubHttp", () => {
       classifyGithubHttp({
         status: 200,
         body: { followers: 0, public_repos: 0 },
+      }),
+    ).toBe("render");
+  });
+});
+
+describe("usesGithubIntegration", () => {
+  it("is false for coding and feed and true for stats/languages", () => {
+    expect(usesGithubIntegration("coding")).toBe(false);
+    expect(usesGithubIntegration("feed")).toBe(false);
+    expect(usesGithubIntegration("stats")).toBe(true);
+    expect(usesGithubIntegration("languages")).toBe(true);
+    expect(usesGithubIntegration("demo")).toBe(false);
+    expect(usesGithubIntegration("json")).toBe(false);
+  });
+});
+
+describe("usesHttpIntegration", () => {
+  it("is true for json and chips", () => {
+    expect(usesHttpIntegration("json")).toBe(true);
+    expect(usesHttpIntegration("chips")).toBe(true);
+    expect(usesHttpIntegration("stats")).toBe(false);
+    expect(usesHttpIntegration("feed")).toBe(false);
+    expect(usesHttpIntegration("coding")).toBe(false);
+  });
+});
+
+describe("classifyHttp", () => {
+  it("fails 401 and 404 without retry", () => {
+    expect(classifyHttp({ status: 401 })).toBe("fail_widget");
+    expect(classifyHttp({ status: 404 })).toBe("fail_widget");
+  });
+
+  it("retries 403 429 and 5xx then fail_widget via fail_after_backoff", () => {
+    expect(classifyHttp({ status: 403 })).toBe("fail_after_backoff");
+    expect(classifyHttp({ status: 429 })).toBe("fail_after_backoff");
+    expect(classifyHttp({ status: 500 })).toBe("fail_after_backoff");
+    expect(classifyHttp({ status: 503 })).toBe("fail_after_backoff");
+  });
+
+  it("treats 2xx as render (JSON parse is separate)", () => {
+    expect(classifyHttp({ status: 200 })).toBe("render");
+  });
+});
+
+describe("decideHttpTokenEnv", () => {
+  it("sends no Authorization when the env name is unset", () => {
+    expect(
+      decideHttpTokenEnv({ envName: undefined, envValue: "secret" }),
+    ).toEqual({ outcome: "render", authorization: undefined });
+    expect(decideHttpTokenEnv({ envName: "  ", envValue: "secret" })).toEqual({
+      outcome: "render",
+      authorization: undefined,
+    });
+  });
+
+  it("fails the widget when the named env is empty", () => {
+    expect(decideHttpTokenEnv({ envName: "HTTP_TOKEN", envValue: "" })).toEqual(
+      { outcome: "fail_widget" },
+    );
+    expect(
+      decideHttpTokenEnv({ envName: "HTTP_TOKEN", envValue: "  \n" }),
+    ).toEqual({ outcome: "fail_widget" });
+  });
+
+  it("prefixes Bearer unless a scheme is already present", () => {
+    expect(
+      decideHttpTokenEnv({ envName: "HTTP_TOKEN", envValue: "secret" }),
+    ).toEqual({ outcome: "render", authorization: "Bearer secret" });
+    expect(
+      decideHttpTokenEnv({ envName: "HTTP_TOKEN", envValue: "Basic abc" }),
+    ).toEqual({ outcome: "render", authorization: "Basic abc" });
+  });
+});
+
+describe("decideHttpOnlyRunFailed", () => {
+  it("fails the job when json is the only widget and it did not render", () => {
+    expect(
+      decideHttpOnlyRunFailed({
+        widgets: [{ id: "json", outcome: "fail_widget" }],
+      }),
+    ).toBe("fail_job");
+  });
+
+  it("does not fail github widgets because json failed", () => {
+    expect(
+      decideHttpOnlyRunFailed({
+        widgets: [
+          { id: "stats", outcome: "render" },
+          { id: "json", outcome: "fail_widget" },
+        ],
+      }),
+    ).toBe("render");
+  });
+
+  it("allows skipped when allow_skipped is true", () => {
+    expect(
+      decideHttpOnlyRunFailed({
+        widgets: [{ id: "json", outcome: "fail_widget" }],
+        allowSkipped: true,
+      }),
+    ).toBe("render");
+  });
+
+  it("fails the job when chips is the only widget and it did not render", () => {
+    expect(
+      decideHttpOnlyRunFailed({
+        widgets: [{ id: "chips", outcome: "fail_widget" }],
+      }),
+    ).toBe("fail_job");
+  });
+
+  it("does not fail github widgets because chips failed", () => {
+    expect(
+      decideHttpOnlyRunFailed({
+        widgets: [
+          { id: "stats", outcome: "render" },
+          { id: "chips", outcome: "fail_widget" },
+        ],
+      }),
+    ).toBe("render");
+  });
+
+  it("fails the job when json and chips both fail (all http, none rendered)", () => {
+    expect(
+      decideHttpOnlyRunFailed({
+        widgets: [
+          { id: "json", outcome: "fail_widget" },
+          { id: "chips", outcome: "fail_widget" },
+        ],
+      }),
+    ).toBe("fail_job");
+  });
+
+  it("renders when json rendered even if chips failed", () => {
+    expect(
+      decideHttpOnlyRunFailed({
+        widgets: [
+          { id: "json", outcome: "render" },
+          { id: "chips", outcome: "fail_widget" },
+        ],
+      }),
+    ).toBe("render");
+  });
+
+  it("allows skipped chips when allow_skipped is true", () => {
+    expect(
+      decideHttpOnlyRunFailed({
+        widgets: [{ id: "chips", outcome: "fail_widget" }],
+        allowSkipped: true,
       }),
     ).toBe("render");
   });
