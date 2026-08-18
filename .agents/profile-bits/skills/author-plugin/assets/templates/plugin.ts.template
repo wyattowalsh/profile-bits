@@ -60,6 +60,7 @@ export const {{PLUGIN_ID_UPPER}}_BITS_USED = [
   "Row",
   "Text",
   "Muted",
+  // plus Stat, Bar, Chip, Avatar, Divider when the template imports them
 ] as const;
 
 export const {{PLUGIN_ID}}Plugin = {

@@ -1,35 +1,41 @@
+import type {
+  {{WIDGET_PASCAL}}Options,
+  {{WIDGET_PASCAL}}Payload,
+} from "./schema.js";
+
 /**
  * Widget fetch: consume the cached {{INTEGRATION_ID}} payload.
  * NO HTTP here (no fetch, octokit, REST /languages, GraphQL).
  * Shared client + cache keys live on the integration:
  *   REST (method, url, params); GraphQL (query, variables).
  *
- * include_private without canPrivate → fail this widget.
- * Do not paint contributions 0 when canContributions is false or viewer ≠ user.
+ * github-class widgets add include_private via OpenSpec and fail closed
+ * on canPrivate. Do not paint contributions 0 when canContributions is
+ * false or viewer ≠ user.
  * Empty language data → caller renders "No language data", not a crash.
  */
+
+type {{INTEGRATION_PASCAL}}CachedPayload = {
+  title:      string;
+  subtitle?:  string;
+  avatarUrl?: string;
+  statLabel:  string;
+  statValue:  string | number;
+  chip:       string;
+  barPct:     number;
+};
 
 export async function fetch{{WIDGET_PASCAL}}(ctx: {
   payload: {{INTEGRATION_PASCAL}}CachedPayload;
   options: {{WIDGET_PASCAL}}Options;
-  capabilities: {
-    canPrivate: boolean;
-    canContributions: boolean;
-  };
 }): Promise<{{WIDGET_PASCAL}}Payload> {
-  const { payload, options, capabilities } = ctx;
+  const { payload } = ctx;
 
-  if (options.include_private === true && capabilities.canPrivate !== true) {
-    throw new Error("include_private requires canPrivate");
-  }
-
-  return mapCachedPayload(payload, options, capabilities);
+  return mapCachedPayload(payload);
 }
 
 function mapCachedPayload(
   payload: {{INTEGRATION_PASCAL}}CachedPayload,
-  options: {{WIDGET_PASCAL}}Options,
-  capabilities: { canPrivate: boolean; canContributions: boolean },
 ): {{WIDGET_PASCAL}}Payload {
   return {
     title:     payload.title,
@@ -39,7 +45,5 @@ function mapCachedPayload(
     statValue: payload.statValue,
     chip:      payload.chip,
     barPct:    payload.barPct,
-    animate:   options.animate,
-    omitContributions: capabilities.canContributions !== true,
   };
 }

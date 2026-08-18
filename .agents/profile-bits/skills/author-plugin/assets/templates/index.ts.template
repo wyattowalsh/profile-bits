@@ -1,6 +1,0 @@
-export {
-  deriveIntegrationUnion,
-  {{PLUGIN_ID}}Plugin,
-  {{PLUGIN_ID_UPPER}}_BITS_USED,
-  WIDGET_INTEGRATIONS,
-} from "./plugin.js";

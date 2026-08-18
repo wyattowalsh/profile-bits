@@ -9,6 +9,9 @@ import * as z from "zod";
 export const {{WIDGET_PASCAL}}OptionsSchema = z.strictObject({
   filename: z.string().default("{{WIDGET_ID}}"),
   animate:  z.boolean().default(false),
+  // github-class widgets add include_private via OpenSpec and fail closed
+  // on canPrivate. Do not add it to the generic widget schema:
+  // include_private: z.boolean().default(false),
   // md/mdx only — omit on react/html widgets:
   // md: z.strictObject({
   //   presets: z.enum(["default"]).default("default"),
@@ -22,6 +25,18 @@ export const {{WIDGET_PASCAL}}OptionsSchema = z.strictObject({
   //   allow_network: z.boolean().default(false),
   // }).optional(),
 });
+
+export type {{WIDGET_PASCAL}}Options = z.infer<typeof {{WIDGET_PASCAL}}OptionsSchema>;
+
+export type {{WIDGET_PASCAL}}Payload = {
+  title:      string;
+  subtitle?:  string;
+  avatarUrl?: string;
+  statLabel:  string;
+  statValue:  string | number;
+  chip:       string;
+  barPct:     number;
+};
 
 export const {{WIDGET_PASCAL}}Formats = [
   "svg",
@@ -41,10 +56,3 @@ export const {{WIDGET_PASCAL}}Examples = [
     animate:  false,
   },
 ] as const;
-
-/** Registry fields (plugin.ts) — not this schema file:
- *  id, title, description, integrations: ["{{INTEGRATION_ID}}"],
- *  size: {{WIDGET_PASCAL}}Size, formats: {{WIDGET_PASCAL}}Formats,
- *  bitsUsed: ["Theme","Frame","Stack","Row","Text","Muted","Stat","Bar","Chip","Avatar","Divider"],
- *  source omitted when canonical widget.tsx|widget.md|widget.mdx|widget.html exists.
- */

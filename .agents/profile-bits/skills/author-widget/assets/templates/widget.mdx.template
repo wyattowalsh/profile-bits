@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Bar,
   Chip,
   Divider,
@@ -18,19 +17,18 @@ import {
     Mermaid: rehype-mermaid strategy inline-svg via isomorphic-mermaid (no Playwright). */}
 
 <Theme>
-  <Frame tw="h-full w-full">
-    <Stack tw="h-full w-full gap-2 p-3">
-      <Row tw="items-center gap-2">
-        <Avatar tw="h-8 w-8" />
-        <Text tw="text-sm font-semibold">{{WIDGET_TITLE}}</Text>
-        <Muted tw="text-xs">{{WIDGET_DESCRIPTION}}</Muted>
+  <Frame>
+    <Stack gap={8}>
+      <Row gap={8}>
+        <Text size={14} weight={600}>{{WIDGET_TITLE}}</Text>
+        <Muted size={12}>{{WIDGET_DESCRIPTION}}</Muted>
       </Row>
       <Divider />
-      <Row tw="gap-3">
-        <Stat label="Count" value="0" />
+      <Row gap={12}>
+        <Stat label="Count" value={0} />
         <Chip>ok</Chip>
       </Row>
-      <Bar tw="w-full" />
+      <Bar pct={0} />
     </Stack>
   </Frame>
 </Theme>

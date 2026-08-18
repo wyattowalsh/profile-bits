@@ -1,7 +1,7 @@
 /*
  * Takumi-safe stylesheet companion.
  *
- * tw prop: built-in Tailwind subset on bits / div / span / img (no Preflight).
+ * tw prop: built-in Tailwind subset on div / span / img only, not bits (no Preflight).
  * Full Tailwind or any CSS: compile (e.g. Vite ?inline) into stylesheets[] and
  * match via className / id. Extra plugin CSS (KaTeX, pretty-code, starry-night)
  * also lands in stylesheets — not in renderSvg() <style>.

@@ -1,3 +1,4 @@
+import { BIT_EXPORTS } from "@profile-bits/bits";
 import { describe, expect, it } from "vitest";
 import {
   deriveIntegrationUnion,
@@ -28,14 +29,9 @@ describe("{{PLUGIN_ID}}Plugin pack registry", () => {
 
   it("exposes pack-level bitsUsed on {{PLUGIN_ID}}Plugin", () => {
     expect({{PLUGIN_ID}}Plugin.bitsUsed).toEqual({{PLUGIN_ID_UPPER}}_BITS_USED);
-    expect({{PLUGIN_ID}}Plugin.bitsUsed).toEqual([
-      "Theme",
-      "Frame",
-      "Stack",
-      "Row",
-      "Text",
-      "Muted",
-    ]);
+    for (const name of {{PLUGIN_ID}}Plugin.bitsUsed) {
+      expect(BIT_EXPORTS).toContain(name);
+    }
   });
 
   it("does not invent integrations the widgets do not consume", () => {
