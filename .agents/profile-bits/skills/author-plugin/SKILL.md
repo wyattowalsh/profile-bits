@@ -32,7 +32,7 @@ include wakatime, rss, and http packs. Thin Action names: read
 `ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
 never invent `plugin_*_*_*`.
 
-Read before writing:
+Read before writing (MUST NOT rewrite the three-layer specs):
 
 - `openspec/specs/plugin-contract/spec.md`
 - `openspec/specs/widget-contract/spec.md`
@@ -46,14 +46,17 @@ Do not load all at once.
 ## Empty args
 
 When `$ARGUMENTS` is empty (or the user only asks how pack authoring works:
-`help`, "what does author-plugin do"), print the gallery below. **Do not
-write files.** Do not inventory the next product add (that is `author` ideate).
+`help`, "what does author-plugin do"), print the gallery below and **stop**.
+Do not write files. Do not inventory live packs or the next product add
+(that is `author` ideate). Do not read `types.ts` or the OpenSpec contracts.
 
 1. Dispatch table
-2. Live catalog: read `FIRST_PARTY_PLUGIN_IDS` in `types.ts` (not github-only)
+2. Live catalog SSOT is `FIRST_PARTY_*` in `types.ts` (not github-only)
 3. Sibling skills: `author` (router + ideate), `author-widget`, `author-integration`
-4. Template destinations under `packages/plugins/src/<id>/`
+4. Template destinations under `packages/plugins/src/<id>/` (`plugin.ts`,
+   `plugin.test.ts` — no per-pack `index.ts`)
 5. Export `{{PLUGIN_ID}}Plugin` + pack-level `{{PLUGIN_ID_UPPER}}_BITS_USED`
+   (six-name starter; union is add-only; update `plugin.test.ts` when unioning)
 6. `docsPath: "{{DOCS_PATH}}"` — do not hardcode `/generate/<id>/`
 7. After public API: tell the user to run `just generate-action` and
    `just generate-docs`. Fail closed on stale codegen — never hand-edit
@@ -65,7 +68,7 @@ write files.** Do not inventory the next product add (that is `author` ideate).
 
 | `$ARGUMENTS` | Mode |
 | --- | --- |
-| *(empty)* / `help` | Empty-args gallery (no writes) |
+| *(empty)* / `help` | Empty-args gallery then **stop** (no writes, no inventory) |
 | New pack / pack registry / `plugin.ts` / `docsPath` / pack defaults | **Pack** (this skill) |
 | Complete existing id in `FIRST_PARTY_PLUGIN_IDS` | **Pack** for that id (no second directory) |
 | New card / widget on an **existing** pack | Stop → `author-widget` |
@@ -85,9 +88,13 @@ Ambiguous "add GitHub languages option" is a widget/yaml change, not a pack.
 3. Export `{{PLUGIN_ID}}Plugin` and `{{PLUGIN_ID_UPPER}}_BITS_USED`. `bitsUsed` is pack-level. Do not export a nameless pack const.
 4. `docsPath: "{{DOCS_PATH}}"`. Do not hardcode `/generate/<id>/`.
 5. `integrations` MUST equal `deriveIntegrationUnion(...)`. Defaults omit `demo`.
-6. Destinations: `packages/plugins/src/<id>/{plugin.ts,index.ts,plugin.test.ts}`. Templates MUST NOT contain `../`.
+6. Destinations: `packages/plugins/src/<id>/{plugin.ts,plugin.test.ts}`. No per-pack `index.ts`. Templates MUST NOT contain `../`.
 7. Never invent flattened `plugin_*_*_*` Action inputs. Read `ActionInputsSchema` (optional `wakatime_token`, `http_token_env`).
 8. `PluginIdentitySchema` has no `bitsUsed`. Use `satisfies PluginIdentity & { bitsUsed: typeof … }`. Do not edit `packages/core`.
+9. Starter `bitsUsed` is six layout names only (`Theme`, `Frame`, `Stack`, `Row`, `Text`, `Muted`). Do not stamp `Stat`, `Bar`, `Chip`, `Avatar`, `Divider` into the pack starter. When unioning `bitsUsed`, update `plugin.test.ts`; do not leave a hardcoded Theme, Frame, Stack, Row, Text, Muted literal array.
+10. MUST NOT rewrite `plugin-contract`, `widget-contract`, or `integration-contract`. Completing an existing catalog id is allowed.
+11. Complete-existing: inventory live files; extend rather than overwrite; keep `githubWidgetRegistry` on github; do not shrink live `WAKATIME_BITS_USED`; copy templates only into empty or new directories.
+12. Empty args / help → gallery and **stop**. Do not inventory. Do not write.
 
 ## Pack identity
 
@@ -101,12 +108,26 @@ Mirror `PluginIdentitySchema` plus pack-level `bitsUsed`:
 | `widgets` | 1..N widget ids owned by this pack. |
 | `integrations` | **Derived union** of those widgets' integrations. Never a hand-maintained parallel list. |
 | `defaults.widgets` | Enabled when the pack is on with no widget list. **Omit `demo`.** |
-| `bitsUsed` | Pack-level `{{PLUGIN_ID_UPPER}}_BITS_USED` on `{{PLUGIN_ID}}Plugin`. author-widget unions names into this array. |
+| `bitsUsed` | Pack-level `{{PLUGIN_ID_UPPER}}_BITS_USED` on `{{PLUGIN_ID}}Plugin`. Six-name starter; author-widget unions imported names (add-only). Update `plugin.test.ts` when unioning. |
 
 Derived union: unique integration ids from each listed widget, sorted.
 Fail if a listed widget has no integrations list. Do not invent an
 integration no listed widget consumes. Do not omit one a listed widget
 declares.
+
+Starter `{{PLUGIN_ID_UPPER}}_BITS_USED` is six layout names: `Theme`,
+`Frame`, `Stack`, `Row`, `Text`, `Muted`. Do **not** stamp `Stat`, `Bar`,
+`Chip`, `Avatar`, `Divider` into the pack starter. author-widget unions
+names the copied family actually imports (add-only). Comment: plus those
+five when the template imports them. Live packs are subsets (http is four
+names). MDX omits Avatar.
+
+When unioning `bitsUsed`, update `plugin.test.ts`. Keep
+`toEqual({{PLUGIN_ID_UPPER}}_BITS_USED)`. Do not leave a hardcoded
+`Theme`, `Frame`, `Stack`, `Row`, `Text`, `Muted` literal array. Assert
+every entry is in the frozen 11 (`Theme`, `Frame`, `Stack`, `Row`,
+`Text`, `Muted`, `Stat`, `Bar`, `Chip`, `Avatar`, `Divider`). The frozen
+11 is the membership allow-list, not the starter.
 
 ## Integrations on a pack
 
@@ -133,6 +154,7 @@ GitHub pack (id already in the enum) fill:
 - `defaults.widgets`: `stats`, `languages` (`demo` opt-in)
 - `integrations`: `["github", "static"]`
 - Do not assume `packages/plugins/src/github/` exists; complete that typed hole when missing.
+- Keep `githubWidgetRegistry` on the live github pack. Do not replace it with a six-name starter.
 
 ## Templates
 
@@ -142,7 +164,6 @@ repo-root, documented here — not inside the template files.
 | Skill-relative template | Destination |
 | --- | --- |
 | `assets/templates/plugin.ts.template` | `packages/plugins/src/<id>/plugin.ts` |
-| `assets/templates/index.ts.template` | `packages/plugins/src/<id>/index.ts` |
 | `assets/templates/plugin.test.ts.template` | `packages/plugins/src/<id>/plugin.test.ts` |
 
 Replace `{{PLUGIN_ID}}`, `{{PLUGIN_ID_UPPER}}`, `{{PLUGIN_TITLE}}`,
@@ -157,20 +178,29 @@ Completing an existing id does not append the enum.
 
 ## Workflow
 
-1. Read OpenSpec + `types.ts`. Classify: existing pack vs new pack id;
-   existing vs new integrations; widget vs pack vs integration.
-2. Reroute or refuse per the dispatch table.
-3. **Public API → OpenSpec first.** New pack id, new widget ids on a new
+1. Empty args / help → gallery and **stop**. Do not continue this workflow.
+2. Read OpenSpec + `types.ts`. MUST NOT rewrite `plugin-contract`,
+   `widget-contract`, or `integration-contract`. Classify: existing pack vs
+   new pack id; existing vs new integrations; widget vs pack vs integration.
+3. Reroute or refuse per the dispatch table.
+4. **Public API → OpenSpec first.** New pack id, new widget ids on a new
    pack, or a new yaml `plugins.<id>` key are public API. Propose/apply the
    OpenSpec change, then widen `types.ts`. Do not silently edit the enum.
-4. Copy templates into `packages/plugins/src/<id>/`. Keep
-   `integrations = deriveIntegrationUnion(...)`. Keep `demo` out of defaults.
-   Export `{{PLUGIN_ID}}Plugin` with pack-level `bitsUsed`.
-5. Yaml options stay in `.github/profile-bits.yml` with
+   Completing an existing catalog id does not append the enum.
+5. **Complete-existing no-clobber.** Inventory live files first. Extend
+   rather than overwrite complete sources. Keep `githubWidgetRegistry` on
+   github. Do not shrink live `WAKATIME_BITS_USED`. Copy templates only into
+   empty or new directories (`plugin.ts`, `plugin.test.ts` — no `index.ts`).
+   For a new empty dir: keep `integrations = deriveIntegrationUnion(...)`.
+   Keep `demo` out of defaults. Export `{{PLUGIN_ID}}Plugin` with pack-level
+   `bitsUsed` (six layout names in the starter). When unioning names later,
+   update `plugin.test.ts` — do not leave a hardcoded Theme, Frame, Stack,
+   Row, Text, Muted array.
+6. Yaml options stay in `.github/profile-bits.yml` with
    `additionalProperties: false`. Yaml present beats `plugin_github`.
    Never add `plugin_<plugin>_<widget>_<option>` inputs. Never flatten
    options into `action.yml`. Root `action.yml` stays **thin**.
-6. **Fail closed on stale codegen.** Do not hand-edit generated
+7. **Fail closed on stale codegen.** Do not hand-edit generated
    `action.yml`. Tell the user to run:
 
 ```bash
@@ -194,11 +224,15 @@ just generate-docs
 
 ## Checklist
 
-- [ ] OpenSpec + `types.ts` read; new catalog ids gated; existing ids not duplicated
+- [ ] Empty args / help stopped at the gallery (no inventory, no writes)
+- [ ] OpenSpec + `types.ts` read; three-layer specs not rewritten; new catalog ids gated; existing ids not duplicated
 - [ ] Not a widget-only or integration-only request
 - [ ] Not a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`
-- [ ] Templates copied with no `../` paths
+- [ ] Complete-existing: inventory; keep `githubWidgetRegistry`; do not shrink `WAKATIME_BITS_USED`
+- [ ] Templates copied with no `../` paths and no per-pack `index.ts`
 - [ ] Export `{{PLUGIN_ID}}Plugin` (not `plugin`) with pack-level `bitsUsed`
+- [ ] Starter `bitsUsed` is six layout names; do not stamp 11 names into the starter
+- [ ] When unioning `bitsUsed`, update `plugin.test.ts`; no hardcoded Theme…Muted six-name array
 - [ ] `docsPath` is `"{{DOCS_PATH}}"`
 - [ ] `integrations` is the derived union
 - [ ] Defaults omit `demo`
@@ -219,5 +253,5 @@ From the plugin root:
 
 ```bash
 bash scripts/validate.sh
-pnpm dlx skills-ref validate skills/author-plugin
+pnpm dlx skills-ref@0.1.5 validate skills/author-plugin
 ```

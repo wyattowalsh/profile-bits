@@ -2,30 +2,85 @@
 
 Load when scaffolding `auth.ts` or deciding token / capability behavior. Reuse `packages/core/src/auth-policy.ts`. Do not fork a second matrix.
 
-Copy `auth.ts` to `packages/integrations/src/<id>/auth.ts`. Never omit `src/`
-under `packages/integrations/`. Read live `INTEGRATION_AUTH` in
-`packages/core/src/types.ts`. Completing an id already in
-`FIRST_PARTY_INTEGRATION_IDS` is allowed. A new id needs OpenSpec first. Do
-not create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`. Thin
-Action names: read `ActionInputsSchema` (optional `wakatime_token`,
-`http_token_env`); never invent `plugin_*_*_*`.
+There is **no** default `auth.ts.template`. Copy **one** scheme file from the
+SKILL id→filename table onto `packages/integrations/src/<id>/auth.ts` only
+when dest is empty or new. If dest `client.ts` exists, **stop**. Never omit
+`src/` under `packages/integrations/`. Refuse dest `../`.
+
+Read live `INTEGRATION_AUTH` in `packages/core/src/types.ts`. This table **is**
+that live map (do not freeze a github-only subset):
+
+`INTEGRATION_AUTH`: github Bearer; wakatime RFC Basic `base64(api_key:)`; http
+optional, whitespace `fail_widget`; no `decideActionToken` on wakatime/http.
+
+| Id | `INTEGRATION_AUTH` | Header / fail |
+| --- | --- | --- |
+| `static` | `none` | No `Authorization`. |
+| `github` | `optional` | Bearer. Empty/whitespace token is `fail_job`. `decideActionToken` is GitHub-only. |
+| `wakatime` | `required` | RFC Basic `base64(api_key:)`. Never Bearer. Never `decideActionToken`. |
+| `rss` | `none` | No `Authorization`. |
+| `http` | `optional` | Unset sends no `Authorization`. Whitespace is `fail_widget` (not `fail_job`). Never `decideActionToken`. |
+
+Completing an id already in `FIRST_PARTY_INTEGRATION_IDS` is allowed. A new
+id needs OpenSpec first (OpenSpec must name `{{scheme}}`). Unknown id
+**stops**. Do not infer `github-bearer` from catalog `optional`. Do not
+create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`.
+Templates are for **new** ids; do not emit a parallel `auth.ts` onto live
+`github` / `wakatime` / `rss`. Thin Action names: read `ActionInputsSchema`
+(optional `wakatime_token`, `http_token_env`); never invent `plugin_*_*_*`.
+
+Shared export **names**: `{{ID}}_AUTH`, `is{{Id}}TokenMissing`,
+`assert{{Id}}ActionToken`, `{{id}}AuthorizationHeader`,
+`{{id}}RequiresAuthorization`. Header functions return `{}` for none-kind —
+never `{ Authorization: "" }`.
+
+`{{auth}}` is catalog `none | optional | required` from live
+`INTEGRATION_AUTH`. `{{scheme}}` is the header/fail policy. They are **not**
+1:1 (github and http are both `optional`).
 
 ## Per integration
 
-| Id | `INTEGRATION_AUTH` | Runtime |
-| --- | --- | --- |
-| `static` | `none` | No `Authorization`. No GitHub. Fixtures only (`demo`, tests, docs preview). |
-| `github` | `optional` in types | **Not** unauthenticated. Action requires a non-empty token. Playground uses a GitHub App token or fixtures. |
-| WakaTime-class / other | `required` | Missing API key fails the run. Never send the request without the secret. |
+| Id | `INTEGRATION_AUTH` | `{{scheme}}` | Runtime |
+| --- | --- | --- | --- |
+| `static` | `none` | `none` | No `Authorization`. No GitHub. Fixtures only (`demo`, tests, docs preview). Copy `auth.none.ts.template` for a **new** none-kind id. |
+| `rss` | `none` | `none` | No `Authorization`. https GET + cache inside the rss client. Copy `auth.none.ts.template` for a **new** none-kind id. Do not emit a parallel `auth.ts` onto live rss. |
+| `github` | `optional` | `github-bearer` | **Not** unauthenticated. Action requires a non-empty token. Playground uses a GitHub App token or fixtures. Copy `auth.github-bearer.ts.template` for a **new** id only. |
+| `wakatime` | `required` | `wakatime-basic` | Missing API key fails the run. Never send the request without the secret. RFC Basic `base64(api_key:)`. Never Bearer. Never `?api_key=`. Never `decideActionToken`. Copy `auth.wakatime-basic.ts.template` for a **new** id only. Do not emit a parallel `auth.ts` onto live wakatime. |
+| `http` | `optional` | `http-optional` | Unset / `null` token sends no `Authorization`. `""` / whitespace is `fail_widget` before fetch, not `fail_job`. Else Bearer unless the value already has `Bearer` / `token` / `Basic`. Never `decideActionToken`. Copy `auth.http-optional.ts.template` for a **new** id only. Pack auth stays `optional` even when a request sets per-request `auth: "none"`. |
 
 `auth: optional` MUST NOT send a GitHub request without `Authorization`. Unauthenticated 60 requests/hour per IP MUST NEVER be used.
 
+### none (`auth.none.ts.template`)
+
+`{{id}}RequiresAuthorization() === false`. `assert{{Id}}ActionToken` is a
+no-op. Header `{}`.
+
+### wakatime-basic (`auth.wakatime-basic.ts.template`)
+
+`{{id}}RequiresAuthorization() === true`. `is{{Id}}TokenMissing` → construct
+`fail_job`. Header is RFC Basic `base64(api_key:)`. Never Bearer. Never
+`?api_key=`. Never `decideActionToken`.
+
+### http-optional (`auth.http-optional.ts.template`)
+
+`{{id}}RequiresAuthorization() === false`. `assert{{Id}}ActionToken` is a
+no-op; construct never throws. Unset / `null` → header `{}`. `""` /
+whitespace → `{ kind: "missing" }` and send/fetchJson throws `fail_widget`
+before fetch. Else Bearer unless the value already has `Bearer` / `token` /
+`Basic`. Never `fail_job` for a missing optional token.
+
 ## Action token (github)
+
+github-bearer (`auth.github-bearer.ts.template`, **new-id only**):
+`{{id}}RequiresAuthorization() === true`. Always `Bearer ${token}`.
 
 - Empty / `""` / whitespace `github_token` is **missing** (`isMissingToken` → `decideActionToken` → `fail_job`).
 - Missing Action token fails the job **before any request**. Do not substitute `${{ github.token }}` when the input was explicitly empty.
 - Omitted (absent) input may default to `${{ github.token }}` — that is not the empty-string case.
 - Default Actions `github.token` rate: **1,000 REST/hour and 1,000 GraphQL points/hour per repo**, not 5,000. User PAT: 5,000/hour.
+
+Do not copy `decideActionToken` into wakatime or http auth. `decideActionToken`
+is GitHub Action-token policy only.
 
 Token classes (`TOKEN_CLASSES`): `actions_installation` | `user_pat` | `github_app_install`.
 

@@ -30,29 +30,33 @@
     },
     {
       "id": "css-animation-gif-apng",
-      "prompt": "Add a widget with CSS animation for gif and apng output.",
-      "expected_output": "Copies keyframes.css.template as animation.css. CSS @keyframes are authoring input to renderAnimation via @profile-bits/renderer (takumi-js 2.9.2). Formats allow-list includes gif and apng. APNG files are named .png. Default SVG remains a baked still with no <style>, @keyframes, SMIL, or foreignObject in renderSvg() output. Card 480×160 on the existing github pack.",
+      "prompt": "Add a widget with CSS animation for gif and apng output on the existing wakatime pack.",
+      "expected_output": "Targets the existing wakatime pack (not github-only). Copies keyframes.css.template as animation.css. Extends live coding files; does not overwrite complete existing schema.ts/fetch.ts/widget.*. Does not create a second wakatime pack. CSS @keyframes are authoring input to renderAnimation via @profile-bits/renderer (takumi-js 2.9.2). Formats allow-list includes gif and apng. APNG files are named .png. Default SVG remains a baked still with no <style>, @keyframes, SMIL, or foreignObject in renderSvg() output. Card 480×160.",
       "assertions": [
+        "Does not assume github-only; targets the existing wakatime pack from FIRST_PARTY_PLUGIN_IDS",
+        "Does not create a second wakatime pack or a new integration just to add animation",
         "Copies assets/templates/keyframes.css.template into the widget dir (animation.css)",
+        "Extends live wakatime coding files rather than overwriting complete existing schema.ts/fetch.ts/widget.*",
         "Treats CSS @keyframes as authoring input to render / renderAnimation, not GitHub SVG runtime",
         "Includes gif and apng on the formats allow-list with default format svg",
         "Names APNG output with a .png extension",
         "Keeps default SVG as a baked still (no <style>, @keyframes, SMIL, or foreignObject in renderSvg output)",
         "Renders through @profile-bits/renderer only (no direct takumi-js / @takumi-rs/* import in the widget)",
-        "Uses card size 480×160 and root width/height 100%",
-        "Does not create a new pack or new integration just to add animation"
+        "Uses card size 480×160 and root width/height 100%"
       ]
     },
     {
       "id": "widget-mdx-no-source",
       "prompt": "Drop in a widget.mdx file with no source field.",
-      "expected_output": "Writes canonical widget.mdx and omits the source field so discoverSource maps .mdx → mdx. Does not also write widget.md or widget.tsx. MDX components map is the bits index. Pipeline is @mdx-js/mdx → fromJsx. Sets md.presets / md.families for md/mdx. Ambiguous dual canonical files without source would fail.",
+      "expected_output": "Writes canonical widget.mdx and omits the source field so discoverSource maps .mdx → mdx. Does not also write widget.md or widget.tsx. Maps MDX components to the bits index (all 11 names available). Does not require JSX to render Avatar. Unions only composed names into pack-level BITS_USED (no Avatar when the MDX scaffold omits it). Does not put tw on bits. MDX scaffold uses numeric bit props (Bar pct={0}, Stat value={0}) and omits Avatar when there is no src. `<Theme>` with no `theme` prop. Pipeline is @mdx-js/mdx → fromJsx. Sets md.presets / md.families for md/mdx. Ambiguous dual canonical files without source would fail.",
       "assertions": [
         "Copies assets/templates/widget.mdx.template as widget.mdx",
         "Omits the source field (prefer omit when the file is named correctly)",
         "Relies on discoverSource extension .mdx → mdx (no explicit source override)",
         "Does not emit a second canonical widget.md or widget.tsx in the same dir",
-        "Maps MDX components to bits (Theme, Frame, Stack, Row, Text, Muted, Stat, Bar, Chip, Avatar, Divider)",
+        "Maps MDX components to the bits index (all 11 names available). Does not require JSX to render Avatar. Unions only composed names into pack-level BITS_USED (no Avatar when the MDX scaffold omits it). Does not put tw on bits.",
+        "MDX scaffold uses numeric bit props (Bar pct={0}, Stat value={0}) and omits Avatar when there is no src",
+        "`<Theme>` with no `theme` prop",
         "Uses remark/rehype via @mdx-js/mdx then fromJsx (not remark-mdx + remark-html)",
         "Declares md.presets and md.families for the md/mdx widget",
         "Would fail closed on ambiguous widget.md + widget.tsx without source"
@@ -61,10 +65,12 @@
     {
       "id": "tailwind-stylesheets",
       "prompt": "Make a Tailwind stylesheets widget.",
-      "expected_output": "Generates a bits-composed Takumi-safe template using tw and/or className, copies stylesheet.css.template, and unions bit names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin. No react-dom, useEffect, portals, or Radix/shadcn DOM. Bits are not yaml keys. Takumi via @profile-bits/renderer. Card 480×160.",
+      "expected_output": "Generates a bits-composed Takumi-safe template. `tw` / `className` only on native `div` / `span` / `img`. Bits use typed props (`gap`, `size`, `weight`, `pct`, `src`) and never take `tw`. Copies `stylesheet.css.template`, unions bit names into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on `{{PACK_ID}}Plugin`, and updates `plugin.test.ts` so it does not assert a stale literal `bitsUsed` list. No react-dom, useEffect, portals, or Radix/shadcn DOM. Bits are not yaml keys. Takumi via `@profile-bits/renderer`. Card 480×160.",
       "assertions": [
         "Copies assets/templates/stylesheet.css.template and a bits-based widget.tsx (or html) template",
-        "Uses Takumi-safe tw and/or className on div/span/img or bits (Theme, Frame, Stack, Row, Text, Muted, Stat, Bar, Chip, Avatar, Divider)",
+        "Uses Takumi-safe tw and/or className only on div/span/img, never on bits",
+        "Does not put tw, className, or style on Theme/Frame/Stack/Row/Text/Muted/Stat/Bar/Chip/Avatar/Divider",
+        "Updates plugin.test.ts when unioning bitsUsed; does not leave a hardcoded Theme…Muted six-name array",
         "Unions bit names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin in plugin.ts, not a widget-entry field, not in .github/profile-bits.yml",
         "Does not import react-dom, useEffect, portals, @radix-ui/*, or shadcn DOM primitives",
         "Does not import takumi-js or @takumi-rs/* from the widget (renderer only)",
@@ -91,13 +97,134 @@
     {
       "id": "bits-used-pack-union",
       "prompt": "Register bitsUsed for a new card that composes Theme, Frame, Stack, Row, Text, and Stat.",
-      "expected_output": "Unions those names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin. Does not set bitsUsed on a widget registry entry. Does not put bits in yaml. Does not edit packages/core PluginIdentitySchema.",
+      "expected_output": "Unions those names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin. Does not set bitsUsed on a widget registry entry. Does not put bits in yaml. Does not edit packages/core PluginIdentitySchema. Updates plugin.test.ts to keep toEqual({{PACK_ID_UPPER}}_BITS_USED) without a hardcoded six-name Theme, Frame, Stack, Row, Text, Muted array.",
       "assertions": [
         "Unions Theme, Frame, Stack, Row, Text, Stat into {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin",
+        "Updates plugin.test.ts to keep toEqual({{PACK_ID_UPPER}}_BITS_USED) without a hardcoded six-name Theme, Frame, Stack, Row, Text, Muted array",
         "Does not set bitsUsed on a widget entry",
         "Does not put bitsUsed or bits keys in .github/profile-bits.yml",
         "Does not add bitsUsed to PluginIdentitySchema in packages/core",
         "Does not create a second pack for an id already in FIRST_PARTY_PLUGIN_IDS"
+      ]
+    },
+    {
+      "id": "implicit-kind",
+      "prompt": "Add a new card.",
+      "expected_output": "Implicit widget kind without a named pack id and widget id stops. Does not invent dest, does not default to github, does not invent a mutating default kind, does not copy templates, does not write packages/plugins.",
+      "assertions": [
+        "Treats implicit widget kind without pack id and widget id as a stop",
+        "Does not invent a destination path",
+        "Does not default to the github pack",
+        "Does not invent a mutating default kind",
+        "Does not copy templates",
+        "Does not write packages/plugins"
+      ]
+    },
+    {
+      "id": "implicit-card-plus-api",
+      "prompt": "Add a card that shows stats from a brand-new time-tracker API we do not have yet.",
+      "expected_output": "Auto-detects new card + new API and refuses this skill. Routes to author-integration. Does not copy widget templates first. Does not invent dest. Does not create a second pack.",
+      "assertions": [
+        "Treats new card plus new API as author-integration, not add",
+        "Does not copy author-widget templates first",
+        "Does not invent a widget dest or pack id",
+        "Does not create a second first-party pack",
+        "Names author-integration as the handoff"
+      ]
+    },
+    {
+      "id": "refuse-mcp",
+      "prompt": "Add an MCP server so agents can generate widgets over MCP.",
+      "expected_output": "Refuse. No mcp.json. Does not inventory a substitute add or copy templates.",
+      "assertions": [
+        "Refuses MCP",
+        "Does not create mcp.json",
+        "Does not copy templates",
+        "Does not inventory the next product add as a consolation"
+      ]
+    },
+    {
+      "id": "refuse-flatten",
+      "prompt": "Add Action input plugin_github_stats_include so Marketplace users can set include without yaml.",
+      "expected_output": "Refuse flattened plugin_<plugin>_<widget>_<option> Action inputs. Thin Action only. Yaml remains SSOT.",
+      "assertions": [
+        "Refuses plugin_github_stats_include",
+        "Refuses plugin_<plugin>_<widget>_<option> names",
+        "Keeps thin Action inputs from ActionInputsSchema",
+        "Does not edit action.yml to add the flattened input",
+        "Does not copy templates as a consolation"
+      ]
+    },
+    {
+      "id": "refuse-unauth",
+      "prompt": "If github_token is empty, just call GitHub unauthenticated from the widget fetch. We only need 60 requests per hour.",
+      "expected_output": "Refuse unauthenticated GitHub. Widgets do not HTTP. Empty/whitespace token fails the Action before any request. Does not add fetch() to fetch.ts.",
+      "assertions": [
+        "Refuses unauthenticated GitHub (60/h/IP)",
+        "Treats empty, \"\", and whitespace github_token as missing",
+        "Keeps widget fetch HTTP-free",
+        "Does not fall back to unauthenticated REST from the widget",
+        "Does not copy templates that call GitHub"
+      ]
+    },
+    {
+      "id": "refuse-http-in-fetch",
+      "prompt": "In fetch.ts, call fetch() to load the JSON so the widget does not need the integration client.",
+      "expected_output": "Refuse HTTP inside widget fetch. Consume the cached integration payload only. No fetch(, octokit, or REST /languages in fetch.ts.",
+      "assertions": [
+        "Refuses HTTP inside widget fetch.ts",
+        "Forbids fetch(, octokit, and REST /languages in the widget",
+        "Requires consuming the cached integration payload",
+        "Does not copy a template that performs HTTP",
+        "Does not bypass the shared integration client"
+      ]
+    },
+    {
+      "id": "refuse-second-wakatime-pack",
+      "prompt": "Add a second first-party WakaTime plugin pack with another coding card.",
+      "expected_output": "Refuses a second wakatime pack. wakatime is already in FIRST_PARTY_PLUGIN_IDS. Completing a card on the existing wakatime pack still requires a named widget id. Does not silently append FIRST_PARTY_*.",
+      "assertions": [
+        "Refuses creating a second wakatime pack",
+        "Notes wakatime is already in FIRST_PARTY_PLUGIN_IDS",
+        "Does not silently append FIRST_PARTY_PLUGIN_IDS",
+        "Does not copy templates into a new wakatime pack directory",
+        "Does not invent flattened plugin_wakatime_* Action inputs"
+      ]
+    },
+    {
+      "id": "refuse-dest-parent",
+      "prompt": "Copy the widget templates using dest ../packages/plugins/src/github/widgets/stats/ so we stay plugin-relative.",
+      "expected_output": "Refuse dest ../. Destination is repo-root packages/plugins/src/<pack>/widgets/<id>/. Templates MUST NOT contain ../. Never copy into /generate/widgets.",
+      "assertions": [
+        "Refuses dest paths that use ../",
+        "States dest is repo-root packages/plugins/src/<pack>/widgets/<id>/",
+        "States templates MUST NOT contain ../",
+        "Does not copy templates to a ../ dest or /generate/widgets"
+      ]
+    },
+    {
+      "id": "discover-source",
+      "prompt": "I dropped widget.md and widget.tsx in the same folder with no source field. What does discover do? Also a .md file with import/export JSX.",
+      "expected_output": "Ambiguous widget.md + widget.tsx without source fails. Prefer omit source when the canonical filename discovers correctly. .md with import/export/JSX promotes to mdx (promotedFrom: md). Explicit source must match bytes or fail. Order is extension → MIME → sniff.",
+      "assertions": [
+        "Fails closed on ambiguous widget.md + widget.tsx without source",
+        "Prefers omitting source when the canonical filename is correct",
+        "Promotes .md with import/export/JSX to mdx",
+        "Requires explicit source to match discovered bytes",
+        "Uses discoverSource order extension → MIME → sniff",
+        "Does not fork a second heuristic"
+      ]
+    },
+    {
+      "id": "animation-not-github-only",
+      "prompt": "Add CSS @keyframes animation for gif and apng. Animation is github-only, so scaffold it under github automatically.",
+      "expected_output": "Animation is not github-only. Requires a named existing pack from FIRST_PARTY_PLUGIN_IDS. Does not assume github, does not default dest to packages/plugins/src/github/, does not copy templates without a named pack id and widget id.",
+      "assertions": [
+        "Does not treat gif/apng animation as github-only",
+        "Requires a named existing pack from FIRST_PARTY_PLUGIN_IDS",
+        "Does not default dest to packages/plugins/src/github/",
+        "Does not copy templates without a named pack id and widget id",
+        "Does not create a new pack or integration just to add animation"
       ]
     }
   ]

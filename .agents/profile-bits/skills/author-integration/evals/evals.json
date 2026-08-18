@@ -4,30 +4,94 @@
     {
       "id": "add-wakatime-integration",
       "prompt": "Add a WakaTime integration so profile widgets can show coding stats from the WakaTime API.",
-      "expected_output": "Complete the existing wakatime integration id (already in FIRST_PARTY_INTEGRATION_IDS) under packages/integrations/src/wakatime/ (client, auth, scopes, inputs, mocked HTTP tests). Auth required. Do not create a second pack. Do not silently append FIRST_PARTY_*. OpenSpec first only if the id were new. No plugin_wakatime_* Action inputs, no live HTTP, no index.ts.template.",
+      "expected_output": "stop-if-client-exists: if packages/integrations/src/wakatime/client.ts exists, STOP (complete-existing; do not clobber live wakatime). Do not copy templates onto the live wakatime directory. Do not emit a parallel auth.ts. Do not create a second pack. Do not silently append FIRST_PARTY_*.",
       "assertions": [
-        "Treats WakaTime as completing the existing integration id, not a second plugin pack",
+        "stop-if-client-exists: STOP because packages/integrations/src/wakatime/client.ts already exists (complete-existing; do not clobber live wakatime)",
+        "Does not overwrite complete existing wakatime sources",
+        "Does not copy templates onto the live wakatime directory",
+        "Does not emit a parallel auth.ts onto live wakatime",
         "Does not create a second wakatime pack or silently append FIRST_PARTY_PLUGIN_IDS / FIRST_PARTY_INTEGRATION_IDS",
-        "Does not scaffold a duplicate packages/plugins/src/wakatime pack registry",
-        "Copies or completes templates into packages/integrations/src/wakatime/ (client.ts, auth.ts, scopes.ts, inputs.ts, client.test.ts)",
-        "Sets integration auth to required (API key as run secret; thin Action already has optional wakatime_token)",
-        "Requires an OpenSpec delta only before adding an id that is not already in FIRST_PARTY_INTEGRATION_IDS",
-        "Does not invent flattened plugin_wakatime_* or plugin_<plugin>_<widget>_<option> Action inputs",
-        "client.test.ts uses mocked HTTP only (no live WakaTime or GitHub)",
-        "Uses a shared client per run",
-        "Does not emit an integration index.ts.template",
-        "Mentions barrel packages/integrations/src/index.ts only (github is already re-exported)",
-        "Tells the user to run just generate-action and just generate-docs if codegen/docs are affected"
+        "Does not invent flattened plugin_wakatime_* or plugin_<plugin>_<widget>_<option> Action inputs"
+      ]
+    },
+    {
+      "id": "add-github",
+      "prompt": "Add a GitHub integration and implement the existing github id under packages/integrations/src/github/.",
+      "expected_output": "Stop because packages/integrations/src/github/client.ts already exists. Distinct from fetch-policy. Do not overwrite live github sources. Do not copy templates. Do not emit a parallel auth.ts.",
+      "assertions": [
+        "Treats add-github as distinct from fetch-policy",
+        "Stops because packages/integrations/src/github/client.ts already exists",
+        "Does not overwrite complete existing github sources",
+        "Does not copy templates onto the live github directory",
+        "Does not emit a parallel auth.ts onto live github"
+      ]
+    },
+    {
+      "id": "github-fetch-policy",
+      "prompt": "Show me the GitHub fetch-policy / crawl locks for the github integration.",
+      "expected_output": "Load github-fetch crawl locks only: REST GET /users/{login} + paginated /repos, filter forks/archived then cap 500, GraphQL nodes(ids:) batches of 100, never REST /languages. Do not copy templates. Do not overwrite live github client.ts. Distinct from add-github.",
+      "assertions": [
+        "Treats fetch-policy as distinct from add-github",
+        "Requires filter forks/archived then cap 500",
+        "Requires GraphQL nodes(ids:) batches of 100",
+        "Refuses REST GET /repos/{owner}/{repo}/languages",
+        "Does not copy templates or overwrite packages/integrations/src/github/client.ts"
+      ]
+    },
+    {
+      "id": "neg-mcp",
+      "prompt": "Add an MCP server so agents can generate widgets over MCP.",
+      "expected_output": "Refuse. No mcp.json. Does not inventory a substitute add or copy templates.",
+      "assertions": [
+        "Refuses MCP",
+        "Does not create mcp.json",
+        "Does not copy templates",
+        "Does not inventory the next product add as a consolation"
+      ]
+    },
+    {
+      "id": "neg-dest-dotdot",
+      "prompt": "Copy the integration templates using dest ../packages/integrations/src/wakatime/ so we stay plugin-relative.",
+      "expected_output": "Refuse dest ../. Destination is repo-root packages/integrations/src/<id>/. Templates MUST NOT contain ../.",
+      "assertions": [
+        "Refuses dest paths that use ../",
+        "States dest is repo-root packages/integrations/src/<id>/",
+        "States templates MUST NOT contain ../",
+        "Does not copy templates to a ../ dest"
+      ]
+    },
+    {
+      "id": "refuse-mcp",
+      "prompt": "Add an MCP server and mcp.json so agents can call this integration.",
+      "expected_output": "Refuse MCP. No mcp.json. Does not inventory a substitute add or copy templates.",
+      "assertions": [
+        "Refuses MCP",
+        "Does not create mcp.json",
+        "Does not copy templates",
+        "Does not inventory the next product add as a consolation"
+      ]
+    },
+    {
+      "id": "refuse-dest-parent",
+      "prompt": "Copy the integration templates using dest ../packages/integrations/src/wakatime/ so we stay plugin-relative.",
+      "expected_output": "Refuse dest ../. Destination is repo-root packages/integrations/src/<id>/. Templates MUST NOT contain ../.",
+      "assertions": [
+        "Refuses dest paths that use ../",
+        "States dest is repo-root packages/integrations/src/<id>/",
+        "States templates MUST NOT contain ../",
+        "Does not copy templates to a ../ dest"
       ]
     },
     {
       "id": "explicit-empty-gallery",
       "prompt": "/author-integration",
-      "expected_output": "Empty-args gallery listing add/github/wakatime modes, destination table, critical rules, and reference index without writing files.",
+      "expected_output": "Empty-args gallery listing add/github/fetch-policy/wakatime modes, destination table, auth copy map, overwrite gate, critical rules, and reference index without writing files.",
       "assertions": [
         "Recognizes empty /author-integration and enters the empty-args handler",
-        "Surfaces add/scaffold, github fetch-policy, and WakaTime-class modes",
+        "Surfaces add/scaffold, add-github, fetch-policy, and WakaTime-class modes as distinct rows",
         "Shows destination paths as packages/integrations/src/<id>/",
+        "Shows the four-row auth id→filename copy map (no default auth.ts.template)",
+        "Mentions the overwrite gate (stop if dest client.ts exists)",
         "Does not invent a mutating default or copy templates",
         "Points at the reference index or critical rules"
       ]
@@ -35,12 +99,12 @@
     {
       "id": "neg-wakatime-first-party-pack",
       "prompt": "Add a first-party WakaTime plugin pack with its own widgets, the same way github is a first-party pack.",
-      "expected_output": "Refuses a second wakatime pack. wakatime is already in FIRST_PARTY_PLUGIN_IDS. Does not silently append FIRST_PARTY_*. Offers completing the existing integration at packages/integrations/src/wakatime/ or the existing pack via author-plugin.",
+      "expected_output": "Refuses a second wakatime pack. wakatime is already in FIRST_PARTY_PLUGIN_IDS. Does not silently append FIRST_PARTY_*. Offers the existing pack via author-plugin or the existing integration dest (stop if client.ts exists).",
       "assertions": [
         "Refuses creating a second wakatime pack",
         "Does not silently append FIRST_PARTY_PLUGIN_IDS",
         "Does not state the catalog is github-only",
-        "Offers packages/integrations/src/wakatime/ when they meant the data source",
+        "Offers packages/integrations/src/wakatime/ when they meant the data source and notes stop-if-client-exists",
         "Routes pack completion to author-plugin for the existing wakatime id without duplicating it"
       ]
     },
@@ -157,6 +221,17 @@
         "Sends no Authorization header for static",
         "Sends no GitHub request for static",
         "Uses fixtures for demo/tests/docs preview"
+      ]
+    },
+    {
+      "id": "auth-scheme-id-filename",
+      "prompt": "Scaffold auth.ts from the default auth.ts.template. Use github Bearer and decideActionToken for WakaTime and http too; infer github-bearer whenever catalog auth is optional.",
+      "expected_output": "Copies the scheme file from the SKILL id→filename table, not a default auth.ts.template. static/rss → auth.none.ts.template; github (new-id only) → auth.github-bearer.ts.template; wakatime (new-id only) → auth.wakatime-basic.ts.template; http (new-id only) → auth.http-optional.ts.template. Unknown id stops; OpenSpec must name {{scheme}}. Templates are for new ids; do not emit a parallel auth.ts onto live github/wakatime/rss. WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=. http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken. Does not copy github decideActionToken into wakatime or http auth.",
+      "assertions": [
+        "WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=",
+        "http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken",
+        "Does not copy github decideActionToken into wakatime or http auth",
+        "Copies the scheme file from the SKILL id→filename table, not a default auth.ts.template"
       ]
     }
   ]

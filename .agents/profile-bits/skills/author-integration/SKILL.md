@@ -3,12 +3,13 @@ name: author-integration
 description: >-
   Generates a profile-bits data-source integration (client, auth, scopes,
   inputs, mocked HTTP) into packages/integrations/src/{id}/. Completing an
-  existing FIRST_PARTY_INTEGRATION_IDS id is allowed; a new id needs OpenSpec
-  first. Use when adding a WakaTime-class API, GitHub client, REST/GraphQL,
-  auth, scopes, or cache keys. NOT for widgets (author-widget), packs
-  (author-plugin), a second pack for an existing plugin id, silent catalog
-  append, live GitHub, REST /languages, flattened plugin_*_*_* inputs, or
-  unauthenticated GitHub.
+  existing FIRST_PARTY_INTEGRATION_IDS id is allowed when dest is empty or new;
+  if dest client.ts exists, stop. A new id needs OpenSpec first. Use when
+  adding a WakaTime-class API, GitHub client, REST/GraphQL, auth, scopes, or
+  cache keys. NOT for widgets (author-widget), packs (author-plugin), a second
+  pack for an existing plugin id, silent catalog append, live GitHub, REST
+  /languages, flattened plugin_*_*_* inputs, unauthenticated GitHub, MCP /
+  mcp.json, or dest paths that use ../.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.
 metadata:
@@ -19,8 +20,8 @@ metadata:
 # author-integration
 
 Scaffold a reusable **integration** (data source), not a widget and not a pack.
-Copy templates into `packages/integrations/src/<id>/`. Load references on
-demand — do not load all at once.
+Copy templates into `packages/integrations/src/<id>/` only when that directory
+is empty or new. Load references on demand — do not load all at once.
 
 Catalog SSOT is `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`,
 `FIRST_PARTY_WIDGET_IDS`, `FIRST_PARTY_INTEGRATION_IDS`, `WIDGET_INTEGRATIONS`,
@@ -41,11 +42,14 @@ Read first (repo-root, not skill-local): `openspec/specs/integration-contract/sp
 | `$ARGUMENTS` | Mode |
 | --- | --- |
 | *(empty)* / `help` | Empty-args gallery — no writes |
-| `add` / `create` / `scaffold` `[id]` | Generate `packages/integrations/src/<id>/` from templates |
-| `github` / `fetch-policy` | GitHub crawl locks + implement existing `github` id |
-| `wakatime` / new API / data source | Integration only — complete existing id or OpenSpec for a new id |
+| `add` / `create` / `scaffold` `[id]` | Generate dest from templates only if dest is empty or new; if `client.ts` exists, **stop** |
+| `github` / add github | Implement existing `github` id — overwrite gate: stop if `client.ts` exists |
+| `fetch-policy` | GitHub crawl locks only (load [github-fetch](references/github-fetch.md)). Do not copy templates. |
+| `wakatime` / new API / data source | Integration only — stop if dest `client.ts` exists; OpenSpec for a new id |
 | widget / card / `languages` option | Stop — route to `author-widget` |
 | new pack / new plugin / first-party id | Stop — route to `author-plugin` |
+| MCP / `mcp.json` | Refuse. No `mcp.json`. |
+| dest `../` / plugin-relative escape | Refuse. Dest is repo-root `packages/integrations/src/<id>/`. |
 | Natural language about HTTP/auth/cache | Auto-detect (below) |
 
 ### Auto-detect
@@ -53,14 +57,15 @@ Read first (repo-root, not skill-local): `openspec/specs/integration-contract/sp
 1. New data source, WakaTime-class API, GitHub client, REST/GraphQL, auth, scopes, cache keys → **this skill**.
 2. New card / widget option on an existing pack → **`author-widget`**.
 3. New pack / extra first-party plugin id → **`author-plugin`**.
-4. Completing `wakatime` / `rss` / `http` / `github` / `static` already in `FIRST_PARTY_INTEGRATION_IDS` stays here. Do not create a second pack for those plugin ids.
+4. Completing `wakatime` / `rss` / `http` / `github` / `static` already in `FIRST_PARTY_INTEGRATION_IDS` stays here. Do not create a second pack for those plugin ids. If dest `client.ts` exists, **stop**.
+5. MCP / `mcp.json` → refuse. Dest `../` → refuse.
 
 ### Empty args
 
 When `$ARGUMENTS` is empty, print this gallery: modes above, destination table,
-critical rules 1–12, reference index. Do not copy templates, do not invent an
-integration id, do not mutate the repo, do not inventory the next product add
-(that is `author` ideate).
+auth copy map, overwrite gate, critical rules 1–13, reference index. Do not copy
+templates, do not invent an integration id, do not mutate the repo, do not
+inventory the next product add (that is `author` ideate).
 
 ## Canonical vocabulary
 
@@ -82,41 +87,58 @@ Use these exactly:
 
 1. Catalog SSOT is `packages/core/src/types.ts`. Completing an id already in `FIRST_PARTY_INTEGRATION_IDS` is allowed. Do not silently append `FIRST_PARTY_*`. A new id needs OpenSpec first.
 2. Do not create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS` (`github`, `wakatime`, `rss`, `http` in live types). Pack work is `author-plugin`.
-3. Dest is `packages/integrations/src/<id>/` (client, auth, scopes, inputs, `client.test.ts`). Never omit `src/` under `packages/integrations/`.
-4. `static` auth = `none`. `github` = token required in the Action. Never unauthenticated GitHub (60/h/IP). Empty / `""` / whitespace token **fails the Action** (`fail_job`) before any request.
-5. Auth is per integration **and** per widget option (`include_private` without `canPrivate` fails that widget). Types may list github as `optional`; that MUST NOT mean unauthenticated.
-6. One shared client per run. Widgets do not construct extra HTTP clients.
-7. REST cache key = `(method, url, params)`. GraphQL cache key = `(query, variables)` — never `POST /graphql` alone.
-8. Never REST `/languages` (`GET /repos/{owner}/{repo}/languages`). Never 500 per-repo GraphQL calls.
-9. GitHub crawl: REST `GET /users/{login}` + paginated `/repos?type=owner&per_page=100`. **Filter forks/archived then cap 500.** Stars and language bytes share that ordered id list. GraphQL `nodes(ids:)` batches of **100**.
-10. Never invent flattened `plugin_<plugin>_<widget>_<option>` Action inputs. Config SSOT is `.github/profile-bits.yml` (`additionalProperties: false`). Thin Action only — read `ActionInputsSchema` (optional `wakatime_token`, `http_token_env`).
-11. Tests: mocked HTTP only. No live GitHub, WakaTime, or network.
-12. Copy from `assets/templates/*.template`. Templates MUST NOT contain `../`. Do not add `index.ts.template`. Barrel re-exports in `packages/integrations/src/index.ts` are mention-only (github **is** already in that barrel). After public schema/codegen impact: tell the user to run `just generate-action` and `just generate-docs`.
+3. Dest is repo-root `packages/integrations/src/<id>/` (client, auth, scopes, inputs, `client.test.ts`). Never omit `src/` under `packages/integrations/`. Refuse dest paths that use `../`. Templates MUST NOT contain `../`.
+4. If dest `client.ts` already exists, **stop**. Do not overwrite complete existing sources. Copy templates only into empty or new directories.
+5. `static` auth = `none`. `github` = token required in the Action. Never unauthenticated GitHub (60/h/IP). Empty / `""` / whitespace token **fails the Action** (`fail_job`) before any request.
+6. Auth is per integration **and** per widget option (`include_private` without `canPrivate` fails that widget). Types may list github as `optional`; that MUST NOT mean unauthenticated. Read live `INTEGRATION_AUTH`.
+7. One shared client per run. Widgets do not construct extra HTTP clients.
+8. REST cache key = `(method, url, params)`. GraphQL cache key = `(query, variables)` — never `POST /graphql` alone.
+9. Never REST `/languages` (`GET /repos/{owner}/{repo}/languages`). Never 500 per-repo GraphQL calls.
+10. GitHub crawl: REST `GET /users/{login}` + paginated `/repos?type=owner&per_page=100`. **Filter forks/archived then cap 500.** Stars and language bytes share that ordered id list. GraphQL `nodes(ids:)` batches of **100**.
+11. Never invent flattened `plugin_<plugin>_<widget>_<option>` Action inputs. Config SSOT is `.github/profile-bits.yml` (`additionalProperties: false`). Thin Action only — read `ActionInputsSchema` (optional `wakatime_token`, `http_token_env`).
+12. Tests: mocked HTTP only. No live GitHub, WakaTime, or network. Refuse MCP / `mcp.json`.
+13. Copy from `assets/templates/*.template` using the destination table and the four-row auth id→filename map (`auth.none.ts.template` / `auth.github-bearer.ts.template` / `auth.wakatime-basic.ts.template` / `auth.http-optional.ts.template`). There is no default `auth.ts.template`. Unknown id **stops** (OpenSpec must name `{{scheme}}`). Templates are for **new** ids; do not emit a parallel `auth.ts` onto live `github` / `wakatime` / `rss`. Do not add `index.ts.template`. Barrel re-exports in `packages/integrations/src/index.ts` are mention-only (github **is** already in that barrel). After public schema/codegen impact: tell the user to run `just generate-action` and `just generate-docs`.
 
 ## Workflow
 
-1. **Classify.** Data source → continue. Widget → `author-widget`. Pack → `author-plugin`. Empty args → gallery and stop.
+1. **Classify.** Data source → continue. Widget → `author-widget`. Pack → `author-plugin`. MCP → refuse. Dest `../` → refuse. Empty args → gallery and stop. `fetch-policy` → load [github-fetch](references/github-fetch.md) only; do not copy templates.
 2. **OpenSpec gate.** New id, yaml keys, or Action surface → propose/apply an OpenSpec change first. Completing an existing `FIRST_PARTY_INTEGRATION_IDS` id does not append the enum. Existing `static` / `github` implementation follows `openspec/specs/integration-contract/spec.md`.
 3. **Read contracts.** `packages/core/src/types.ts` (`FIRST_PARTY_INTEGRATION_IDS`, `INTEGRATION_AUTH`, `TOKEN_CLASSES`). Reuse core `auth-policy` — do not fork a second skip/fail matrix.
-4. **Substitute placeholders** in templates: `{{id}}` kebab, `{{Id}}` Pascal, `{{ID}}` CONSTANT, `{{auth}}` = `none` \| `optional` \| `required`.
-5. **Copy** templates to destinations below (strip `.template`). Do not write live package source except at those destinations. Do not hand-edit a second skills tree.
-6. **Specialize.** `github`: load [github-fetch](references/github-fetch.md). Other ids: keep cache/auth/shared-client; omit GitHub REST crawl and language `nodes(ids:)`; keep the REST `/languages` guard if the client might call GitHub.
-7. **Tests.** Fill `client.test.ts` with mocked `fetch`. Cover empty token, shared client, cache keys, and (github-class) filter-then-cap + batches of 100.
-8. **Stop at the integration boundary.** Do not add widgets, packs, or Action inputs. Point the user at `just generate-action` / `just generate-docs` when codegen is affected.
+4. **Overwrite gate.** If `packages/integrations/src/<id>/client.ts` exists, **STOP** (complete-existing; do not clobber live wakatime). Copy templates only into empty or new directories.
+5. **Substitute placeholders** in templates: `{{id}}` kebab, `{{Id}}` Pascal, `{{ID}}` CONSTANT, `{{auth}}` = catalog `none` \| `optional` \| `required`, `{{scheme}}` = `none` \| `github-bearer` \| `wakatime-basic` \| `http-optional` (header/fail policy; OpenSpec names it for a new id). Do not interpolate `{{scheme}}` into filenames. After substitute, ids `^[a-z][a-z0-9-]*$` (no `..`, no `/`).
+6. **Copy** templates to destinations below (strip `.template`) only after the overwrite gate. Auth: exactly one row from the id→filename table; unknown id stops. Templates are for **new** ids — do not emit a parallel `auth.ts` onto live `github` / `wakatime` / `rss`. Do not write live package source except at those destinations. Do not hand-edit a second skills tree.
+7. **Specialize.** `github` (new dest only): load [github-fetch](references/github-fetch.md). Other ids: keep cache/auth/shared-client; omit GitHub REST crawl and language `nodes(ids:)`; keep the REST `/languages` guard if the client might call GitHub.
+8. **Tests.** Fill `client.test.ts` with mocked `fetch`. Cover empty token, shared client, cache keys, and (github-class) filter-then-cap + batches of 100.
+9. **Stop at the integration boundary.** Do not add widgets, packs, or Action inputs. Point the user at `just generate-action` / `just generate-docs` when codegen is affected.
 
 ## Destinations
 
-Repo-root paths (replace `<id>`). Skill templates live under `assets/templates/` with a `.template` suffix so Biome does not parse placeholders.
+Repo-root paths (replace `<id>`). Skill templates live under `assets/templates/` with a `.template` suffix so Biome does not parse placeholders. Dest MUST NOT use `../`.
 
 | Template | Destination |
 | --- | --- |
 | `assets/templates/client.ts.template` | `packages/integrations/src/<id>/client.ts` |
-| `assets/templates/auth.ts.template` | `packages/integrations/src/<id>/auth.ts` |
 | `assets/templates/scopes.ts.template` | `packages/integrations/src/<id>/scopes.ts` |
 | `assets/templates/inputs.ts.template` | `packages/integrations/src/<id>/inputs.ts` |
 | `assets/templates/client.test.ts.template` | `packages/integrations/src/<id>/client.test.ts` |
 
-Do not emit `plugin.json`, widgets, packs, `action.yml`, `index.ts`, or files under `packages/core/**` / `apps/**` / `openspec/**` from this skill. Barrel re-exports in `packages/integrations/src/index.ts` are out of template scope — mention them; do not invent `../` imports. github is already re-exported from that barrel.
+### Auth copy map (id → filename)
+
+There is **no** default `auth.ts.template`. Skills are a static 1:1 copy table plus in-file `{{placeholders}}` — do not interpolate `auth.{{scheme}}.ts.template` as a path. Copy **one** scheme file from this table onto `packages/integrations/src/<id>/auth.ts` only when dest is empty or new. Unknown id **stops**; OpenSpec must name `{{scheme}}`. Do not infer `github-bearer` from catalog `optional` (github and http are both `optional`).
+
+These templates are for **new** ids after OpenSpec. If dest `client.ts` exists, **stop**. Completing a live first-party id MUST NOT emit a parallel `auth.ts` onto live `github` / `wakatime` / `rss`.
+
+| Id | Scheme file |
+| --- | --- |
+| `static`, `rss` | `assets/templates/auth.none.ts.template` |
+| `github` (new-id only) | `assets/templates/auth.github-bearer.ts.template` |
+| `wakatime` (new-id only) | `assets/templates/auth.wakatime-basic.ts.template` |
+| `http` (new-id only) | `assets/templates/auth.http-optional.ts.template` |
+| any other id | **stop** — OpenSpec must name `{{scheme}}` |
+
+Shared export names (behavior is per scheme; see [auth](references/auth.md)): `{{ID}}_AUTH`, `is{{Id}}TokenMissing`, `assert{{Id}}ActionToken`, `{{id}}AuthorizationHeader`, `{{id}}RequiresAuthorization`. Header functions return `{}` for none-kind — never `{ Authorization: "" }`.
+
+Do not emit `plugin.json`, `mcp.json`, widgets, packs, `action.yml`, `index.ts`, or files under `packages/core/**` / `apps/**` / `openspec/**` from this skill. Barrel re-exports in `packages/integrations/src/index.ts` are out of template scope — mention them; do not invent `../` imports. github is already re-exported from that barrel.
 
 ## Placeholders
 
@@ -125,7 +147,8 @@ Do not emit `plugin.json`, widgets, packs, `action.yml`, `index.ts`, or files un
 | `{{id}}` | `wakatime` |
 | `{{Id}}` | `WakaTime` |
 | `{{ID}}` | `WAKATIME` |
-| `{{auth}}` | `required` (WakaTime-class); `none` (static); github Action still requires a token |
+| `{{auth}}` | Catalog `none` \| `optional` \| `required`. Example: `required`. `none` = static/rss. github and http are both `optional`. |
+| `{{scheme}}` | Header/fail policy: `none` \| `github-bearer` \| `wakatime-basic` \| `http-optional`. Example: `wakatime-basic`. **Not** 1:1 with `{{auth}}`. OpenSpec names this for a new id. Substitute in-file only (client tests). Do not use it to build the auth filename. |
 
 After copy, set `{{ID}}_GRAPHQL_URL` (exported from `client.ts`) to the provider endpoint (`https://api.github.com/graphql` for github).
 
@@ -135,29 +158,37 @@ Do not load all at once.
 
 | File | Load when |
 | --- | --- |
-| [locks](references/locks.md) | Catalog, yaml SSOT, OpenSpec, flattened-input ban |
-| [auth](references/auth.md) | Token classes, static/github/required, per-widget options |
-| [github-fetch](references/github-fetch.md) | Crawl, cache keys, skip/fail, `nodes(ids:)` |
+| [locks](references/locks.md) | Catalog, yaml SSOT, OpenSpec, flattened-input ban, dest `../`, MCP |
+| [auth](references/auth.md) | Live `INTEGRATION_AUTH`, token classes, id→scheme map (static/rss none, github-bearer, wakatime-basic, http-optional), per-widget options |
+| [github-fetch](references/github-fetch.md) | `fetch-policy` crawl, cache keys, skip/fail, `nodes(ids:)` — not the add-github scaffold |
 
 ## WakaTime-class (canonical)
 
 Prompt like "add a WakaTime integration":
 
-- Integration id `wakatime` is already in `FIRST_PARTY_INTEGRATION_IDS`. Complete it at `packages/integrations/src/wakatime/`. Do not create a second pack or a second integration directory.
-- Auth `required` (API key as run secret — not a flattened Action input). Thin Action already has optional `wakatime_token`.
-- Mocked HTTP tests in `packages/integrations/src/wakatime/client.test.ts`.
-- OpenSpec first only before adding an id that is **not** already in the enum.
+- Integration id `wakatime` is already in `FIRST_PARTY_INTEGRATION_IDS`. If `packages/integrations/src/wakatime/client.ts` exists, **stop**. Do not overwrite complete existing sources. Do not create a second pack or a second integration directory. Do not emit a parallel `auth.ts` onto live wakatime.
+- Auth `required` (API key as run secret — not a flattened Action input). Thin Action already has optional `wakatime_token`. `{{scheme}}` is `wakatime-basic`: RFC Basic `base64(api_key + ":")`. Never Bearer. Never `?api_key=`. Do not copy github `decideActionToken` into wakatime auth.
+- Mocked HTTP tests stay in the live `packages/integrations/src/wakatime/client.test.ts` — do not overwrite them from templates when `client.ts` exists.
+- OpenSpec first only before adding an id that is **not** already in the enum. A new id still needs OpenSpec to name `{{scheme}}`; unknown id stops.
 - **Do not** create a second `packages/plugins/src/wakatime` pack. **Do not** silently append `FIRST_PARTY_PLUGIN_IDS`. **Do not** invent `plugin_wakatime_*` inputs.
 
-New data sources that are not yet in `FIRST_PARTY_INTEGRATION_IDS` still use this client/auth/scopes/inputs/mocked-HTTP shape after OpenSpec.
+New data sources that are not yet in `FIRST_PARTY_INTEGRATION_IDS` still use this client/auth/scopes/inputs/mocked-HTTP shape after OpenSpec, and only when dest `client.ts` does not exist.
 
 ## Examples
 
 **Empty:** `/author-integration` → gallery only.
 
-**WakaTime:** `/author-integration add wakatime` → complete existing id at `packages/integrations/src/wakatime/`, mocked HTTP, no second pack.
+**WakaTime:** `/author-integration add wakatime` → **stop** if `packages/integrations/src/wakatime/client.ts` exists; do not overwrite; no second pack; no parallel `auth.ts`.
 
-**Refuse second pack:** "Add another first-party WakaTime plugin pack" → refuse duplicate id; offer complete existing pack (`author-plugin`) or existing integration dest.
+**GitHub add:** `/author-integration add github` → **stop** if `packages/integrations/src/github/client.ts` exists; do not overwrite.
+
+**Fetch-policy:** `/author-integration fetch-policy` → crawl locks only (filter-then-cap, `nodes(ids:)` batches of 100, never REST `/languages`). Do not copy templates.
+
+**Refuse MCP:** "Add an MCP server" → refuse. No `mcp.json`.
+
+**Refuse dest `../`:** dest `../packages/integrations/...` → refuse. Repo-root dest only.
+
+**Refuse second pack:** "Add another first-party WakaTime plugin pack" → refuse duplicate id; offer existing pack (`author-plugin`) or existing integration dest (stop if client exists).
 
 **Refuse widget:** "Add a languages option" → `author-widget` (OpenSpec for yaml; no flattened Action input).
 
@@ -167,5 +198,5 @@ From the plugin root:
 
 ```bash
 bash scripts/validate.sh
-pnpm dlx skills-ref validate skills/author-integration
+pnpm dlx skills-ref@0.1.5 validate skills/author-integration
 ```

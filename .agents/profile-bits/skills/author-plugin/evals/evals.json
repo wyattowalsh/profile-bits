@@ -4,13 +4,17 @@
     {
       "id": "new-pack-github-static",
       "prompt": "Add a new pack that uses the github and static integrations. Scaffold the pack registry with docsPath, defaults, and a derived integration union. Do not flatten widget options into Action inputs.",
-      "expected_output": "OpenSpec delta and types.ts widen before expanding FIRST_PARTY_PLUGIN_IDS (no silent catalog add). Pack registry at packages/plugins/src/<id>/ from templates, exporting <id>Plugin with pack-level bitsUsed, integrations derived as the union of widgets that consume github and static, docsPath from {{DOCS_PATH}} (not hardcoded /generate/<id>/), demo omitted from defaults. No plugin_<plugin>_<widget>_<option> inputs. User told to run just generate-action and just generate-docs; fail closed on stale codegen.",
+      "expected_output": "OpenSpec delta and types.ts widen before expanding FIRST_PARTY_PLUGIN_IDS (no silent catalog add). MUST NOT rewrite plugin-contract, widget-contract, or integration-contract. Pack registry at packages/plugins/src/<id>/{plugin.ts,plugin.test.ts} from templates (no index.ts.template, no per-pack index.ts), exporting <id>Plugin with pack-level bitsUsed whose starter is Theme, Frame, Stack, Row, Text, Muted (not 11 names). plugin.test.ts uses toEqual({{PLUGIN_ID_UPPER}}_BITS_USED) without a hardcoded six-name array. Integrations derived as the union of widgets that consume github and static, docsPath from {{DOCS_PATH}} (not hardcoded /generate/<id>/), demo omitted from defaults. No plugin_<plugin>_<widget>_<option> inputs. User told to run just generate-action and just generate-docs; fail closed on stale codegen.",
       "assertions": [
         "Reads openspec/specs/plugin-contract/spec.md and packages/core/src/types.ts before writing",
+        "MUST NOT rewrite plugin-contract, widget-contract, or integration-contract",
         "Treats a new pack id as an OpenSpec + types change, not a silent append to FIRST_PARTY_PLUGIN_IDS",
         "Does not add a new first-party id to FIRST_PARTY_PLUGIN_IDS without that OpenSpec+types gate",
         "Scaffolds pack registry (plugin.ts) exporting <id>Plugin with docsPath {{DOCS_PATH}}, defaults.widgets, widgets, and pack-level bitsUsed",
+        "Does not copy index.ts.template or write packages/plugins/src/<id>/index.ts",
         "Does not hardcode docsPath to /generate/<id>/",
+        "Does not stamp Stat, Bar, Chip, Avatar, Divider into the pack starter BITS_USED",
+        "When unioning bitsUsed, updates plugin.test.ts; does not leave a hardcoded Theme, Frame, Stack, Row, Text, Muted literal array",
         "Sets integrations to the derived union of listed widgets, including both github and static",
         "Does not invent a hand-maintained integrations list that disagrees with widget declarations",
         "Does not add flattened Action inputs of the form plugin_<plugin>_<widget>_<option>",
@@ -25,25 +29,69 @@
     {
       "id": "empty-args",
       "prompt": "author-plugin",
-      "expected_output": "Empty-args gallery: dispatch table, live FIRST_PARTY_* catalog (read types.ts; not github-only), sibling skills, template destinations, codegen commands. No file writes.",
+      "expected_output": "Empty-args gallery then stop: dispatch table, live FIRST_PARTY_* catalog (not github-only), sibling skills, template destinations (plugin.ts + plugin.test.ts, no per-pack index.ts), codegen commands. No file writes. No inventory. Does not read types.ts or OpenSpec contracts.",
       "assertions": [
         "Recognizes empty args / help and does not invent a mutating default pack",
+        "Prints the gallery and stops",
         "Surfaces the dispatch table (pack vs author-widget vs author-integration)",
         "States catalog SSOT is packages/core/src/types.ts FIRST_PARTY_* (not github-only)",
+        "Does not inventory live packs or types.ts holes",
+        "Does not read packages/core/src/types.ts or the OpenSpec contracts",
         "Does not write packages/plugins or types.ts",
         "Mentions just generate-action and just generate-docs"
       ]
     },
     {
+      "id": "complete-existing-no-clobber",
+      "prompt": "Complete the existing github and wakatime packs. Overwrite plugin.ts from the six-name starter and replace githubWidgetRegistry.",
+      "expected_output": "Inventories live files first. Completing existing FIRST_PARTY_PLUGIN_IDS ids is allowed (no second directory, no silent enum append). Extends rather than overwriting complete sources. Keeps githubWidgetRegistry on the github pack. Does not shrink live WAKATIME_BITS_USED. Copies templates only into empty or new directories. Does not emit a per-pack index.ts. MUST NOT rewrite plugin-contract, widget-contract, or integration-contract.",
+      "assertions": [
+        "Inventories live pack files before writing",
+        "Allows completing existing github and wakatime catalog ids without appending FIRST_PARTY_PLUGIN_IDS",
+        "Does not create a second github or wakatime pack directory",
+        "Extends rather than overwrites complete existing sources",
+        "Keeps githubWidgetRegistry on the github pack",
+        "Does not shrink live WAKATIME_BITS_USED",
+        "Copies templates only into empty or new directories",
+        "Does not copy index.ts.template or write a per-pack index.ts",
+        "MUST NOT rewrite plugin-contract, widget-contract, or integration-contract"
+      ]
+    },
+    {
+      "id": "refuse-three-layer-rewrite",
+      "prompt": "Rewrite plugin-contract, widget-contract, and integration-contract so this new pack can land without a separate author-plugin delta.",
+      "expected_output": "Refuses. MUST NOT rewrite plugin-contract, widget-contract, or integration-contract. A new pack id still needs an author-plugin OpenSpec delta plus types.ts. Completing an existing catalog id is allowed without touching those three-layer specs.",
+      "assertions": [
+        "MUST NOT rewrite plugin-contract",
+        "MUST NOT rewrite widget-contract",
+        "MUST NOT rewrite integration-contract",
+        "Does not treat three-layer rewrites as a substitute for an author-plugin OpenSpec delta",
+        "Allows completing an existing FIRST_PARTY_* id without rewriting those specs"
+      ]
+    },
+    {
       "id": "refuse-wakatime-pack",
       "prompt": "Add a first-party WakaTime plugin pack with a coding widget and put wakatime in FIRST_PARTY_PLUGIN_IDS.",
-      "expected_output": "wakatime is already in live FIRST_PARTY_PLUGIN_IDS. Refuses a second wakatime pack and refuses a silent enum append. Completing the existing wakatime pack at packages/plugins/src/wakatime/ is allowed. Does not invent plugin_wakatime_coding_* inputs.",
+      "expected_output": "wakatime is already in live FIRST_PARTY_PLUGIN_IDS. Refuses a second wakatime pack and refuses a silent enum append. Completing the existing wakatime pack at packages/plugins/src/wakatime/ is allowed and MUST NOT shrink live WAKATIME_BITS_USED. Does not invent plugin_wakatime_coding_* inputs.",
       "assertions": [
         "Notes wakatime is already in FIRST_PARTY_PLUGIN_IDS",
         "Refuses creating a second wakatime pack",
         "Does not silently append FIRST_PARTY_PLUGIN_IDS",
         "Allows completing the existing wakatime pack rather than duplicating it",
+        "Does not shrink live WAKATIME_BITS_USED when completing wakatime",
         "Does not generate plugin_wakatime_coding_* flattened Action inputs"
+      ]
+    },
+    {
+      "id": "bits-used-pack-union",
+      "prompt": "Scaffold a pack, then union Stat into pack-level bitsUsed when a widget imports it.",
+      "expected_output": "Starter {{PLUGIN_ID_UPPER}}_BITS_USED stays Theme, Frame, Stack, Row, Text, Muted — do not stamp 11 names into the pack starter. When unioning bitsUsed, updates plugin.test.ts; does not leave a hardcoded Theme, Frame, Stack, Row, Text, Muted literal array. Keeps toEqual({{PLUGIN_ID_UPPER}}_BITS_USED). Does not set bitsUsed on a widget entry. Does not put bits in yaml.",
+      "assertions": [
+        "When unioning bitsUsed, updates plugin.test.ts; does not leave a hardcoded Theme, Frame, Stack, Row, Text, Muted literal array",
+        "Does not stamp Stat, Bar, Chip, Avatar, Divider into the pack starter BITS_USED",
+        "Keeps plugin.test.ts asserting toEqual({{PLUGIN_ID_UPPER}}_BITS_USED) without a hardcoded six-name Theme, Frame, Stack, Row, Text, Muted array",
+        "Does not set bitsUsed on a widget entry",
+        "Does not put bitsUsed or bits keys in .github/profile-bits.yml"
       ]
     }
   ]

@@ -65,7 +65,7 @@
     {
       "id": "route-tailwind-stylesheets",
       "prompt": "Make a Tailwind stylesheets widget.",
-      "expected_output": "Routes to author-widget. Takumi-safe tw/className on bits composition. Not a new pack or renderer change.",
+      "expected_output": "Routes to author-widget. Takumi-safe tw/className only on div/span/img; bits use typed props, never tw. Not a new pack or renderer change.",
       "assertions": [
         "Routes to author-widget",
         "Requires Takumi-safe tw and/or className (not react-dom or Radix/shadcn DOM)",
@@ -89,11 +89,13 @@
     {
       "id": "ideate-next-best",
       "prompt": "What should I add next?",
-      "expected_output": "Loads next.md. Inventories live FIRST_PARTY_* plus on-disk holes. Ranks one kind with why/target/openspec/handoff, then 1-2 runners-up. Writes no files and copies no templates.",
+      "expected_output": "Loads next.md. Inventories live FIRST_PARTY_* plus on-disk holes. When no typed-id hole remains, ranks pack-level bitsUsed missing (rank 1b): kind=pack, handoff=author-plugin, openspec=no. Then 1-2 runners-up. Does not assume a missing github pack dir or an absent packages/bits tree. Writes no files and copies no templates.",
       "assertions": [
         "Enters ideate/next mode (not empty-args gallery stop)",
         "Reads packages/core/src/types.ts FIRST_PARTY_* registries",
-        "Produces one ranked kind plus handoff",
+        "Ranks pack-level bitsUsed missing (rank 1b) when no typed-id hole remains",
+        "Hands off to author-plugin with openspec=no for that existing catalog id",
+        "Does not treat a missing github pack dir or an absent packages/bits tree as today's assumed hole",
         "Includes an output table with kind, why, target, openspec, handoff",
         "Does not write files or copy templates"
       ]
@@ -101,10 +103,11 @@
     {
       "id": "ideate-bit-vs-widget",
       "prompt": "What should I add next? Should we start with bits?",
-      "expected_output": "Ranks bit only if the frozen 11 primitives are missing AND no typed-id hole ranks higher. packages/bits absence is a runner-up behind a missing github pack implementation when that typed hole exists.",
+      "expected_output": "Does not always pick bits first. Rank 1b (pack present, pack-level bitsUsed missing) outranks bits when that hole exists. Rank 2 (frozen 11 / packages/bits) fires only when bits are actually missing and no rank 1/1b hole remains. Does not assume a missing github pack implementation or an absent bits tree. bit-checklist only when kind=bit wins. No author-bit skill. Writes no files.",
       "assertions": [
         "Does not always pick packages/bits first",
-        "Ranks a typed-id hole (missing packages/plugins/src/<pack>/) above an absent bits tree",
+        "Ranks pack-level bitsUsed missing (rank 1b) above bits when the pack exists without pack-level bitsUsed",
+        "Does not assume a missing github pack dir or an absent packages/bits tree",
         "Uses handoff bit-checklist only when kind=bit wins",
         "Does not create an author-bit skill",
         "Writes no files"
@@ -137,11 +140,13 @@
     {
       "id": "ideate-empty-args-not-run",
       "prompt": "/author",
-      "expected_output": "Empty-args gallery including ideate as item 0. Does not inventory live holes. Does not write files. Does not load next.md.",
+      "expected_output": "Empty-args/help gallery items 0-3 only (ideate is item 0). Skips Before routing. Does not read types.ts or OpenSpec contracts. Does not inventory. Does not load next.md. Does not write files.",
       "assertions": [
         "Shows the empty-args gallery",
         "Lists ideate/next/brainstorm as gallery item 0",
-        "Does not inventory types.ts holes",
+        "Gallery items are 0-3 only",
+        "Skips Before routing",
+        "Does not read packages/core/src/types.ts",
         "Does not load next.md",
         "Does not write files"
       ]
@@ -149,12 +154,13 @@
     {
       "id": "ideate-named-kind-honor",
       "prompt": "Add a widget on rss",
-      "expected_output": "Named kind is widget. Routes to author-widget on the existing rss pack even if a github pack dir is missing.",
+      "expected_output": "Named kind is widget. Routes to author-widget on the existing rss pack. Does not load next.md. Does not inventory. Does not redirect to complete github pack-level bitsUsed (rank 1b) or any other unprompted hole.",
       "assertions": [
         "Routes to author-widget",
         "Honors the named widget kind",
         "Targets the existing rss pack",
-        "Does not redirect to complete a missing github pack first",
+        "Does not load next.md",
+        "Does not redirect to complete github pack-level bitsUsed or another unprompted hole first",
         "Does not create a second rss pack"
       ]
     },
@@ -178,6 +184,39 @@
         "Refuses plugin_<plugin>_<widget>_<option> names",
         "Keeps thin Action inputs from ActionInputsSchema",
         "Does not edit action.yml to add the flattened input"
+      ]
+    },
+    {
+      "id": "route-refuse-rest-languages",
+      "prompt": "Fetch language stats from REST /languages so we can skip GraphQL.",
+      "expected_output": "Refuse REST /languages. Languages use REST crawl, filter forks/archived then cap 500, GraphQL nodes(ids:) batches of 100. Does not inventory a substitute add.",
+      "assertions": [
+        "Refuses REST /languages",
+        "Names the lock (never REST /languages)",
+        "Does not route to author-integration, author-widget, or author-plugin to implement REST /languages",
+        "Does not inventory the next product add as a consolation"
+      ]
+    },
+    {
+      "id": "route-refuse-unauth-github",
+      "prompt": "Call GitHub without a token so we stay under the unauthenticated 60/h/IP limit.",
+      "expected_output": "Refuse unauthenticated GitHub. Empty / \"\" / whitespace token fails the Action. Does not inventory a substitute add.",
+      "assertions": [
+        "Refuses unauthenticated GitHub",
+        "Treats empty / \"\" / whitespace github_token as a failing Action",
+        "Does not route to implement unauthenticated GitHub",
+        "Does not inventory the next product add as a consolation"
+      ]
+    },
+    {
+      "id": "refuse-openspec-json",
+      "prompt": "Run openspec --json so I can see engine output.",
+      "expected_output": "Refuse openspec --json. Engine JSON is a subcommand flag only (pnpm exec openspec status --change <id> --json). Does not inventory a substitute add.",
+      "assertions": [
+        "Refuses openspec --json",
+        "States engine JSON is a subcommand flag only",
+        "Does not recommend or run openspec --json",
+        "Does not inventory the next product add as a consolation"
       ]
     }
   ]

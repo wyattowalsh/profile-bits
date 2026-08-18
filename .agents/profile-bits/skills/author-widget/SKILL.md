@@ -43,29 +43,34 @@ deep procedure. Do not load all at once.
 | `$ARGUMENTS` | Mode |
 | --- | --- |
 | *(empty)* / `help` | Empty-args gallery |
-| `add [id] [pack]` | New card on an existing pack |
+| `add [id] [pack]` | New card on a **named** existing pack. Missing pack or id → **stop** |
 | `option [widget] [field]` | Add a yaml option (OpenSpec first) |
-| `animation [gif\|apng]` | CSS `@keyframes` for `renderAnimation` |
+| `animation [gif\|apng]` | CSS `@keyframes` for `renderAnimation` (any existing pack, not github-only) |
 | `mdx` | Canonical `widget.mdx`; omit `source` |
-| `stylesheet` / `tailwind` | Takumi-safe `tw` / `className` |
+| `stylesheet` / `tailwind` | Takumi-safe `tw` / `className` only on native `div` / `span` / `img`; typed bit props |
 | `families [family] [member]` | Exclusive `md.families` swap |
 | `discover [path]` | `discoverSource` rules |
+| New card + new API | Refuse → `author-integration` (do not copy widget templates first) |
 | New data source / WakaTime-class | Refuse → `author-integration` |
-| New pack / plugin id | Refuse → `author-plugin` |
+| New pack / plugin id / second pack | Refuse → `author-plugin` |
+| MCP / `mcp.json` | Refuse. No `mcp.json`. |
+| dest `../` / `/generate/widgets` | Refuse. Dest is repo-root `packages/plugins/src/<pack>/widgets/<id>/`. |
 
 Natural language uses the same table. Do not invent a mutating default.
 
 ### Auto-detect
 
 1. "option" / languages field / yaml schema on an existing widget → **option**
-2. `@keyframes` / gif / apng / animation → **animation**
+2. `@keyframes` / gif / apng / animation → **animation** (named existing pack; not github-only)
 3. `widget.mdx` / "no source" / drop MDX → **mdx**
 4. Tailwind / `tw` / `className` / stylesheets → **stylesheet**
 5. `md.families` / starry-night / pretty-code / katex / mermaid → **families**
 6. "discover" / ambiguous `widget.md` + `widget.tsx` / MIME sniff → **discover**
-7. New card / widget / template on a named or existing pack → **add**
-8. New API / WakaTime-class → refuse (`author-integration`)
+7. New card that also needs a **new API** / WakaTime-class data source → refuse (`author-integration`). Do not copy widget templates first.
+8. New card / widget / template on a **named** existing pack (pack id + widget id) → **add**. Missing pack or id → **stop**.
 9. New pack / second pack for an existing `FIRST_PARTY_PLUGIN_IDS` id → refuse (`author-plugin`)
+10. MCP / `mcp.json` → refuse
+11. dest `../` / `/generate/widgets` → refuse
 
 ### Empty args
 
@@ -73,11 +78,11 @@ When `$ARGUMENTS` is empty (or the user only asks how widget authoring works),
 show this gallery and stop. Do not write files. Do not inventory the next
 product add (that is `author` ideate).
 
-1. **add** — new card on an existing pack (read `FIRST_PARTY_PLUGIN_IDS`; do not assume github-only).
+1. **add** — new card on a **named** existing pack (read `FIRST_PARTY_PLUGIN_IDS`; missing pack or id → stop; do not assume github-only).
 2. **option** — yaml option on an existing widget; OpenSpec delta first.
-3. **animation** — `@keyframes` authoring for gif/apng; APNG named `.png`.
+3. **animation** — `@keyframes` authoring for gif/apng on any existing pack (not github-only); APNG named `.png`.
 4. **mdx** — canonical `widget.mdx`; prefer omit `source`.
-5. **stylesheet** — `tw` / `className`; bits composition.
+5. **stylesheet** — Takumi-safe `tw` / `className` only on `div` / `span` / `img`; typed bit props; bits composition.
 6. **families** — exclusive `md.families` swap; do not stack.
 7. **discover** — extension → MIME → sniff; mismatch / ambiguous fail.
 
@@ -91,11 +96,13 @@ baked still. Union bits into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on
 1. Cards land on an existing pack id from `FIRST_PARTY_PLUGIN_IDS`. Do not create a second pack for an existing id.
 2. If the pack dir `packages/plugins/src/<pack>/` is missing, stop and name `author-plugin` (typed hole). Do not assume `packages/plugins/src/github/` exists.
 3. Union composed bit names into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on `{{PACK_ID}}Plugin`. Never a widget-entry `bitsUsed`. Never yaml.
-4. Widgets do not HTTP. Consume the cached integration payload. Never REST `/languages`. Never unauthenticated GitHub.
+4. Widgets do not HTTP. Consume the cached integration payload. Never REST `/languages`. Never unauthenticated GitHub. Never `fetch(` in `fetch.ts`.
 5. Public API (new widget id, yaml option, `FIRST_PARTY_WIDGET_IDS`) → OpenSpec first. Completing an id already in types does not append the enum.
 6. Never invent `plugin_<plugin>_<widget>_<option>` Action inputs. Read `ActionInputsSchema` (optional `wakatime_token`, `http_token_env`).
 7. Prefer omit `source`. Canonical `widget.tsx` \| `widget.md` \| `widget.mdx` \| `widget.html`. Ambiguous dual canonical files fail.
-8. Templates MUST NOT contain `../`. Destinations are `packages/plugins/src/<pack>/widgets/<id>/`.
+8. Templates MUST NOT contain `../`. Dest is repo-root `packages/plugins/src/<pack>/widgets/<id>/`. Refuse dest `../` and `/generate/widgets`.
+9. `add` without a pack id **and** a widget id → **stop**. Do not invent dest.
+10. New card + new API → `author-integration` first. Refuse MCP / `mcp.json`.
 
 ## Before generating
 
@@ -106,31 +113,45 @@ baked still. Union bits into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on
    - `packages/core/src/types.ts`
    - `openspec/specs/author-plugin/spec.md` when present
 2. Load [locks](references/locks.md).
-3. If the request is a **new data source**, stop and name `author-integration`
-   (dest `packages/integrations/src/<id>/`).
+3. If the request is a **new data source**, or a **new card that also needs
+   a new API**, stop and name `author-integration`
+   (dest `packages/integrations/src/<id>/`). Do not copy widget templates first.
 4. If they **asked for a new pack**, stop and name `author-plugin`.
-5. Otherwise pick an existing pack from `FIRST_PARTY_PLUGIN_IDS`. Do not
-   invent extra first-party packs. Completing a typed widget id is allowed.
-6. Public API (new widget id, yaml option, `FIRST_PARTY_WIDGET_IDS`, Action
-   inputs) → OpenSpec delta **first**. Then copy templates. Fail closed on
-   stale codegen.
+5. `add` without a pack id **and** a widget id → **stop**. MCP / dest `../`
+   / `/generate/widgets` → refuse.
+6. Otherwise pick an existing **named** pack from `FIRST_PARTY_PLUGIN_IDS`.
+   Do not invent extra first-party packs. Completing a typed widget id is
+   allowed. Animation is not github-only.
+7. Public API (new widget id, yaml option, `FIRST_PARTY_WIDGET_IDS`, Action
+   inputs) → OpenSpec delta **first**. Then copy templates **only if** the
+   widget dir is empty or new. Fail closed on stale codegen.
 
 ## Generate
 
+Load [generate](references/generate.md). Complete-existing: **extend** live
+files; copy templates **only** when
+`packages/plugins/src/<pack>/widgets/<id>/` is empty or new; **append**
+`widgets[]`; preserve `docsPath: "{{DOCS_PATH}}"`. Never copy into
+`/generate/widgets` or `apps/docs/**`. A new card that needs a new API
+stops (`author-integration`). `add` without pack id and widget id stops.
+
 Copy templates from `assets/templates/` into the repo-root destination
-`packages/plugins/src/<pack>/widgets/<id>/`. Destination paths are documented
-in [generate](references/generate.md). Template paths must not contain `../`.
+`packages/plugins/src/<pack>/widgets/<id>/` only for a new or empty widget
+dir. Destination paths are documented in [generate](references/generate.md).
+Template paths must not contain `../`.
 
 Replace `{{WIDGET_ID}}`, `{{WIDGET_PASCAL}}`, `{{PACK_ID}}`,
-`{{PACK_ID_UPPER}}`, `{{WIDGET_TITLE}}`, `{{INTEGRATION_ID}}`,
-`{{INTEGRATION_PASCAL}}`. Emit:
+`{{PACK_ID_UPPER}}`, `{{WIDGET_TITLE}}`, `{{WIDGET_DESCRIPTION}}`,
+`{{INTEGRATION_ID}}`, `{{INTEGRATION_PASCAL}}`.
+`{{WIDGET_DESCRIPTION}}` is subtitle copy in `widget.md` / `widget.mdx` /
+`widget.html` (MDX `<Muted>`). Emit:
 
 | Artifact | Rule |
 | --- | --- |
 | Option schema | Zod `strictObject`. Yaml keys only. Not bits. Not Action inputs. |
-| Fetch | Consume cached integration payload. **No HTTP.** Shared client lives on the integration. |
+| Fetch | Consume cached integration payload. **No HTTP.** Shared client lives on the integration. `include_private` is github-class only (OpenSpec). |
 | Source file | Prefer **omit** `source`. Name `widget.tsx` \| `widget.md` \| `widget.mdx` \| `widget.html`. |
-| Template | Bits-based, Takumi-safe. Root `width: 100%` `height: 100%`. Card **480×160**. |
+| Template | Bits-based, Takumi-safe. Typed bit props; `tw` only on native `div` / `span` / `img`. Root `width: 100%` `height: 100%`. Card **480×160**. |
 | Formats | Allow-list: `svg`, `png`, `jpeg`, `webp`, `ico`, `gif`, `apng`. Default `svg`. |
 | `md.presets` / `md.families` | Required for md/mdx. Exclusive families — do not stack. |
 | Examples | At least one yaml-shaped example. |
@@ -139,8 +160,9 @@ Replace `{{WIDGET_ID}}`, `{{WIDGET_PASCAL}}`, `{{PACK_ID}}`,
 `demo` → integration `static`. `stats` / `languages` → `github`. `coding` →
 `wakatime`. `feed` → `rss`. `json` → `http`. A new card declares the
 integrations it consumes. Fetch maps cached payload → render props. Empty
-languages data → “No language data”, not a crash. `include_private` without
-`canPrivate` fails that widget. Do not paint contributions `0` when
+languages data → “No language data”, not a crash. Generic fetch does **not**
+read `include_private`. github-class widgets add that option via OpenSpec
+and fail closed on `canPrivate`. Do not paint contributions `0` when
 `canContributions` is false or viewer ≠ user.
 
 After public-API or docs-field work, tell the user:
@@ -150,8 +172,9 @@ just generate-action
 just generate-docs
 ```
 
-CI uses `just generate-action --check`. That check **must** fail if a
-flattened `plugin_<plugin>_<widget>_<option>` input appears (including
+CI uses `just generate-action --check` and `just generate-docs --check`.
+`generate-action --check` **must** fail if a flattened
+`plugin_<plugin>_<widget>_<option>` input appears (including
 `plugin_github_stats_include`, `plugin_github_languages_*`).
 
 ## `discoverSource({ path, filename, mime, body })`
@@ -206,10 +229,10 @@ Full matrix: [discover-source](references/discover-source.md).
 | `assets/templates/widget.md.template` | Markdown → remark/rehype → `fromHtml` |
 | `assets/templates/widget.mdx.template` | MDX → `@mdx-js/mdx` → `fromJsx`; bits as `components` |
 | `assets/templates/widget.html.template` | HTML → `fromHtml` |
-| `assets/templates/stylesheet.css.template` | `tw` / `className` / compiled `stylesheets[]` |
+| `assets/templates/stylesheet.css.template` | `tw` / `className` on `div` / `span` / `img` only; compiled `stylesheets[]` |
 | `assets/templates/keyframes.css.template` | gif/apng `@keyframes` → `renderAnimation` |
 | `assets/templates/schema.ts.template` | Option schema + formats + examples |
-| `assets/templates/fetch.ts.template` | Cached-payload fetch (no HTTP) |
+| `assets/templates/fetch.ts.template` | Cached-payload fetch (no HTTP; `include_private` github-class only) |
 
 Copy the matching source template as the canonical filename. Do not emit
 `source:` unless the user asked to override discovery.
@@ -229,7 +252,11 @@ or `@takumi-rs/*` from widgets. Card **480×160**. Default format `svg`
 `renderSvg()` output). CSS `@keyframes` are authoring input to `render` /
 `renderAnimation`. APNG files are named `.png`.
 
-Takumi-safe: `div` / `span` / `img` plus `tw` / `style` / `className`.
+Takumi-safe: `tw` / `className` / `style` only on native `div` / `span` /
+`img`, never on bits. Bits use typed props (`gap`, `size`, `weight`, `pct`,
+`src`) and never take `tw` / `className` / `style`. Numeric `gap` / `size` /
+`weight`. `Avatar` requires `src: string`. `Bar` requires `pct: number`.
+`Stat` is the only `value` bit.
 Hooks: server semantics only (`useState` initial, `useContext`, `use()`).
 **No** `react-dom`, `useEffect`, portals, Radix/shadcn DOM, `"use client"`,
 canvas/WebGL.
@@ -273,13 +300,15 @@ present beats `plugin_github`. Read `ActionInputsSchema` — do not invent names
 
 ## Refuse (NOT-for)
 
-- New data source / WakaTime-class → `author-integration`
+- New data source / WakaTime-class / **new card + new API** → `author-integration`
 - New pack / second pack for an existing plugin id → `author-plugin`
+- `add` without pack id and widget id (do not invent dest)
 - Action runtime, thin `action.yml`, Marketplace flattened inputs
 - Takumi renderer internals (`packages/renderer`) except calling it
-- Docs `/playground` or `/generate`
+- Docs `/playground` or `/generate`; copy dest `/generate/widgets`
 - MCP (`mcp.json`)
-- HTTP inside widgets; REST `/languages`; unauthenticated GitHub
+- dest `../`
+- HTTP inside widgets / `fetch.ts`; REST `/languages`; unauthenticated GitHub
 - Two canonical `widget.*` files without `source`
 
 ## Gotchas
@@ -309,5 +338,7 @@ From the plugin root:
 
 ```bash
 bash scripts/validate.sh
-pnpm dlx skills-ref validate skills/author-widget
+pnpm dlx skills-ref@0.1.5 validate skills/author-widget
 ```
+
+No `agentskills` fallback.

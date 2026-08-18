@@ -20,9 +20,10 @@ Read the live constants. Completing `github` / `wakatime` / `rss` / `http`
 means write `packages/plugins/src/<id>/` for that existing id — not a second
 directory and not a silent enum append.
 
-A second **new** pack id is an OpenSpec change (`plugin-contract` and related
-yaml shape) **plus** a types change. Never append to `FIRST_PARTY_PLUGIN_IDS`
-inside this skill as a silent catalog add.
+MUST NOT rewrite `plugin-contract`, `widget-contract`, or `integration-contract`.
+A second **new** pack id is an OpenSpec change (`author-plugin`) **plus** a
+types change. Never append to `FIRST_PARTY_PLUGIN_IDS` inside this skill as
+a silent catalog add. Completing an existing catalog id is allowed.
 
 `wakatime` is already a first-party pack in live types. Refuse a **second**
 wakatime pack. Completing the existing `wakatime` pack is allowed.
@@ -30,9 +31,25 @@ wakatime pack. Completing the existing `wakatime` pack is allowed.
 ## Pack-level `bitsUsed`
 
 Export `{{PLUGIN_ID}}Plugin` and `{{PLUGIN_ID_UPPER}}_BITS_USED`. Union widget
-bit names into that pack array. `PluginIdentitySchema` has no `bitsUsed`; live
-packs use `PluginIdentity & { bitsUsed }`. Do not edit `packages/core`. Do not
-put `bitsUsed` on a widget entry. Do not put bits in yaml.
+bit names into that pack array (add-only). `PluginIdentitySchema` has no
+`bitsUsed`; live packs use `PluginIdentity & { bitsUsed }`. Do not edit
+`packages/core`. Do not put `bitsUsed` on a widget entry. Do not put bits in
+yaml.
+
+Starter `{{PLUGIN_ID_UPPER}}_BITS_USED` is the six layout names `Theme`,
+`Frame`, `Stack`, `Row`, `Text`, `Muted`. Keep the comment “plus Stat, Bar,
+Chip, Avatar, Divider when the template imports them.” Do **not** stamp the
+frozen 11 names into the pack starter. Live packs are subsets (http is four
+names). MDX omits Avatar.
+
+Frozen 11 names (membership allow-list, **not** the starter): `Theme`,
+`Frame`, `Stack`, `Row`, `Text`, `Muted`, `Stat`, `Bar`, `Chip`, `Avatar`,
+`Divider`.
+
+When unioning `bitsUsed`, update `plugin.test.ts`. Keep
+`toEqual({{PLUGIN_ID_UPPER}}_BITS_USED)`. Do not leave a hardcoded `Theme`,
+`Frame`, `Stack`, `Row`, `Text`, `Muted` literal array. Assert every entry
+is in the frozen 11.
 
 `docsPath: "{{DOCS_PATH}}"`. Do not hardcode `/generate/<id>/`. Live examples
 differ (`wakatime`, `rss`, `/playground/http`).
@@ -49,6 +66,9 @@ When the pack id is already `github` (typed hole or existing dir):
 
 Do not change github pack defaults when scaffolding a **different** pack.
 Do not assume `packages/plugins/src/github/` exists until inventory says so.
+
+Complete-existing: inventory live files; extend, do not overwrite; keep
+`githubWidgetRegistry`; do not shrink `WAKATIME_BITS_USED`.
 
 ## Derived integration union
 
@@ -110,5 +130,4 @@ Skill-relative paths only (`assets/templates/*.template`). No `../` in
 template paths. Destinations are repo-root paths in SKILL.md:
 
 `packages/plugins/src/<id>/plugin.ts`  
-`packages/plugins/src/<id>/index.ts`  
 `packages/plugins/src/<id>/plugin.test.ts`

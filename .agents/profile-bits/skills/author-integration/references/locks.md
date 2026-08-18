@@ -16,24 +16,28 @@ include wakatime, rss, and http packs. Thin Action names: read
 never invent `plugin_*_*_*`.
 
 Read the live constants. Do not paste a frozen github-only table into new work.
+Live `INTEGRATION_AUTH` is `static: none`, `github: optional`,
+`wakatime: required`, `rss: none`, `http: optional`.
 
 A plugin is a **pack** (1..N widgets, 0..N integrations), not a single card and
 not a single API. Adding a widget or an integration MUST NOT require a new
 plugin when an existing pack already owns that card.
 
 WakaTime-class (or any additional API) is a **new integration** when the id is
-not in `FIRST_PARTY_INTEGRATION_IDS`. Completing `wakatime` already in that
-list is allowed at `packages/integrations/src/wakatime/`. Do not append ids to
+not in `FIRST_PARTY_INTEGRATION_IDS`. If `packages/integrations/src/wakatime/client.ts`
+already exists, **stop** — do not overwrite. Do not append ids to
 `FIRST_PARTY_PLUGIN_IDS` from this skill. Do not create a second wakatime pack.
 
 ## Dest
 
-This skill writes only under `packages/integrations/src/<id>/` from templates
-(client, auth, scopes, inputs, `client.test.ts`). Never omit `src/` under
-`packages/integrations/`. Templates MUST NOT contain `../`.
+This skill writes only under repo-root `packages/integrations/src/<id>/` from
+templates (client, auth, scopes, inputs, `client.test.ts`) and only when dest
+is empty or new. complete-existing: if dest `client.ts` exists, STOP; do not clobber live wakatime.
+Never omit `src/` under `packages/integrations/`.
+Refuse dest paths that use `../`. Templates MUST NOT contain `../`.
 Do not add `index.ts.template`. Barrel
 `packages/integrations/src/index.ts` is mention-only; github **is** already
-re-exported there.
+re-exported there. Do not emit `mcp.json`.
 
 ## Yaml and Action
 
@@ -67,3 +71,4 @@ Existing `static` / `github` contracts live in `openspec/specs/integration-contr
 - Widgets consume cached payloads and MUST NOT add HTTP (`author-widget`).
 - Pack registry / `docsPath` / pack-level `bitsUsed` / derived integration union (`author-plugin`).
 - Do not write `packages/core/**`, `apps/**`, `openspec/**`, `action.yml`, `justfile`, or harness skill copies.
+- Refuse MCP / `mcp.json`.
