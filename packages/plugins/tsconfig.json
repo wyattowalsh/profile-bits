@@ -7,6 +7,7 @@
     "moduleDetection": "force",
     "strict": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "erasableSyntaxOnly": true,
@@ -16,7 +17,8 @@
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react-jsx"
   },
   "include": ["src", "tests"]
 }

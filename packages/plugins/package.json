@@ -5,5 +5,19 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@profile-bits/bits": "workspace:*",
+    "@profile-bits/core": "workspace:*",
+    "@profile-bits/integrations": "workspace:*",
+    "@profile-bits/renderer": "workspace:*",
+    "@profile-bits/themes": "workspace:*",
+    "@jmespath-community/jmespath": "catalog:",
+    "react": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
