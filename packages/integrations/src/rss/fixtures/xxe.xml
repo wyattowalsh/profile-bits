@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE feed [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+  <!ENTITY canary SYSTEM "file:///tmp/profile-bits-xxe-canary-should-not-appear">
+]>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>&xxe;</title>
+  <id>urn:uuid:profile-bits-xxe-fixture</id>
+  <updated>2026-08-16T12:00:00Z</updated>
+  <entry>
+    <title>&canary;</title>
+    <link href="https://example.com/xxe" rel="alternate"/>
+    <id>https://example.com/xxe</id>
+    <updated>2026-08-16T12:00:00Z</updated>
+  </entry>
+</feed>

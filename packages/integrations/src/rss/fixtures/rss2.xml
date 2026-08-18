@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Profile Bits RSS2 Fixture</title>
+    <link>https://example.com/</link>
+    <description>Fixture feed with eight items so limit is testable</description>
+    <item>
+      <title>RSS Item 1</title>
+      <link>https://example.com/rss/1</link>
+      <pubDate>Sun, 16 Aug 2026 11:00:00 GMT</pubDate>
+      <guid>https://example.com/rss/1</guid>
+    </item>
+    <item>
+      <title>RSS Item 2</title>
+      <link>https://example.com/rss/2</link>
+      <pubDate>Sun, 16 Aug 2026 10:00:00 GMT</pubDate>
+      <guid>https://example.com/rss/2</guid>
+    </item>
+    <item>
+      <title>RSS Item 3</title>
+      <link>https://example.com/rss/3</link>
+      <pubDate>Sun, 16 Aug 2026 09:00:00 GMT</pubDate>
+      <guid>https://example.com/rss/3</guid>
+    </item>
+    <item>
+      <title>RSS Item 4</title>
+      <link>https://example.com/rss/4</link>
+      <pubDate>Sun, 16 Aug 2026 08:00:00 GMT</pubDate>
+      <guid>https://example.com/rss/4</guid>
+    </item>
+    <item>
+      <title>RSS Item 5</title>
+      <link>https://example.com/rss/5</link>
+      <pubDate>Sun, 16 Aug 2026 07:00:00 GMT</pubDate>
+      <guid>https://example.com/rss/5</guid>
+    </item>
+    <item>
+      <title>RSS Item 6</title>
+      <link>https://example.com/rss/6</link>
+      <pubDate>Sun, 16 Aug 2026 06:00:00 GMT</pubDate>
+      <guid>https://example.com/rss/6</guid>
+    </item>
+    <item>
+      <title>RSS Item 7</title>
+      <link>https://example.com/rss/7</link>
+      <pubDate>Sun, 16 Aug 2026 07:00:00 GMT</pubDate>
+      <guid>https://example.com/rss/7</guid>
+    </item>
+    <item>
+      <title>RSS Item 8</title>
+      <link>https://example.com/rss/8</link>
+      <pubDate>Sun, 16 Aug 2026 04:00:00 GMT</pubDate>
+      <guid>https://example.com/rss/8</guid>
+    </item>
+  </channel>
+</rss>
