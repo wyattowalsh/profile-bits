@@ -6,7 +6,7 @@ export function composeRenderWidgets(adapters: {
   github?: RenderWidget;
 }): RenderWidget {
   return (request) => {
-    if (request.id === "json") {
+    if (request.id === "json" || request.id === "chips") {
       return adapters.json(request);
     }
     if (request.id === "feed" && adapters.feed !== undefined) {

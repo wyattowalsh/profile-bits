@@ -54,9 +54,9 @@ Constraints: Node 24, pnpm catalog, OpenSpec 1.9.0, Takumi 2.9.2 via `@profile-b
   - Package-level cache: `packages/integrations/src/cache.ts` (RSS keeps `src/rss/cache.ts`; do not edit it; later github T111a should import shared cache)
   - Widget: `packages/plugins/src/http/widgets/json/` (`index.ts`, `template.ts`, `jmes.ts`) plus pack `packages/plugins/src/http/plugin.ts`
   - Barrels: merge additively if rss already exported (`packages/integrations/src/index.ts`, `packages/plugins/src/index.ts`)
-- **Lock:** `createHttpClient({ fetch, lookup, token })` one instance per Action / playground / generate preview run. Injectables default to global `fetch` + `dns.promises.lookup`. Order: token decision → cache/single-flight → ssrf → GET (`redirect: "manual"`) → hops → size cap → BOM-strip `JSON.parse` → `classifyHttp` → backoff. Http module MUST NOT import octokit.
+- **Lock:** `createHttpClient({ fetch, lookup, token })` one instance per Action / playground / generate preview run. Production `createHttpClient({ token })` omits `fetch` (pinned `https.request`; never `fetch: globalThis.fetch`). Lookup MAY still default to `dns.promises.lookup`. Injectable `fetch`/`lookup` are test-only. Pin-path tests MUST mock `node:https.request` and MUST use zero live network. Order: token decision → cache/single-flight → ssrf → GET (`redirect: "manual"`) → hops → size cap → BOM-strip `JSON.parse` → `classifyHttp` → backoff. Http module MUST NOT import octokit.
 - **Identity:** `defaults.widgets: ["json"]` is metadata only vs yaml apply no-op. `docsPath: "/playground/http"`. `bitsUsed` string literals `Theme/Frame/Stack/Row/Text/Muted` (do not create `packages/bits`).
-- **Why:** Matches github: widgets consume cached payloads. Shared cache is for http (and later github), not a rewrite of rss. Yaml extra headers MUST be forwarded on GET and MUST be part of the cache key so two GETs to the same URL with different headers cannot share a body.
+- **Why:** Matches github: widgets consume cached payloads. Shared cache is for http (and later github), not a rewrite of rss. Yaml extra headers MUST be forwarded on GET and MUST be part of the cache key so two GETs to the same URL with different headers cannot share a body. Required `Accept` and `User-Agent` MUST win over yaml extras of those names (any casing); the cache key MUST stay the yaml headers, not the merged wire headers.
 - **Alternative:** Extra undici + MockAgent — rejected; fights Node 24 global fetch and Action ncc. Alternative: steal `rss/cache.ts` — rejected; do not modify rss modules.
 
 ### 4. JMESPath in the widget, not the client
@@ -67,7 +67,7 @@ Constraints: Node 24, pnpm catalog, OpenSpec 1.9.0, Takumi 2.9.2 via `@profile-b
 
 ### 5. SSRF: ssrfcheck then ipaddr allow-unicast; no extra undici
 
-- **Choice:** Catalog pins `ssrfcheck@1.4.0` and `ipaddr.js@2.5.0` (reuse if rss already added ipaddr). `assertSafeHttpUrl` + `assertSafeResolvedAddresses`. Order: `isSSRFSafeURL(url, { allowedProtocols: ["https"], allowUsername: false })` → ipaddr `parse` / `range()` / `isIPv4MappedAddress()` / `toIPv4Address()` → **allow only `unicast` after mapping**. `lookup({ all: true })`; **any** non-unicast fails closed (mixed A/AAAA). Pin IPs into connect lookup; TLS `servername` = original host. `redirect: "manual"`, max 5 hops, reject https→http, re-validate each `Location`. Abort if `Content-Length` or accumulated (decompressed) body > 1 MiB. Metadata hostnames: `metadata.google.internal`, `metadata.internal`, `169.254.169.254`. RFC1918 is `192.168.0.0/16` not `/8`.
+- **Choice:** Catalog pins `ssrfcheck@1.4.0` and `ipaddr.js@2.5.0` (reuse if rss already added ipaddr). `assertSafeHttpUrl` + `assertSafeResolvedAddresses`. Order: `isSSRFSafeURL(url, { allowedProtocols: ["https"], allowUsername: false })` → ipaddr `parse` / `range()` / `isIPv4MappedAddress()` / `toIPv4Address()` → **allow only `unicast` after mapping**. `lookup({ all: true })`; **any** non-unicast fails closed (mixed A/AAAA). Pin IPs into connect lookup; TLS `servername` = original host. `redirect: "manual"`, max 5 hops, reject https→http, re-validate each `Location`, cancel or destroy the 3xx body before following `Location`. Abort if `Content-Length` or accumulated (decompressed) body > 1 MiB. Metadata hostnames: `metadata.google.internal`, `metadata.internal`, `169.254.169.254`. RFC1918 is `192.168.0.0/16` not `/8`.
 - **Why:** ssrfcheck covers localhost names, octal/decimal IPs, userinfo, dot-domains — not DNS, not redirects. ipaddr encodes private ranges correctly. Hand-rolled denylist can get `/8` wrong.
 - **Alternative:** Extra undici — rejected. Alternative: `private-ip` / `is-ip` — superseded. Alternative: Zod `z.httpUrl()` — rejected; allows `http`.
 
@@ -79,7 +79,7 @@ Constraints: Node 24, pnpm catalog, OpenSpec 1.9.0, Takumi 2.9.2 via `@profile-b
 
 ### 7. Token: env name, Bearer vs raw, redact secrets
 
-- **Choice:** Thin input `http_token_env` is an env **name**. Unset/whitespace name → no `Authorization`. Name set + empty/whitespace value → `fail_widget`. `createHttpClient({ token: "" })` (empty/whitespace string) MUST also `fail_widget` and MUST NOT send an unauthenticated GET; unset/`null` token still sends no `Authorization`. Name set + value → `Bearer ${value}` unless value already has scheme `Bearer`/`token`/`Basic` (case-insensitive prefix) then send raw. Forbidden yaml headers: `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, names `/token/i`, values `/^(Bearer|token|Basic)\s/i`. `packages/core/src/redact.ts` strips Authorization values (including `token` scheme) and env secrets from error strings; barrel `export * from "./redact.js"`. Never log token values. User-Agent `profile-bits-http/0`; `Accept: application/json`. Timeout `AbortSignal.timeout(timeout_ms)`.
+- **Choice:** Thin input `http_token_env` is an env **name**. Unset/whitespace name → no `Authorization`. Name set + empty/whitespace value → `fail_widget`. `createHttpClient({ token: "" })` (empty/whitespace string) MUST also `fail_widget` and MUST NOT send an unauthenticated GET; unset/`null` token still sends no `Authorization`. Name set + value → `Bearer ${value}` unless value already has scheme `Bearer`/`token`/`Basic` (case-insensitive prefix) then send raw. Forbidden yaml headers: `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, names `/token/i`, values `/^(Bearer|token|Basic)\s/i`. `packages/core/src/redact.ts` strips Authorization values (including `token` scheme) and env secrets from error strings; barrel `export * from "./redact.js"`. Never log token values. User-Agent `profile-bits-http/0`; `Accept: application/json`. One `AbortSignal.timeout(timeout_ms)` per `httpGet` attempt covering DNS + hops + body.
 - **Why:** Optional auth ≠ send Authorization. Value never in yaml.
 - **Alternative:** Store token in yaml — rejected.
 
@@ -101,8 +101,8 @@ Constraints: Node 24, pnpm catalog, OpenSpec 1.9.0, Takumi 2.9.2 via `@profile-b
 ### 10. Exclusive-glob apply graph (B0–B5)
 
 - **Choice:** One writer per file. Same-file edits sequential. Never two agents on `types.ts`, `auth-policy.ts`, `action-yml.ts`, `action.yml`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `packages/renderer/src/index.ts`, `packages/renderer/src/render-svg.ts`, `packages/integrations/src/index.ts`, `packages/action/src/engine.ts`, `packages/action/src/main.ts`.
-- **Waves:** B0–B5 library apply already landed (`tasks.md` §1–§7 stay ticked). Remaining apply is `tasks.md` §8 (Action json wiring + residual tests). No commit.
-- **Why:** cache/ssrf/renderer/headers did not need `types.ts` and ran with B1. Remaining work is Action-port json enablement, not a second change.
+- **Waves:** B0–B5 library apply and §8 Action json wiring already landed (`tasks.md` §1–§8 stay ticked). Remaining apply is `tasks.md` §9 (HTTP client timeout, pin tests, redirects, headers). No commit.
+- **Why:** cache/ssrf/renderer/headers did not need `types.ts` and ran with B1. Remaining work is `tasks.md` §9 HTTP client findings, not a second change.
 - **Alternative:** Serialize all apply — rejected; wastes the disjoint globs. Alternative: start a second OpenSpec change for `engine.ts`/`main.ts` — rejected; json Action wiring belongs in this catalog add.
 
 ### 11. Action wires json only; engine stays a port
@@ -145,7 +145,7 @@ Constraints: Node 24, pnpm catalog, OpenSpec 1.9.0, Takumi 2.9.2 via `@profile-b
 
 ## Migration Plan
 
-Greenfield additive pack. Default committed yaml stays github-only; existing consumers unchanged. Library apply already landed (`tasks.md` §1–§7). Remaining apply follows `tasks.md` §8 (do not untick §1–§7). Catalog pins already present; `pnpm install` only if Action workspace deps change the lockfile. Rollback: omit `plugins.http` from yaml; delete this change folder before archive. Do not archive or commit unless asked.
+Greenfield additive pack. Default committed yaml stays github-only; existing consumers unchanged. Library apply and Action json wiring already landed (`tasks.md` §1–§8). Remaining apply follows `tasks.md` §9 (do not untick §1–§8). Catalog pins already present; `pnpm install` only if Action workspace deps change the lockfile. Rollback: omit `plugins.http` from yaml; delete this change folder before archive. Do not archive or commit unless asked.
 
 ## Open Questions
 

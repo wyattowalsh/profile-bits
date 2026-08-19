@@ -66,14 +66,157 @@ const SHIELDS_PATHS: ReadonlyArray<{
 
 const ALLOWED_HOSTNAMES = new Set(["shieldcn.dev", "img.shields.io"]);
 const FORBIDDEN_PATH_MARKERS = [
-  "/badge/dynamic/json",
+  "/badge",
+  "/endpoint",
   "/https/",
   "/memo",
-  "discord",
-  "reddit",
-  "nba",
-  "views",
+  "/discord",
+  "/reddit",
+  "/nba",
+  "/views",
+  "/watchers",
 ] as const;
+
+const FORBIDDEN_SEGMENT_CASES: ReadonlyArray<{
+  name: string;
+  input: ExpandChipsRequestInput;
+}> = [
+  {
+    name: "npm empty segment",
+    input: { preset: "shieldcn", type: "npm", packageName: "foo/" },
+  },
+  {
+    name: "npm double slash",
+    input: { preset: "shieldcn", type: "npm", packageName: "foo//bar" },
+  },
+  {
+    name: "unscoped two-segment package",
+    input: { preset: "shields", type: "npm", packageName: "foo/bar" },
+  },
+  {
+    name: "npm leading slash",
+    input: { preset: "shields", type: "npm", packageName: "/react" },
+  },
+  {
+    name: "npm . segment",
+    input: { preset: "shieldcn", type: "npm", packageName: "." },
+  },
+  {
+    name: "npm .. segment",
+    input: { preset: "shields", type: "npm", packageName: ".." },
+  },
+  {
+    name: "owner .",
+    input: {
+      preset: "shieldcn",
+      type: "stars",
+      user: ".",
+      repo: "hello-world",
+    },
+  },
+  {
+    name: "owner ..",
+    input: {
+      preset: "shields",
+      type: "forks",
+      user: "..",
+      repo: "hello-world",
+    },
+  },
+  {
+    name: "repo name .",
+    input: {
+      preset: "shieldcn",
+      type: "license",
+      user: "octocat",
+      repo: ".",
+    },
+  },
+  {
+    name: "repo name ..",
+    input: {
+      preset: "shields",
+      type: "ci",
+      user: "octocat",
+      repo: "..",
+    },
+  },
+  {
+    name: "workflow .",
+    input: {
+      preset: "shields",
+      type: "ci",
+      repo: "vercel/next.js",
+      workflow: ".",
+    },
+  },
+  {
+    name: "workflow ..",
+    input: {
+      preset: "shields",
+      type: "ci",
+      repo: "vercel/next.js",
+      workflow: "..",
+    },
+  },
+];
+
+const ADVERSARIAL_CASES: ReadonlyArray<{
+  name: string;
+  input: ExpandChipsRequestInput;
+}> = [
+  {
+    name: "../badge/dynamic/json",
+    input: {
+      preset: "shieldcn",
+      type: "npm",
+      packageName: "../badge/dynamic/json",
+    },
+  },
+  {
+    name: "../../badge/dynamic/json",
+    input: {
+      preset: "shields",
+      type: "npm",
+      packageName: "../../badge/dynamic/json",
+    },
+  },
+  {
+    name: "foo/../bar",
+    input: { preset: "shieldcn", type: "npm", packageName: "foo/../bar" },
+  },
+  {
+    name: "@scope/../../badge/dynamic/json",
+    input: {
+      preset: "shields",
+      type: "npm",
+      packageName: "@scope/../../badge/dynamic/json",
+    },
+  },
+  {
+    name: "repo ../hello",
+    input: { preset: "shieldcn", type: "stars", repo: "../hello" },
+  },
+  {
+    name: "owner ..",
+    input: {
+      preset: "shieldcn",
+      type: "issues",
+      user: "..",
+      repo: "hello-world",
+    },
+  },
+  {
+    name: "shields ci repo ..",
+    input: {
+      preset: "shields",
+      type: "ci",
+      user: "octocat",
+      repo: "..",
+      workflow: "ci.yml",
+    },
+  },
+];
 
 function expand(
   input: ExpandChipsRequestInput,
@@ -256,7 +399,12 @@ describe("expandChipsRequest", () => {
       expect(url.protocol).toBe("https:");
       expect(url.href.startsWith("https://")).toBe(true);
       expect(url.href.startsWith("http://")).toBe(false);
+      expect(url.search).toBe("");
+      expect(url.hash).toBe("");
       expect(ALLOWED_HOSTNAMES.has(url.hostname)).toBe(true);
+      expect(
+        url.hostname === "shieldcn.dev" || url.hostname === "img.shields.io",
+      ).toBe(true);
       expect(url.hostname).not.toBe("www.shieldcn.dev");
       expect(url.hostname).not.toBe("shields.io");
       expect(url.hostname).not.toBe("www.img.shields.io");
@@ -264,5 +412,109 @@ describe("expandChipsRequest", () => {
         expect(url.pathname.toLowerCase()).not.toContain(marker);
       }
     }
+  });
+
+  it("keeps next.js, ci.yml, and scoped @scope/name", () => {
+    expect(
+      expand({
+        preset: "shieldcn",
+        type: "npm",
+        packageName: "next.js",
+      }).url.href,
+    ).toBe("https://shieldcn.dev/npm/next.js.json");
+    expect(
+      expand({
+        preset: "shields",
+        type: "ci",
+        repo: "vercel/next.js",
+        workflow: "ci.yml",
+      }).url.href,
+    ).toBe(
+      "https://img.shields.io/github/actions/workflow/status/vercel/next.js/ci.yml.json",
+    );
+    expect(
+      expand({
+        preset: "shieldcn",
+        type: "npm",
+        packageName: "@scope/name",
+      }).url.href,
+    ).toBe("https://shieldcn.dev/npm/@scope/name.json");
+  });
+
+  it.each(FORBIDDEN_SEGMENT_CASES)(
+    "throws forbidden_path for $name",
+    ({ input }) => {
+      expect(thrownCode(input)).toBe("forbidden_path");
+    },
+  );
+
+  it.each(ADVERSARIAL_CASES)(
+    "throws forbidden_path for adversarial $name",
+    ({ input }) => {
+      expect(thrownCode(input)).toBe("forbidden_path");
+    },
+  );
+
+  it("rejects github .. traversal that would still start with /github", () => {
+    const collapsed = new URL(
+      "/github/stars/../watchers.json",
+      "https://shieldcn.dev",
+    );
+    expect(collapsed.pathname).toBe("/github/watchers.json");
+    expect(collapsed.pathname.startsWith("/github")).toBe(true);
+    expect(
+      thrownCode({
+        preset: "shieldcn",
+        type: "stars",
+        repo: "../watchers",
+      }),
+    ).toBe("forbidden_path");
+  });
+
+  it("does not let foo/../bar collapse to /npm/bar.json", () => {
+    const collapsed = new URL("/npm/foo/../bar.json", "https://shieldcn.dev");
+    expect(collapsed.pathname).toBe("/npm/bar.json");
+    expect(collapsed.pathname.startsWith("/badge")).toBe(false);
+    for (const prefix of FORBIDDEN_PATH_MARKERS) {
+      expect(collapsed.pathname.toLowerCase().startsWith(prefix)).toBe(false);
+    }
+    expect(
+      thrownCode({
+        preset: "shieldcn",
+        type: "npm",
+        packageName: "foo/../bar",
+      }),
+    ).toBe("forbidden_path");
+    expect(
+      thrownCode({
+        preset: "shields",
+        type: "npm",
+        packageName: "foo/../bar",
+      }),
+    ).toBe("forbidden_path");
+  });
+
+  it("keeps %2e%2e encoded and does not resolve to /badge", () => {
+    const shieldcn = expand({
+      preset: "shieldcn",
+      type: "npm",
+      packageName: "%2e%2e",
+    });
+    expect(shieldcn.url.pathname).toBe("/npm/%252e%252e.json");
+    expect(shieldcn.url.pathname).not.toContain("/badge");
+    expect(shieldcn.url.href).toBe("https://shieldcn.dev/npm/%252e%252e.json");
+    expect(shieldcn.url.search).toBe("");
+    expect(shieldcn.url.hash).toBe("");
+
+    const shields = expand({
+      preset: "shields",
+      type: "npm",
+      packageName: "%2e%2e",
+    });
+    expect(shields.url.pathname).toBe("/npm/v/%252e%252e.json");
+    expect(shields.url.pathname).not.toContain("/badge");
+    expect(shields.url.href).toBe(
+      "https://img.shields.io/npm/v/%252e%252e.json",
+    );
   });
 });

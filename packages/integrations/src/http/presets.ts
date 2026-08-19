@@ -29,11 +29,27 @@ export type ChipsExpandErrorCode =
   | "missing_repo"
   | "unknown_preset"
   | "unknown_type"
-  | "forbidden_origin";
+  | "forbidden_origin"
+  | "forbidden_path";
 
 const SHIELDCN_ORIGIN = "https://shieldcn.dev";
 const SHIELDS_ORIGIN = "https://img.shields.io";
 const ALLOWED_HOSTNAMES = new Set(["shieldcn.dev", "img.shields.io"]);
+
+/** Belt-only. Path identity and whole-segment checks are the real lock. */
+const DENY_PATH_PREFIXES = [
+  "/badge",
+  "/endpoint",
+  "/https/",
+  "/memo",
+  "/discord",
+  "/reddit",
+  "/nba",
+  "/views",
+  "/watchers",
+] as const;
+
+const SCOPED_NPM_PREFIX = /^@[^/]+$/;
 
 type GithubChipType = Exclude<HttpChipType, "npm">;
 
@@ -75,7 +91,9 @@ export function expandChipsRequest(
         );
 
   const url = new URL(pathname, origin);
+  assertExactPathname(url, pathname);
   assertAllowedOrigin(url);
+  assertDeniedPrefix(url.pathname);
   return { url };
 }
 
@@ -96,13 +114,18 @@ function requirePackage(packageName?: string | null): string {
     );
   }
   const segments = raw.split("/");
-  if (segments.some((segment) => segment === "")) {
+  assertSafePathSegments(segments);
+  if (segments.length !== 1 && !isScopedNpmPackage(segments)) {
     throw new ChipsExpandError(
-      "missing_package",
-      "chips npm type requires package",
+      "forbidden_path",
+      "chips npm package must be one name or a scoped @scope/name",
     );
   }
   return segments.map(encodePackageSegment).join("/");
+}
+
+function isScopedNpmPackage(segments: readonly string[]): boolean {
+  return segments.length === 2 && SCOPED_NPM_PREFIX.test(segments[0] ?? "");
 }
 
 function encodePackageSegment(segment: string): string {
@@ -131,6 +154,8 @@ function parseOwnerRepo(
         "chips github type requires repo",
       );
     }
+    assertSafePathSegment(owner);
+    assertSafePathSegment(name);
     return { owner, name };
   }
   if (userRaw === "") {
@@ -145,11 +170,19 @@ function parseOwnerRepo(
       "chips github type requires repo",
     );
   }
+  assertSafePathSegment(userRaw);
+  assertSafePathSegment(repoRaw);
   return { owner: userRaw, name: repoRaw };
 }
 
 function resolveWorkflow(workflow?: string | null): string {
   const raw = workflow?.trim() ?? "";
+  if (raw === "." || raw === "..") {
+    throw new ChipsExpandError(
+      "forbidden_path",
+      "chips workflow is a forbidden path segment",
+    );
+  }
   return raw === "" ? CHIPS_WORKFLOW_DEFAULT : raw;
 }
 
@@ -191,6 +224,30 @@ function githubPathname(
   return paths[type];
 }
 
+function assertSafePathSegments(segments: readonly string[]): void {
+  for (const segment of segments) {
+    assertSafePathSegment(segment);
+  }
+}
+
+function assertSafePathSegment(segment: string): void {
+  if (segment === "" || segment === "." || segment === "..") {
+    throw new ChipsExpandError(
+      "forbidden_path",
+      "chips preset path contains a forbidden segment",
+    );
+  }
+}
+
+function assertExactPathname(url: URL, pathname: string): void {
+  if (url.pathname !== pathname || url.search !== "" || url.hash !== "") {
+    throw new ChipsExpandError(
+      "forbidden_path",
+      "chips preset path must equal the constructed pathname",
+    );
+  }
+}
+
 function assertAllowedOrigin(url: URL): void {
   const allowed =
     url.protocol === "https:" &&
@@ -203,5 +260,20 @@ function assertAllowedOrigin(url: URL): void {
       "forbidden_origin",
       `chips origin is not allowlisted: ${url.origin}`,
     );
+  }
+}
+
+function assertDeniedPrefix(pathname: string): void {
+  const lower = pathname.toLowerCase();
+  for (const prefix of DENY_PATH_PREFIXES) {
+    const hit = prefix.endsWith("/")
+      ? lower.startsWith(prefix)
+      : lower === prefix || lower.startsWith(`${prefix}/`);
+    if (hit) {
+      throw new ChipsExpandError(
+        "forbidden_path",
+        "chips preset path is forbidden",
+      );
+    }
   }
 }

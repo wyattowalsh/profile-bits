@@ -38,4 +38,4 @@ Playground/docs wrap **rss XML fixtures** under `packages/integrations/src/rss/f
 - SSRF: ssrfcheck then ipaddr allow-only-unicast after IPv4-mapped unwrap. Mixed A/AAAA fails closed. `redirect: "manual"`, max 5 hops, 1 MiB body cap. Chips origin allowlist `shieldcn.dev` + `img.shields.io` **in addition to** existing SSRF.
 - Preset expander under `src/http/presets.ts`; closed presets `shieldcn` | `shields`; types `npm` | `stars` | `forks` | `license` | `release` | `issues` | `prs` | `ci`. `normalizeBadgeJson`. Fixtures under `src/http/fixtures/chips/` (`chipFixture`).
 - `classifyHttp` is separate from GitHub: 401/404 `fail_widget` (no retry); 403/429/5xx retry then `fail_widget`.
-- Playground/docs: fixtures only. Zero live URLs. Do not add `/playground/http` UI in this change.
+- Playground/docs: fixtures only. Zero live URLs.

@@ -2,11 +2,17 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ACTION_CONFIG_PATH_DEFAULT } from "@profile-bits/core";
-import type { HttpFetch, HttpLookup } from "@profile-bits/integrations";
+import {
+  chipFixture,
+  expandChipsRequest,
+  type HttpFetch,
+  type HttpLookup,
+} from "@profile-bits/integrations";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AllGithubWidgetsSkippedError, EngineError } from "./engine.ts";
 import { type ConfigFs, MissingGithubTokenError } from "./load-config.ts";
 import { runMain } from "./main.ts";
+import { UnhandledActionWidgetError } from "./render.ts";
 
 const TOKEN = "ghs_test_token";
 const SECRET = "super-secret-http-token-xyz";
@@ -15,15 +21,44 @@ const CWD = "/repo";
 const DEFAULT_CONFIG_PATH = `${CWD}/${ACTION_CONFIG_PATH_DEFAULT}`;
 const HTTP_TOKEN_ENV = "HTTP_JSON_TOKEN";
 
+const JSON_URL = "https://example.com/api.json";
+
 const HTTP_JSON_YAML = `version: 1
 format: svg
 plugins:
   http:
     widgets:
       json:
-        url: https://example.com/api.json
+        url: ${JSON_URL}
         headers:
           X-Profile-Bits: test
+`;
+
+const HTTP_CHIPS_YAML = `version: 1
+format: svg
+plugins:
+  http:
+    widgets:
+      chips:
+        preset: shieldcn
+        types: [npm, stars]
+        package: react
+        repo: vercel/next.js
+`;
+
+const HTTP_JSON_AND_CHIPS_YAML = `version: 1
+format: svg
+plugins:
+  http:
+    widgets:
+      json:
+        url: ${JSON_URL}
+        headers:
+          X-Profile-Bits: test
+      chips:
+        preset: shieldcn
+        types: [npm]
+        package: react
 `;
 
 function createMemoryFs(files: Readonly<Record<string, string>>): ConfigFs {
@@ -46,11 +81,29 @@ function publicLookup(): HttpLookup {
   return async () => [{ address: PUBLIC_V4, family: 4 }];
 }
 
-function jsonResponse(body: unknown): Response {
+function jsonResponse(body: unknown, init: { status?: number } = {}): Response {
   return new Response(JSON.stringify(body), {
-    status: 200,
+    status: init.status ?? 200,
     headers: { "content-type": "application/json" },
   });
+}
+
+function chipsUrl(type: "npm" | "stars"): string {
+  return expandChipsRequest({
+    preset: "shieldcn",
+    type,
+    packageName: "react",
+    repo: "vercel/next.js",
+  }).url.href;
+}
+
+function isEngineFailJob(error: unknown): error is EngineError {
+  return (
+    error instanceof EngineError &&
+    !(error instanceof AllGithubWidgetsSkippedError) &&
+    !(error instanceof UnhandledActionWidgetError) &&
+    error.decision === "fail_job"
+  );
 }
 
 function errorText(error: unknown): string {
@@ -242,5 +295,306 @@ describe("runMain http json", () => {
       }),
     ).rejects.toBeInstanceOf(MissingGithubTokenError);
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("runMain http chips", () => {
+  const tempDirs: string[] = [];
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await Promise.all(
+      tempDirs
+        .splice(0)
+        .map((dir) => rm(dir, { recursive: true, force: true })),
+    );
+  });
+
+  async function writableCwd(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), "profile-bits-http-chips-"));
+    tempDirs.push(dir);
+    return dir;
+  }
+
+  it("writes chips.svg for chips-only yaml with injected fetch and lookup", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const npmUrl = chipsUrl("npm");
+    const starsUrl = chipsUrl("stars");
+    const fetch = vi.fn<HttpFetch>(async (url, init) => {
+      expect(init?.method).toBe("GET");
+      expect(init?.headers?.Authorization).toBeUndefined();
+      if (url === npmUrl) {
+        return jsonResponse(chipFixture("shieldcn", "npm"));
+      }
+      if (url === starsUrl) {
+        return jsonResponse(chipFixture("shieldcn", "stars"));
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    const lookup = vi.fn(publicLookup());
+    const cwd = await writableCwd();
+
+    const result = await runMain({
+      inputs: {
+        github_token: TOKEN,
+        output_action: "none",
+      },
+      env: {},
+      cwd,
+      fs: createMemoryFs({
+        [`${cwd}/${ACTION_CONFIG_PATH_DEFAULT}`]: HTTP_CHIPS_YAML,
+      }),
+      httpFetch: fetch,
+      httpLookup: lookup,
+    });
+
+    expect(result.files).toContain("profile-bits/chips.svg");
+    expect(result.did_commit).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(lookup).toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails the job on chips-only 404 unless allow_skipped", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const npmUrl = chipsUrl("npm");
+    const starsUrl = chipsUrl("stars");
+    const fetch = vi.fn<HttpFetch>(async (url) => {
+      if (url === npmUrl || url === starsUrl) {
+        return jsonResponse({ error: true }, { status: 404 });
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+
+    await expect(
+      runMain({
+        inputs: {
+          github_token: TOKEN,
+          output_action: "none",
+        },
+        env: {},
+        cwd: CWD,
+        fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: HTTP_CHIPS_YAML }),
+        httpFetch: fetch,
+        httpLookup: publicLookup(),
+      }),
+    ).rejects.toSatisfy((error: unknown) => {
+      return isEngineFailJob(error) && !errorText(error).includes(SECRET);
+    });
+    expect(fetch).toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("completes without chips files when chips-only 404 and allow_skipped", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const npmUrl = chipsUrl("npm");
+    const starsUrl = chipsUrl("stars");
+    const fetch = vi.fn<HttpFetch>(async (url) => {
+      if (url === npmUrl || url === starsUrl) {
+        return jsonResponse({ error: true }, { status: 404 });
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+
+    const result = await runMain({
+      inputs: {
+        github_token: TOKEN,
+        output_action: "none",
+        allow_skipped: true,
+      },
+      env: {},
+      cwd: CWD,
+      fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: HTTP_CHIPS_YAML }),
+      httpFetch: fetch,
+      httpLookup: publicLookup(),
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.did_commit).toBe(false);
+    expect(fetch).toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("runMain http json and chips", () => {
+  const tempDirs: string[] = [];
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await Promise.all(
+      tempDirs
+        .splice(0)
+        .map((dir) => rm(dir, { recursive: true, force: true })),
+    );
+  });
+
+  async function writableCwd(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), "profile-bits-http-both-"));
+    tempDirs.push(dir);
+    return dir;
+  }
+
+  it("writes json.svg and chips.svg when both widgets return 200", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const npmUrl = chipsUrl("npm");
+    const fetch = vi.fn<HttpFetch>(async (url, init) => {
+      expect(init?.method).toBe("GET");
+      if (url === JSON_URL) {
+        expect(init?.headers?.["X-Profile-Bits"]).toBe("test");
+        expect(init?.headers?.Authorization).toBeUndefined();
+        return jsonResponse({ name: "octocat", count: 3 });
+      }
+      if (url === npmUrl) {
+        expect(init?.headers?.Authorization).toBeUndefined();
+        return jsonResponse(chipFixture("shieldcn", "npm"));
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    const lookup = vi.fn(publicLookup());
+    const cwd = await writableCwd();
+
+    const result = await runMain({
+      inputs: {
+        github_token: TOKEN,
+        output_action: "none",
+      },
+      env: {},
+      cwd,
+      fs: createMemoryFs({
+        [`${cwd}/${ACTION_CONFIG_PATH_DEFAULT}`]: HTTP_JSON_AND_CHIPS_YAML,
+      }),
+      httpFetch: fetch,
+      httpLookup: lookup,
+    });
+
+    expect(result.files).toEqual(
+      expect.arrayContaining([
+        "profile-bits/json.svg",
+        "profile-bits/chips.svg",
+      ]),
+    );
+    expect(result.did_commit).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(lookup).toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("sends Bearer on json GET and omits Authorization on chips GET", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const npmUrl = chipsUrl("npm");
+    const fetch = vi.fn<HttpFetch>(async (url, init) => {
+      expect(init?.method).toBe("GET");
+      if (url === JSON_URL) {
+        expect(init?.headers?.Authorization).toBe(`Bearer ${SECRET}`);
+        return jsonResponse({ ok: true });
+      }
+      if (url === npmUrl) {
+        expect(init?.headers?.Authorization).toBeUndefined();
+        return jsonResponse(chipFixture("shieldcn", "npm"));
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    const cwd = await writableCwd();
+
+    const result = await runMain({
+      inputs: {
+        github_token: TOKEN,
+        output_action: "none",
+        http_token_env: HTTP_TOKEN_ENV,
+      },
+      env: { [HTTP_TOKEN_ENV]: SECRET },
+      cwd,
+      fs: createMemoryFs({
+        [`${cwd}/${ACTION_CONFIG_PATH_DEFAULT}`]: HTTP_JSON_AND_CHIPS_YAML,
+      }),
+      httpFetch: fetch,
+      httpLookup: publicLookup(),
+    });
+
+    expect(result.files).toEqual(
+      expect.arrayContaining([
+        "profile-bits/json.svg",
+        "profile-bits/chips.svg",
+      ]),
+    );
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("GETs chips and fail_widget json when the named env is empty without leaking the token", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const npmUrl = chipsUrl("npm");
+    const fetch = vi.fn<HttpFetch>(async (url, init) => {
+      expect(init?.headers?.Authorization).toBeUndefined();
+      if (url === JSON_URL) {
+        throw new Error(
+          `json GET must not run; Authorization: Bearer ${SECRET}`,
+        );
+      }
+      if (url === npmUrl) {
+        return jsonResponse(chipFixture("shieldcn", "npm"));
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    const cwd = await writableCwd();
+
+    const result = await runMain({
+      inputs: {
+        github_token: TOKEN,
+        output_action: "none",
+        http_token_env: HTTP_TOKEN_ENV,
+      },
+      env: { [HTTP_TOKEN_ENV]: "" },
+      cwd,
+      fs: createMemoryFs({
+        [`${cwd}/${ACTION_CONFIG_PATH_DEFAULT}`]: HTTP_JSON_AND_CHIPS_YAML,
+      }),
+      httpFetch: fetch,
+      httpLookup: publicLookup(),
+    });
+
+    expect(result.files).toContain("profile-bits/chips.svg");
+    expect(result.files).not.toContain("profile-bits/json.svg");
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([npmUrl]);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not leak the client token through error causes when the named env is empty", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const npmUrl = chipsUrl("npm");
+    const fetch = vi.fn<HttpFetch>(async (url, init) => {
+      expect(init?.headers?.Authorization).toBeUndefined();
+      if (url === JSON_URL) {
+        throw new Error(
+          `json GET must not run; Authorization: Bearer ${SECRET}`,
+        );
+      }
+      if (url === npmUrl) {
+        throw new Error(`Authorization: Bearer ${SECRET} boom`);
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+
+    await expect(
+      runMain({
+        inputs: {
+          github_token: TOKEN,
+          output_action: "none",
+          http_token_env: HTTP_TOKEN_ENV,
+        },
+        env: { [HTTP_TOKEN_ENV]: "" },
+        cwd: CWD,
+        fs: createMemoryFs({
+          [DEFAULT_CONFIG_PATH]: HTTP_JSON_AND_CHIPS_YAML,
+        }),
+        httpFetch: fetch,
+        httpLookup: publicLookup(),
+      }),
+    ).rejects.toSatisfy((error: unknown) => {
+      const text = errorText(error);
+      return isEngineFailJob(error) && !text.includes(SECRET);
+    });
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([npmUrl]);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

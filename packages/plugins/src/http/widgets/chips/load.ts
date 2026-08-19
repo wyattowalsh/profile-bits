@@ -45,6 +45,7 @@ export async function loadChipsPayloads(
         client.fetchJson({
           url: url.href,
           timeout_ms: options.timeout_ms,
+          auth: "none",
         }),
       ),
     );

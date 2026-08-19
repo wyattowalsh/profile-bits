@@ -155,6 +155,19 @@ describe("createHttpClient", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("sends application/json when yaml extras set Accept to text/plain", async () => {
+    const fetch = vi.fn<HttpFetch>(async (_url, init) => {
+      expect(init?.headers?.Accept).toBe(HTTP_ACCEPT);
+      return jsonResponse({ ok: true });
+    });
+    const client = createHttpClient({ fetch, lookup: publicLookup() });
+    await client.fetchJson({
+      url: JSON_URL,
+      headers: { Accept: "text/plain" },
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("does not reuse cache across different yaml headers", async () => {
     const fetch = vi.fn<HttpFetch>(async (_url, init) =>
       jsonResponse({ h: init?.headers?.["X-Custom"] ?? "none" }),
@@ -205,6 +218,113 @@ describe("createHttpClient", () => {
       lookup: publicLookup(),
       token: "Basic abc",
     }).fetchJson({ url: JSON_URL });
+  });
+
+  it("omits Authorization when auth is none even with a token", async () => {
+    const fetch = vi.fn<HttpFetch>(async (_url, init) => {
+      expect(init?.headers?.Authorization).toBeUndefined();
+      return jsonResponse({ ok: true });
+    });
+    const client = createHttpClient({
+      fetch,
+      lookup: publicLookup(),
+      token: "secret",
+    });
+    await expect(
+      client.fetchJson({ url: JSON_URL, auth: "none" }),
+    ).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("still GETs when token is empty and auth is none", async () => {
+    for (const token of ["", "  \n"]) {
+      const fetch = vi.fn<HttpFetch>(async (_url, init) => {
+        expect(init?.headers?.Authorization).toBeUndefined();
+        return jsonResponse({ ok: true });
+      });
+      const client = createHttpClient({
+        fetch,
+        lookup: publicLookup(),
+        token,
+      });
+      await expect(
+        client.fetchJson({ url: JSON_URL, auth: "none" }),
+      ).resolves.toEqual({ ok: true });
+      expect(fetch).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("fails omitted auth with an empty token without GET", async () => {
+    const fetch = vi.fn<HttpFetch>(async () => jsonResponse({ ok: true }));
+    const client = createHttpClient({
+      fetch,
+      lookup: publicLookup(),
+      token: "",
+    });
+    await expect(client.fetchJson({ url: JSON_URL })).rejects.toSatisfy(
+      (error: unknown) =>
+        error instanceof HttpClientError && error.outcome === "fail_widget",
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not reuse cache between default auth and none", async () => {
+    const fetch = vi.fn<HttpFetch>(async (_url, init) =>
+      jsonResponse({ auth: init?.headers?.Authorization ?? "none" }),
+    );
+    const client = createHttpClient({
+      fetch,
+      lookup: publicLookup(),
+      token: "secret",
+    });
+    const withBearer = await client.fetchJson({ url: JSON_URL });
+    const withNone = await client.fetchJson({ url: JSON_URL, auth: "none" });
+    expect(withBearer).toEqual({ auth: "Bearer secret" });
+    expect(withNone).toEqual({ auth: "none" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("sends no Authorization on redirect hops when auth is none", async () => {
+    const hopUrl = "https://example.com/other.json";
+    const fetch = vi.fn<HttpFetch>(async (input, init) => {
+      expect(init?.headers?.Authorization).toBeUndefined();
+      if (input === JSON_URL) {
+        return new Response(null, {
+          status: 302,
+          headers: { location: hopUrl },
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    const client = createHttpClient({
+      fetch,
+      lookup: publicLookup(),
+      token: "secret",
+    });
+    await expect(
+      client.fetchJson({ url: JSON_URL, auth: "none" }),
+    ).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch.mock.calls[0]?.[0]).toBe(JSON_URL);
+    expect(fetch.mock.calls[1]?.[0]).toBe(hopUrl);
+  });
+
+  it("keeps secrets out of error messages when auth is none", async () => {
+    const fetch = vi.fn<HttpFetch>(async () => {
+      throw new Error("Authorization: Bearer super-secret boom");
+    });
+    const client = createHttpClient({
+      fetch,
+      lookup: publicLookup(),
+      token: "super-secret",
+    });
+    await expect(
+      client.fetchJson({ url: JSON_URL, auth: "none" }),
+    ).rejects.toSatisfy(
+      (error: unknown) =>
+        error instanceof HttpClientError &&
+        !error.message.includes("super-secret"),
+    );
   });
 
   it("keeps secrets out of error messages", async () => {

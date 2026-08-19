@@ -51,8 +51,8 @@ export async function renderChipsFromPayloads(input: {
 export async function renderChipsFromClient(
   client: HttpClient,
   options: ChipsOptions,
-  ctx: { user: string },
+  ctx: { user: string; theme?: WidgetTheme },
 ): Promise<string> {
   const badges = await loadChipsPayloads(client, options, ctx);
-  return renderChipsSvg({ badges });
+  return renderChipsSvg({ badges, theme: ctx.theme });
 }

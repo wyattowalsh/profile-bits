@@ -1,14 +1,6 @@
 import type { PluginIdentity } from "@profile-bits/core";
 
-export const HTTP_BITS_USED = [
-  "Theme",
-  "Frame",
-  "Stack",
-  "Row",
-  "Text",
-  "Muted",
-  "Chip",
-] as const;
+export const HTTP_BITS_USED = ["Theme", "Frame", "Muted", "Chip"] as const;
 
 export const httpPlugin = {
   id: "http",

@@ -8,7 +8,7 @@ Fumadocs + shadcn playground (`/playground`, `/playground/github`, `/playground/
 - Dual pane: WASM layout + README mode (`renderSvg` / `renderAnimation` bytes).
 - **No App token → fixtures, zero outbound GitHub.** Never unauthenticated REST. Never log visitor tokens (sessionStorage only).
 - Playground **wakatime** uses wakatime integration JSON fixtures or skips live. Never unauthenticated WakaTime.
-- Preview wraps rss XML fixtures via `rss-fixtures.ts` (`parseRssXml(loadFixture(...))` + `renderFeedSvg`; not a second static JSON pack), with **zero live feeds**. Rss has no playground route in this change.
+- Preview wraps rss XML fixtures via `rss-fixtures.ts` (`parseRssXml(loadFixture(...))` + `renderFeedSvg`; not a second static JSON pack), with **zero live feeds**. Rss has no playground route.
 - Playground **http** uses fixtures only (`chipFixture` for chips). **Zero live URLs.** No live shieldcn/shields fetches. `/playground/http` is a fixtures-only chips explorer (preset/types tuners; baked SVG; yaml/README copy). Keep `http_token_env` / `http_token` in `PREVIEW_TOKEN_QUERY_KEYS` so permalinks cannot round-trip secrets. `PREVIEW_PLUGIN_IDS` is `github` then `http`. Do not add `chips` or `json` to github `PREVIEW_WIDGET_IDS`.
 - Playground is not a Camo/sanitize oracle.
 

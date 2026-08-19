@@ -17,7 +17,7 @@ import {
 } from "@profile-bits/core";
 import { paramsFromUrl, RequestCache, type RestCacheAuth } from "../cache.js";
 import { authorizationFromToken, authorizationHeaderValue } from "./auth.js";
-import { assertSafeYamlHeaders } from "./headers.js";
+import { assertSafeYamlHeaders, buildHttpRequestHeaders } from "./headers.js";
 import {
   assertSafeHttpUrl,
   HTTP_MAX_REDIRECTS,
@@ -38,20 +38,41 @@ export const HTTP_TIMEOUT_MS_DEFAULT = 10_000;
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
+export type HttpClientErrorCode =
+  | "timeout"
+  | "ssrf"
+  | "missing_token"
+  | "http_status"
+  | "invalid_json"
+  | "forbidden_header"
+  | "body_too_large"
+  | "network";
+
 export class HttpClientError extends Error {
   override readonly name = "HttpClientError";
   readonly outcome: SkipFailOutcome;
   readonly status?: number;
+  readonly code?: HttpClientErrorCode;
+  readonly host?: string;
+  readonly attempt?: number;
 
   constructor(
     outcome: SkipFailOutcome,
     message: string,
     status?: number,
-    options?: { cause?: unknown },
+    options?: {
+      cause?: unknown;
+      code?: HttpClientErrorCode;
+      host?: string;
+      attempt?: number;
+    },
   ) {
-    super(redactSecrets(message), options);
+    super(redactSecrets(message), { cause: options?.cause });
     this.outcome = outcome;
     this.status = status;
+    this.code = options?.code;
+    this.host = options?.host;
+    this.attempt = options?.attempt;
   }
 }
 
@@ -84,6 +105,7 @@ export type HttpJsonRequest = {
   url: string;
   timeout_ms?: number;
   headers?: Readonly<Record<string, string>>;
+  auth?: "none";
 };
 
 export type HttpClient = {
@@ -105,8 +127,18 @@ export function createHttpClient(
   return {
     async fetchJson(request) {
       try {
-        if (authorization.kind === "missing") {
-          throw new HttpClientError("fail_widget", "missing http token");
+        let requestAuth = auth;
+        let requestAuthorization = authorizationHeaderValue(authorization);
+        if (request.auth === "none") {
+          requestAuth = "none";
+          requestAuthorization = undefined;
+        } else if (authorization.kind === "missing") {
+          throw new HttpClientError(
+            "fail_widget",
+            "missing http token",
+            undefined,
+            { code: "missing_token" },
+          );
         }
         assertSafeYamlHeaders(request.headers);
         const url = assertSafeHttpUrl(request.url);
@@ -116,7 +148,7 @@ export function createHttpClient(
             method: "GET",
             url: url.href,
             params: paramsFromUrl(url.href),
-            auth,
+            auth: requestAuth,
             headers: request.headers,
           },
           () =>
@@ -124,13 +156,15 @@ export function createHttpClient(
               fetch: fetchImpl,
               lookup,
               sleep,
-              authorization: authorizationHeaderValue(authorization),
+              authorization: requestAuthorization,
               timeoutMs,
               extraHeaders: request.headers,
             }),
         );
       } catch (error: unknown) {
-        throw wrapFailWidget(error, authorizationHeaderValue(authorization));
+        throw wrapFailWidget(error, authorizationHeaderValue(authorization), {
+          host: hostnameOnly(request.url),
+        });
       }
     },
   };
@@ -153,6 +187,7 @@ async function loadJson(
     extraHeaders?: Readonly<Record<string, string>>;
   },
 ): Promise<unknown> {
+  const host = hostnameOnly(url);
   let lastStatus: number | undefined;
   for (let attempt = 1; attempt <= HTTP_MAX_ATTEMPTS; attempt += 1) {
     let result: {
@@ -163,7 +198,11 @@ async function loadJson(
     try {
       result = await httpGet(url, deps);
     } catch (error: unknown) {
-      throw wrapFailWidget(error, deps.authorization);
+      throw wrapFailWidget(error, deps.authorization, {
+        host,
+        attempt,
+        timeoutMs: deps.timeoutMs,
+      });
     }
 
     const classified = classifyHttp({ status: result.status });
@@ -171,7 +210,11 @@ async function loadJson(
       try {
         return parseJsonBody(result.body);
       } catch (error: unknown) {
-        throw wrapFailWidget(error, deps.authorization);
+        throw wrapFailWidget(error, deps.authorization, {
+          host,
+          attempt,
+          timeoutMs: deps.timeoutMs,
+        });
       }
     }
 
@@ -185,15 +228,17 @@ async function loadJson(
 
     throw new HttpClientError(
       "fail_widget",
-      `HTTP JSON request failed (${result.status})`,
+      httpStatusFailMessage(result.status, host),
       result.status,
+      { code: "http_status", host, attempt },
     );
   }
 
   throw new HttpClientError(
     "fail_widget",
-    `HTTP JSON request failed (${lastStatus ?? "unknown"})`,
+    httpStatusFailMessage(lastStatus, host),
     lastStatus,
+    { code: "http_status", host, attempt: HTTP_MAX_ATTEMPTS },
   );
 }
 
@@ -213,52 +258,72 @@ async function httpGet(
 }> {
   let current = assertSafeHttpUrl(urlString);
   let redirects = 0;
-  const headers = requestHeaders(deps.authorization, deps.extraHeaders);
+  const headers = buildHttpRequestHeaders(
+    deps.authorization,
+    deps.extraHeaders,
+    { accept: HTTP_ACCEPT, userAgent: HTTP_USER_AGENT },
+  );
+  const signal = AbortSignal.timeout(deps.timeoutMs);
 
-  for (;;) {
-    const addresses = await resolveValidatedAddresses(current, deps.lookup);
-    const signal = AbortSignal.timeout(deps.timeoutMs);
-    const response = await performGet(current, {
-      fetch: deps.fetch,
-      addresses,
-      signal,
-      headers,
-    });
+  try {
+    for (;;) {
+      const addresses = await raceAbort(
+        signal,
+        resolveValidatedAddresses(current, deps.lookup),
+      );
+      const response = await performGet(current, {
+        fetch: deps.fetch,
+        addresses,
+        signal,
+        headers,
+      });
 
-    if (REDIRECT_STATUSES.has(response.status)) {
-      redirects += 1;
-      if (redirects > HTTP_MAX_REDIRECTS) {
-        throw new HttpSsrfError("too many redirects");
+      if (REDIRECT_STATUSES.has(response.status)) {
+        await cancelRedirectBody(response);
+        redirects += 1;
+        if (redirects > HTTP_MAX_REDIRECTS) {
+          throw new HttpSsrfError("too many redirects");
+        }
+        current = nextRedirectUrl(current, response.headers.get("location"));
+        continue;
       }
-      current = nextRedirectUrl(current, response.headers.get("location"));
-      continue;
-    }
 
-    return {
-      status: response.status,
-      headers: response.headers,
-      body: await readCappedBody(response),
-    };
+      return {
+        status: response.status,
+        headers: response.headers,
+        body: await readCappedBody(response, signal),
+      };
+    }
+  } catch (error: unknown) {
+    throw hopLayerError(error);
   }
 }
 
-function requestHeaders(
-  authorization: string | undefined,
-  extra: Readonly<Record<string, string>> | undefined,
-): Record<string, string> {
-  const headers: Record<string, string> = {
-    Accept: HTTP_ACCEPT,
-    "User-Agent": HTTP_USER_AGENT,
-  };
-  if (extra != null) {
-    for (const [name, value] of Object.entries(extra)) {
-      headers[name] = value;
+async function raceAbort<T>(signal: AbortSignal, work: Promise<T>): Promise<T> {
+  let onAbort: (() => void) | undefined;
+  const aborted = new Promise<never>((_, reject) => {
+    onAbort = () => {
+      reject(
+        signal.reason instanceof Error
+          ? signal.reason
+          : new HttpSsrfError("timeout"),
+      );
+    };
+    if (signal.aborted) {
+      onAbort();
+      return;
     }
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+  try {
+    return await Promise.race([work, aborted]);
+  } finally {
+    if (onAbort != null) {
+      signal.removeEventListener("abort", onAbort);
+    }
+    void work.then(undefined, () => undefined);
+    void aborted.then(undefined, () => undefined);
   }
-  if (authorization != null) {
-    headers.Authorization = authorization;
-  }
-  return headers;
 }
 
 async function performGet(
@@ -302,7 +367,25 @@ function nextRedirectUrl(current: URL, location: string | null): URL {
   return assertSafeHttpUrl(next.href);
 }
 
-async function readCappedBody(response: HttpFetchResponse): Promise<string> {
+async function cancelRedirectBody(response: HttpFetchResponse): Promise<void> {
+  const body = response.body;
+  if (body == null) {
+    return;
+  }
+  const nodeDestroy = (body as { destroy?: (error?: Error) => void }).destroy;
+  if (typeof body.cancel === "function") {
+    await body.cancel();
+    return;
+  }
+  if (typeof nodeDestroy === "function") {
+    nodeDestroy.call(body);
+  }
+}
+
+async function readCappedBody(
+  response: HttpFetchResponse,
+  signal: AbortSignal,
+): Promise<string> {
   const lengthRaw = response.headers.get("content-length");
   if (lengthRaw != null && lengthRaw !== "") {
     const length = Number(lengthRaw);
@@ -310,16 +393,31 @@ async function readCappedBody(response: HttpFetchResponse): Promise<string> {
       throw new HttpSsrfError("body exceeds 1 MiB");
     }
   }
+  if (signal.aborted) {
+    await cancelRedirectBody(response);
+    throw new HttpSsrfError("timeout");
+  }
   const body = response.body;
   if (body == null) {
     return "";
   }
   const reader = body.getReader();
+  const onAbort = (): void => {
+    void reader.cancel().then(undefined, () => undefined);
+  };
+  signal.addEventListener("abort", onAbort, { once: true });
   const chunks: Uint8Array[] = [];
   let total = 0;
   try {
+    if (signal.aborted) {
+      await reader.cancel();
+      throw new HttpSsrfError("timeout");
+    }
     for (;;) {
       const { done, value } = await reader.read();
+      if (signal.aborted) {
+        throw new HttpSsrfError("timeout");
+      }
       if (done) {
         break;
       }
@@ -333,8 +431,21 @@ async function readCappedBody(response: HttpFetchResponse): Promise<string> {
       }
       chunks.push(value);
     }
+  } catch (error: unknown) {
+    if (error instanceof HttpSsrfError && error.message === "timeout") {
+      throw error;
+    }
+    if (signal.aborted) {
+      throw new HttpSsrfError("timeout", { cause: error });
+    }
+    throw error;
   } finally {
-    reader.releaseLock();
+    signal.removeEventListener("abort", onAbort);
+    try {
+      reader.releaseLock();
+    } catch {
+      void 0;
+    }
   }
   const bytes = new Uint8Array(total);
   let offset = 0;
@@ -352,6 +463,7 @@ export function parseJsonBody(body: string): unknown {
   } catch (cause: unknown) {
     throw new HttpClientError("fail_widget", "invalid json", undefined, {
       cause,
+      code: "invalid_json",
     });
   }
 }
@@ -389,18 +501,125 @@ function parseRetryAfterMs(value?: string | null): number | undefined {
   return timestamp - Date.now();
 }
 
-function wrapFailWidget(error: unknown, secret?: string): HttpClientError {
+function wrapFailWidget(
+  error: unknown,
+  secret?: string,
+  context: {
+    host?: string;
+    attempt?: number;
+    timeoutMs?: number;
+  } = {},
+): HttpClientError {
   if (error instanceof HttpClientError) {
+    if (
+      (error.host == null && context.host != null) ||
+      (error.attempt == null && context.attempt != null)
+    ) {
+      return new HttpClientError(error.outcome, error.message, error.status, {
+        cause: error.cause ?? error,
+        code: error.code,
+        host: error.host ?? context.host,
+        attempt: error.attempt ?? context.attempt,
+      });
+    }
     return error;
   }
-  const message =
-    error instanceof Error ? error.message : "HTTP JSON request failed";
+  const code = clientErrorCode(error);
+  const host = context.host;
+  const message = failWidgetMessage(error, code, host, context.timeoutMs);
   return new HttpClientError(
     "fail_widget",
     redactSecrets(message, secret == null ? [] : [secret]),
     undefined,
-    { cause: error },
+    {
+      cause: error,
+      code,
+      host,
+      attempt: context.attempt,
+    },
   );
+}
+
+function clientErrorCode(error: unknown): HttpClientErrorCode {
+  if (error instanceof HttpSsrfError) {
+    if (error.message === "timeout") {
+      return "timeout";
+    }
+    if (error.message.includes("body exceeds")) {
+      return "body_too_large";
+    }
+    return "ssrf";
+  }
+  if (isAbortTimeout(error)) {
+    return "timeout";
+  }
+  if (error instanceof Error && error.message === "forbidden header") {
+    return "forbidden_header";
+  }
+  return "network";
+}
+
+function failWidgetMessage(
+  error: unknown,
+  code: HttpClientErrorCode,
+  host: string | undefined,
+  timeoutMs: number | undefined,
+): string {
+  if (code === "timeout") {
+    let message = "timeout";
+    if (host != null && host !== "") {
+      message += ` for ${host}`;
+    }
+    if (timeoutMs != null) {
+      message += ` (${timeoutMs}ms)`;
+    }
+    return message;
+  }
+  return error instanceof Error ? error.message : "HTTP JSON request failed";
+}
+
+function httpStatusFailMessage(
+  status: number | undefined,
+  host: string | undefined,
+): string {
+  const statusPart = status ?? "unknown";
+  if (host == null || host === "") {
+    return `HTTP JSON request failed (${statusPart})`;
+  }
+  return `HTTP JSON request failed (${statusPart}) for ${host}`;
+}
+
+function hostnameOnly(urlString: string): string | undefined {
+  try {
+    const hostname = new URL(urlString).hostname;
+    return hostname === "" ? undefined : hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+function isAbortTimeout(error: unknown): boolean {
+  if (error instanceof HttpSsrfError) {
+    return error.message === "timeout";
+  }
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return (
+    error.name === "TimeoutError" ||
+    error.name === "AbortError" ||
+    error.message === "The operation was aborted due to timeout"
+  );
+}
+
+function hopLayerError(error: unknown): never {
+  if (error instanceof HttpSsrfError) {
+    throw error;
+  }
+  if (isAbortTimeout(error)) {
+    throw new HttpSsrfError("timeout", { cause: error });
+  }
+  throw error;
 }
 
 function pinnedHttpsGet(
@@ -411,15 +630,51 @@ function pinnedHttpsGet(
 ): Promise<HttpFetchResponse> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) {
-      reject(signal.reason ?? new HttpSsrfError("timeout"));
+      reject(
+        signal.reason instanceof Error
+          ? signal.reason
+          : new HttpSsrfError("timeout"),
+      );
       return;
     }
-    const req = httpsRequest(
+
+    let settled = false;
+    let req: ReturnType<typeof httpsRequest>;
+
+    const onAbort = (): void => {
+      req.destroy(
+        signal.reason instanceof Error
+          ? signal.reason
+          : new HttpSsrfError("timeout"),
+      );
+    };
+    const stopAbort = (): void => {
+      signal.removeEventListener("abort", onAbort);
+    };
+    const succeed = (response: HttpFetchResponse): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      stopAbort();
+      resolve(response);
+    };
+    const fail = (error: unknown): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      stopAbort();
+      reject(error);
+    };
+
+    req = httpsRequest(
       url,
       {
         method: "GET",
         servername: url.hostname,
         headers,
+        signal,
         lookup(hostname, options, callback) {
           const all = typeof options === "object" && options.all === true;
           if (all) {
@@ -441,7 +696,7 @@ function pinnedHttpsGet(
         },
       },
       (res) => {
-        resolve({
+        succeed({
           status: res.statusCode ?? 0,
           headers: {
             get(name) {
@@ -456,15 +711,9 @@ function pinnedHttpsGet(
         });
       },
     );
-    const onAbort = (): void => {
-      req.destroy(
-        signal.reason instanceof Error
-          ? signal.reason
-          : new HttpSsrfError("timeout"),
-      );
-    };
     signal.addEventListener("abort", onAbort, { once: true });
-    req.on("error", reject);
+    req.on("error", fail);
+    req.on("close", stopAbort);
     req.end();
   });
 }

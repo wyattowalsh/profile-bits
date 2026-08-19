@@ -142,4 +142,36 @@ describe("chips widget", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
+
+  it("renders distinct light and dark SVGs from ctx.theme", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const npmUrl = chipsUrl("npm");
+    const starsUrl = chipsUrl("stars");
+    const fetch = vi.fn<HttpFetch>(async (url) => {
+      if (url === npmUrl) {
+        return jsonResponse(chipFixture("shieldcn", "npm"));
+      }
+      if (url === starsUrl) {
+        return jsonResponse(chipFixture("shieldcn", "stars"));
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    const lookup = vi.fn<HttpLookup>(async () => [
+      { address: PUBLIC_V4, family: 4 },
+    ]);
+    const client = createHttpClient({ fetch, lookup });
+    const light = await renderChipsFromClient(client, CHIPS_OPTIONS, {
+      user: "vercel",
+      theme: "light",
+    });
+    const dark = await renderChipsFromClient(client, CHIPS_OPTIONS, {
+      user: "vercel",
+      theme: "dark",
+    });
+    assertBakedStillSvg(light);
+    assertBakedStillSvg(dark);
+    expect(light).not.toEqual(dark);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
 });

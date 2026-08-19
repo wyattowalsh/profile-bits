@@ -8,14 +8,6 @@ describe("httpPlugin", () => {
     expect(httpPlugin.integrations).toEqual(["http"]);
     expect(httpPlugin.defaults.widgets).toEqual(["json"]);
     expect(httpPlugin.docsPath).toBe("/playground/http");
-    expect(httpPlugin.bitsUsed).toEqual([
-      "Theme",
-      "Frame",
-      "Stack",
-      "Row",
-      "Text",
-      "Muted",
-      "Chip",
-    ]);
+    expect(httpPlugin.bitsUsed).toEqual(["Theme", "Frame", "Muted", "Chip"]);
   });
 });
