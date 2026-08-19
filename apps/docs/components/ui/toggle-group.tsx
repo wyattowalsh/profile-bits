@@ -103,6 +103,7 @@ export function ToggleGroupItem({
       className={cn(className)}
       onClick={() => group.toggle(value)}
       {...props}
+      value={value}
     >
       {children}
     </button>
