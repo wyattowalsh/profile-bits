@@ -1,6 +1,6 @@
 import type { Writable } from "node:stream";
 import { spinner as createSpinner, type SpinnerResult } from "@clack/prompts";
-import { redactSecrets } from "@profile-bits/core";
+import { redactSecrets } from "./core-symbols.ts";
 import { errorMessage, isEpipeError } from "./errors.ts";
 
 export type JsonRenderResult = {
@@ -153,7 +153,7 @@ export function startRenderSpinner(
     return undefined;
   }
   const spinner = createSpinner({
-    ...(options.output === undefined ? {} : { output: options.output }),
+    output: options.output ?? process.stderr,
     ...(options.signal === undefined ? {} : { signal: options.signal }),
   });
   spinner.start("Rendering widgets");

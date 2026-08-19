@@ -84,8 +84,10 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
-      - name: Demo smoke
-        run: echo "placeholder: demo format smoke (T100/T101)"
+      - name: CLI help
+        run: pnpm render --help
+      - name: CLI typecheck
+        run: pnpm --filter @profile-bits/cli exec tsc --noEmit
 
   action-dry-run:
     name: action dry-run

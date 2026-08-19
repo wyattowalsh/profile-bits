@@ -1,4 +1,4 @@
-import { THIN_ACTION_INPUT_NAMES } from "@profile-bits/core";
+import { THIN_ACTION_INPUT_NAMES } from "./core-symbols.ts";
 import { describe, expect, it } from "vitest";
 import { isCliExitError, throwCliExit } from "./errors.ts";
 import { CLI_OUTPUT_ACTION_DEFAULT, mapInputs } from "./map-inputs.ts";

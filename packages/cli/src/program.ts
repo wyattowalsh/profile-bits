@@ -17,7 +17,8 @@ import {
   OutputFormatSchema,
   THIN_ACTION_INPUT_NAMES,
   ThemeSchema,
-} from "@profile-bits/core";
+} from "./core-symbols.ts";
+
 /** CLI-layer default; do not change Action `ACTION_OUTPUT_ACTION_DEFAULT`. */
 export const CLI_OUTPUT_ACTION_DEFAULT = "none" as const;
 

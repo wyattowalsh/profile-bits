@@ -1,7 +1,7 @@
 ## 1. Catalog and package scaffold
 
 - [x] 1.1 Exclusive: `pnpm-workspace.yaml` catalog pins `"@optique/core": "1.2.1"`, `"@optique/run": "1.2.1"`, `"@optique/zod": "1.2.1"`, `"@optique/env": "1.2.1"`, `"@optique/clack": "1.2.1"`, `"@clack/prompts": "1.7.0"`, `"tsx": "4.23.12"`, `"tsdown": "0.22.14"`. Create `packages/cli/package.json` (`name: @profile-bits/cli`, `private: true`, `type: module`, `bin.profile-bits` → dist after tsdown, workspace `*` `@profile-bits/action` + `@profile-bits/core`, catalog optique/clack/zod, dev tsx/tsdown/typescript/vitest). `packages/cli/tsconfig.json` matching action NodeNext + `allowImportingTsExtensions`. `packages/cli/vitest.config.ts` aliases for action/core. `packages/cli/tsdown.config.ts` ESM + sourcemaps, entry `src/bin.ts`. One `pnpm install` (lockfile exclusive). FORBIDDEN: `@optique/config`, logtape, execa, commander, ncc on the CLI, editing `action.yml`.
-- [ ] 1.2 Exclusive: `packages/action/src/index.ts` re-export `runMain`, `main`, `ActionRunResult`, `EngineResult`, `RunMainOptions` from `main.ts`. Do **not** edit `main.ts`. Importing the barrel MUST NOT take the Action `isDirectRun()` path.
+- [x] 1.2 Exclusive: `packages/action/src/index.ts` re-export `runMain`, `main`, `ActionRunResult`, `EngineResult`, `RunMainOptions` from `main.ts`. Do **not** edit `main.ts`. Importing the barrel MUST NOT take the Action `isDirectRun()` path.
 
 ## 2. Optique program and IO
 
@@ -25,4 +25,4 @@
 
 ## 6. Verify
 
-- [ ] 6.1 Focused vitest `@profile-bits/cli` (mock `runMain`: default none, unknown flags, `--help`, `--json` shape, tokens absent from stdout/stderr). Docs llms/catalog/readme-mode tests. `just generate-action --check` still rejects flattened inputs. `just lint`. `pnpm render --help`. CLI `tsc --noEmit`. Do not commit. Do not tag `v1`.
+- [x] 6.1 Focused vitest `@profile-bits/cli` (mock `runMain`: default none, unknown flags, `--help`, `--json` shape, tokens absent from stdout/stderr). Docs llms/catalog/readme-mode tests. `just generate-action --check` still rejects flattened inputs. `just lint`. `pnpm render --help`. CLI `tsc --noEmit`. Do not commit. Do not tag `v1`.
