@@ -51,7 +51,7 @@ Constraints: Node 24, pnpm catalog, OpenSpec 1.9.0, Takumi 2.9.2 via `@profile-b
 
 ### 4. main.ts injects T300/T301 ports; does not rewrite git/gist
 
-- **Choice:** `runEngine(loaded, { renderWidget, probeCapabilities, writeFiles, output })`. Probe github capabilities only when github widgets are enabled. `writeFiles` is real disk under `output_dir`. Use existing `createGitOutputPorts` / `createGistOutputPorts` when `output_action` is commit/pr/gist. `dry_run` / `output_action: none` already suppress commit in `applyPublishGuards` and the engine.
+- **Choice:** `runEngine(loaded, { renderWidget, probeCapabilities, tokenClass, writeFiles, output })`. Publish probe is **token-class**, not widget-gated. If a github crawl client exists, use `github.capabilities` / `github.tokenClass`. Else `publishProbeFromGithubToken(github_token)` via exported `inferGithubTokenClass` — no `createGithubClient`, no `GET /user`. `canGist` iff `user_pat`; `canPrivate`/`canContributions` stay false. Constructing `createGithubClient` remains widget-gated. Do not rewrite `git.ts` / `gist.ts`. WakaTime-only gist and PAT skip-ci must work.
 - **Why:** Compose of T300/T301, not a rewrite of `git.ts` / `gist.ts`.
 - **Alternative:** Inline git in `main.ts` — rejected.
 

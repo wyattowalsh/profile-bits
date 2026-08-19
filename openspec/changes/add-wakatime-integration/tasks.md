@@ -45,7 +45,7 @@ Ids are stable for subagent dispatch. `[P]` = parallel with siblings that do not
 ## 7. Wave B5 verify (serial)
 
 - [x] B5.1 AGENTS.md six files: root, core, integrations, plugins, action, docs. github + this wakatime pack; core freeze exception is wakatime/coding only; playground fixtures/skip live.
-- [ ] B5.2 `just lint && just test`. Mock HTTP. No Playwright. No commit.
-  Stays open: neither command is green. `just lint` fails on out-of-scope `apps/docs/**` generate/playground chrome (format/organizeImports) plus concurrent `packages/plugins/src/http/**` and `packages/renderer/src/stylesheets*` noise — not the wakatime client. `just test` fails on `apps/docs` (`source-drop` in generate shell; missing `@profile-bits/bits` / `@profile-bits/plugins` in generate pages). Scoped WakaTime vitest, `generate-action --check`, and `generate-docs --check` pass. Do not format `apps/docs/src/**` in this change.
+- [x] B5.2 `just lint && just test`. Mock HTTP. No Playwright. No commit.
+  Evidence: both commands exit 0. Lint: 395 files, 0 errors, 5 infos + 5 warnings (core/action/http — not docs, not wakatime). Test: 136 files, 1254 passed / 0 failed / 0 skipped. Remaining Biome infos/warnings are outside wakatime. Do not archive.
 
 Forbidden globs this change: `packages/integrations/src/github/**`, REST `/languages`, `apps/docs/src/**`, `packages/action/src/**`, consumer README.md.

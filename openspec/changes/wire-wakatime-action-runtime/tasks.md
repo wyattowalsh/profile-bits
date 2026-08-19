@@ -54,6 +54,43 @@ Stop for review before apply. Do not implement Action product code in this propo
 
 - [x] T1 `pnpm exec vitest run packages/action packages/core packages/integrations/src/wakatime packages/plugins/src/wakatime packages/renderer` (494 passed)
 - [x] T2 `pnpm generate-action --check` (must still reject `plugin_wakatime_coding_*`; `wakatime_token` remains thin)
-- [x] T3 `just lint && just test`
+- [x] T3 `just lint && just test` (lint exit 0; 1254 passed)
 
 Forbidden globs this change: `packages/integrations/src/github/**`, REST `/languages`, `apps/docs/src/**`, consumer README.md, rss/http engine ids, T112 `graphql.ts`. No commit unless asked.
+
+## Leftovers
+
+Not a new change id on disk. No commit. No archive.
+
+- Track C injected-`fetch` DNS pin remains a later OpenSpec unit `harden-injected-fetch-dns-pin` (shared wakatime/rss/http). **Not created** in this program — needs its own change because it is not a small single-pack fix.
+- T112 GitHub GraphQL languages still leftover (`github-api-fetch-policy`).
+- rss/http `enabledWidgets` still deferred (engine bottleneck; `render.ts` stays coding vs github).
+
+## 9. Wave F0 — OpenSpec Decision 4 `[P]` (do not reopen D/E/M)
+
+No `openspec` CLI. Do not rewrite Leftovers. Do not uncheck D/E/M/Q/T.
+
+- [ ] F0.1 `[P]` exclusive `openspec/changes/wire-wakatime-action-runtime/design.md` — Decision 4 only. No `openspec` CLI. No Decision 6 / Track C.
+- [x] F0.2 `[P]` exclusive `openspec/changes/wire-wakatime-action-runtime/tasks.md` — append F/W/V checkboxes. Do not reopen D/E/M. Do not rewrite Leftovers.
+- [ ] F0.3 `[P]` exclusive `openspec/changes/wire-wakatime-action-runtime/proposal.md` — replace widget-gated probe sentence.
+
+## 10. Wave 1 — F1 / W1 / F5 / F3 / F4 `[P]`
+
+FORBIDDEN: `engine.ts`, `clients.ts`, `engine.test.ts`, `packages/integrations/src/github/**`, REST `/languages`, Track C pin, T112, rss/http ids in `render.ts`, flattened inputs, `plugin_wakatime`, extra ranges, Bearer, `?api_key=`, `WidgetRenderResult.code`.
+
+- [ ] F1 `[P]` exclusive `packages/action/src/publish-probe.ts` + `publish-probe.test.ts`: `ghp_` / `github_pat_` / `gho_` → `user_pat`, `canGist: true`; `ghs_` → `actions_installation`, `canGist: false`; `ghu_` / `ghy_` → `github_app_install`, `canGist: false`. Console spy: PAT never logged. Import `inferGithubTokenClass` from `@profile-bits/integrations`. FORBIDDEN: `packages/integrations/src/github/**`.
+- [ ] W1 `[P]` exclusive `packages/integrations/src/wakatime/client.ts` + `client.test.ts`: keep ctor arity `(outcome, message, status?)`; default `.code` from outcome+status (`missing_token`, `dns_no_addresses`, `dns_blocked`, `body_too_large`, `invalid_response`, `transport`, `http_unauthorized`, `http_not_found`, `http_bad_request`, `http_forbidden`, `http_rate_limited`, `http_redirect`, `http_accepted`, `http_server`, `stale`, `http_unclassified`, `unsafe_api_domain`); ctor `redactSecrets(message)`; wrap `UnsafeApiDomainError` → `fail_widget` + `unsafe_api_domain` without hostname; move `assertPublicResolvedAddresses` inside `cache.rest`; second `fetchStats` does not call `lookup`; existing 401/404/pin/mixed-AAAA still pass. No `cause`; no `http.ts` / `types.ts` / `cache.ts` edits.
+- [ ] F5 `[P]` exclusive `packages/action/src/render-wakatime.ts` + `render-wakatime.test.ts` — outcome-only map `fail_widget | fail_run | fail_after_backoff | fail_job` to `{ id, outcome }`; 401 → `{ id: "coding", outcome: "fail_run" }`; no files; token absent; **do not** set `code` on the result. Rethrow unknown. Do not read `error.code` in Wave 1.
+- [ ] F3 `[P]` exclusive **new** `packages/action/src/engine-wakatime-publish.test.ts`: WakaTime-only + gist + injected `canGist: true` still renders; WakaTime-only + gist + omitted probe → `GistOutputError`; WakaTime-only + commit + `tokenClass: "user_pat"` → message without `[skip ci]`; omitted `tokenClass` → message with `[skip ci]`; stub render returning `fail_run` → `EngineError`, no `writeFiles`, no token in message. FORBIDDEN: `engine.ts`, `engine.test.ts`.
+- [ ] F4 `[P]` exclusive `packages/action/AGENTS.md` — Ports sentence only. Leave T112/F6/F7.
+
+## 11. Wave 2 — F2 main compose (after F1)
+
+- [ ] F2.1 exclusive `packages/action/src/main.ts` — always inject `probeCapabilities` + `tokenClass` (github client if present, else `publishProbeFromGithubToken`); `clientFactories?: ActionClientFactories` on `RunMainOptions` forwarded to `createActionClients`; `workflowError`: `redactSecrets`; if `error instanceof EngineError` emit `::error::${decision} ${message}`. Do not edit `clients.ts`.
+- [ ] F2.2 same agent, exclusive `packages/action/src/main.test.ts`: `ghs_` WakaTime-only probe **defined**, `canGist === false`, `tokenClass === "actions_installation"`; unmocked engine: `ghs_` + gist → `GistOutputError`, no coding write, no tokens in message; mocked: `ghp_` + gist → `canGist === true`, `user_pat`, `clientFactories.createGithubClient` not called; mocked: PAT + commit → `tokenClass === "user_pat"`; pack off still does not construct WakaTime client.
+
+## 12. Wave 3 — V verify (serial after F2 + F3 + W1 + F5)
+
+- [ ] V1 `pnpm exec vitest run packages/action packages/integrations/src/wakatime`
+- [ ] V2 `pnpm generate-action --check`
+- [ ] V3 `pnpm exec biome check` on touched files; do not format `apps/docs/**`. No commit.

@@ -6,8 +6,14 @@ import {
   LANGUAGES_OPTION_DEFAULTS,
   STATS_OPTION_DEFAULTS,
 } from "@profile-bits/core";
+import type { HttpFetch, HttpLookup } from "@profile-bits/integrations";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EngineError } from "./engine.ts";
+import type { ActionClientFactories } from "./clients.ts";
+import {
+  EngineError,
+  type EngineDependencies,
+  GistOutputError,
+} from "./engine.ts";
 import {
   type ConfigFs,
   type LoadedActionConfig,
@@ -36,8 +42,16 @@ vi.mock("./engine.js", async (importOriginal) => {
 const { runMain } = await import("./main.ts");
 
 const TOKEN = "ghs_test_token";
+const PAT = "ghp_secret_do_not_log_f2";
+const GHS = "ghs_secret_do_not_log_f2";
+const WAKA = "waka_secret_do_not_log_f2";
 const CWD = "/repo";
 const DEFAULT_CONFIG_PATH = `${CWD}/.github/profile-bits.yml`;
+const WAKATIME_ONLY_YAML = `version: 1
+format: svg
+plugins:
+  wakatime: {}
+`;
 
 const DEMO_ONLY_YAML = `version: 1
 plugins:
@@ -67,6 +81,63 @@ function createMemoryFs(files: Readonly<Record<string, string>>): ConfigFs {
       return files[path] ?? "";
     },
   };
+}
+
+const noLiveHttp: HttpFetch = async () => {
+  throw new Error("no live http");
+};
+
+const noLiveDns: HttpLookup = async () => {
+  throw new Error("no live dns");
+};
+
+function engineDeps(): EngineDependencies {
+  return (runEngine.mock.calls[0]?.[1] ?? {}) as EngineDependencies;
+}
+
+async function probedCapabilities(): Promise<{
+  canGist: boolean;
+}> {
+  const deps = engineDeps();
+  expect(deps.probeCapabilities).toEqual(expect.any(Function));
+  const loaded = runEngine.mock.calls[0]?.[0];
+  expect(loaded).toBeDefined();
+  return deps.probeCapabilities!({
+    inputs: loaded!.inputs,
+    config: loaded!.config,
+  });
+}
+
+function unusedGithubFactory(): NonNullable<
+  ActionClientFactories["createGithubClient"]
+> {
+  return vi.fn<NonNullable<ActionClientFactories["createGithubClient"]>>(
+    () => {
+      throw new Error("createGithubClient must stay widget-gated");
+    },
+  );
+}
+
+function unusedWakatimeFactory(): NonNullable<
+  ActionClientFactories["createWakatimeClient"]
+> {
+  return vi.fn<NonNullable<ActionClientFactories["createWakatimeClient"]>>(
+    () => {
+      throw new Error("createWakatimeClient must stay pack-gated");
+    },
+  );
+}
+
+function stubWakatimeFactory(): NonNullable<
+  ActionClientFactories["createWakatimeClient"]
+> {
+  return vi.fn<NonNullable<ActionClientFactories["createWakatimeClient"]>>(
+    () => ({
+      fetchStats: async () => {
+        throw new Error("coding fetch should not run");
+      },
+    }),
+  );
 }
 
 function parseGithubOutput(text: string): Record<string, string> {
@@ -346,12 +417,6 @@ describe("runMain", () => {
   });
 
   describe("wakatime token", () => {
-    const wakatimeYaml = `version: 1
-format: svg
-plugins:
-  wakatime: {}
-`;
-
     it("passes INPUT_WAKATIME_TOKEN through to the engine", async () => {
       await runMain({
         env: {
@@ -360,15 +425,15 @@ plugins:
           INPUT_WAKATIME_TOKEN: "waka_from_env",
         },
         cwd: CWD,
-        fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: wakatimeYaml }),
+        fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: WAKATIME_ONLY_YAML }),
       });
 
       const loaded = runEngine.mock.calls[0]?.[0];
-      const deps = runEngine.mock.calls[0]?.[1];
+      const deps = engineDeps();
       expect(loaded?.inputs.wakatime_token).toBe("waka_from_env");
-      expect(deps?.renderWidget).toEqual(expect.any(Function));
-      expect(deps?.writeFiles).toEqual(expect.any(Function));
-      expect(deps?.probeCapabilities).toBeUndefined();
+      expect(deps.renderWidget).toEqual(expect.any(Function));
+      expect(deps.writeFiles).toEqual(expect.any(Function));
+      expect(deps.probeCapabilities).toEqual(expect.any(Function));
     });
 
     it("fails when the wakatime pack is on and the token is empty", async () => {
@@ -384,7 +449,7 @@ plugins:
             wakatime_token: "",
           },
           cwd: CWD,
-          fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: wakatimeYaml }),
+          fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: WAKATIME_ONLY_YAML }),
         }),
       ).rejects.toSatisfy(
         (error: unknown) =>
@@ -410,7 +475,7 @@ plugins:
           wakatime_token: "waka_from_env",
         },
         cwd: CWD,
-        fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: wakatimeYaml }),
+        fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: WAKATIME_ONLY_YAML }),
       });
 
       expect(runEngine).toHaveBeenCalledOnce();
@@ -420,6 +485,131 @@ plugins:
       );
       expect(result.files).toEqual(["profile-bits/wakatime.svg"]);
       expect(result.did_commit).toBe(false);
+    });
+  });
+
+  describe("publish probe", () => {
+    it("injects a prefix probe for ghs_ WakaTime-only", async () => {
+      await runMain({
+        inputs: {
+          github_token: TOKEN,
+          output_action: "none",
+          wakatime_token: WAKA,
+        },
+        cwd: CWD,
+        fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: WAKATIME_ONLY_YAML }),
+        httpFetch: noLiveHttp,
+        httpLookup: noLiveDns,
+      });
+
+      const capabilities = await probedCapabilities();
+      expect(capabilities.canGist).toBe(false);
+      expect(engineDeps().tokenClass).toBe("actions_installation");
+    });
+
+    it("fails gist on unmocked ghs_ without writing coding or leaking tokens", async () => {
+      const { runEngine: actualRunEngine } =
+        await vi.importActual<typeof import("./engine.ts")>("./engine.ts");
+      runEngine.mockImplementation(actualRunEngine);
+
+      const fetchStats = vi.fn(async () => {
+        throw new Error("coding fetch should not run");
+      });
+      const createGithubClient = unusedGithubFactory();
+      const createWakatimeClient = vi.fn<
+        NonNullable<ActionClientFactories["createWakatimeClient"]>
+      >(() => ({ fetchStats }));
+      const dir = await mkdtemp(join(tmpdir(), "profile-bits-action-"));
+      tempDirs.push(dir);
+
+      await expect(
+        runMain({
+          inputs: {
+            github_token: GHS,
+            output_action: "gist",
+            wakatime_token: WAKA,
+          },
+          cwd: dir,
+          fs: createMemoryFs({
+            [`${dir}/.github/profile-bits.yml`]: WAKATIME_ONLY_YAML,
+          }),
+          httpFetch: noLiveHttp,
+          httpLookup: noLiveDns,
+          clientFactories: { createGithubClient, createWakatimeClient },
+        }),
+      ).rejects.toSatisfy((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        expect(error).toBeInstanceOf(GistOutputError);
+        expect(message).not.toContain(GHS);
+        expect(message).not.toContain(WAKA);
+        return true;
+      });
+
+      expect(createGithubClient).not.toHaveBeenCalled();
+      expect(fetchStats).not.toHaveBeenCalled();
+    });
+
+    it("injects canGist for mocked ghp_ gist without constructing GitHub", async () => {
+      const createGithubClient = unusedGithubFactory();
+      const createWakatimeClient = stubWakatimeFactory();
+
+      await runMain({
+        inputs: {
+          github_token: PAT,
+          output_action: "gist",
+          wakatime_token: WAKA,
+        },
+        cwd: CWD,
+        fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: WAKATIME_ONLY_YAML }),
+        httpFetch: noLiveHttp,
+        httpLookup: noLiveDns,
+        clientFactories: { createGithubClient, createWakatimeClient },
+      });
+
+      const capabilities = await probedCapabilities();
+      expect(capabilities.canGist).toBe(true);
+      expect(engineDeps().tokenClass).toBe("user_pat");
+      expect(createGithubClient).not.toHaveBeenCalled();
+    });
+
+    it("injects user_pat for mocked PAT commit", async () => {
+      await runMain({
+        inputs: {
+          github_token: PAT,
+          output_action: "commit",
+          wakatime_token: WAKA,
+        },
+        cwd: CWD,
+        fs: createMemoryFs({ [DEFAULT_CONFIG_PATH]: WAKATIME_ONLY_YAML }),
+        httpFetch: noLiveHttp,
+        httpLookup: noLiveDns,
+        clientFactories: {
+          createGithubClient: unusedGithubFactory(),
+          createWakatimeClient: stubWakatimeFactory(),
+        },
+      });
+
+      expect(engineDeps().tokenClass).toBe("user_pat");
+    });
+
+    it("does not construct WakaTime when the pack is off", async () => {
+      const createWakatimeClient = unusedWakatimeFactory();
+
+      await runMain({
+        inputs: {
+          github_token: TOKEN,
+          output_action: "none",
+          plugin_github: true,
+          wakatime_token: WAKA,
+        },
+        cwd: CWD,
+        fs: createMemoryFs({}),
+        httpFetch: noLiveHttp,
+        httpLookup: noLiveDns,
+        clientFactories: { createWakatimeClient },
+      });
+
+      expect(createWakatimeClient).not.toHaveBeenCalled();
     });
   });
 });

@@ -165,21 +165,21 @@ describe("createWakatimeRenderWidget", () => {
     fetchSpy.mockRestore();
   });
 
-  it("rethrows 401 WakatimeClientError fail_run", async () => {
+  it("maps 401 WakatimeClientError fail_run to no files", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const fetchStats = vi.fn<WakatimeClient["fetchStats"]>(async () => {
-      throw new WakatimeClientError("fail_run", "unauthorized", 401);
+      throw new WakatimeClientError("fail_run", `unauthorized ${TOKEN}`, 401);
     });
     const render = createWakatimeRenderWidget({
       client: fakeClient(fetchStats),
     });
 
-    const thrown = await render(codingRequest()).catch(
-      (error: unknown) => error,
-    );
+    const result = await render(codingRequest());
 
-    expect(thrown).toBeInstanceOf(WakatimeClientError);
-    expect(thrown).toMatchObject({ outcome: "fail_run", status: 401 });
+    expect(result).toEqual({ id: "coding", outcome: "fail_run" });
+    expect(result.files).toBeUndefined();
+    expect(result).not.toHaveProperty("code");
+    expect(JSON.stringify(result)).not.toContain(TOKEN);
     expect(vi.mocked(renderCodingSvg)).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();

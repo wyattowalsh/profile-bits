@@ -16,7 +16,7 @@
     "@takumi-rs/core-linux-x64-gnu": "catalog:"
   },
   "scripts": {
-    "build": "ncc build src/main.ts -o dist --external @takumi-rs/core"
+    "build": "node --experimental-strip-types --disable-warning=ExperimentalWarning ../../scripts/package-action.mts"
   },
   "devDependencies": {
     "@vercel/ncc": "catalog:"

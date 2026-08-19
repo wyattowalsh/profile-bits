@@ -1,15 +1,15 @@
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { THIN_ACTION_INPUT_NAMES } from "@profile-bits/core";
+import { redactSecrets, THIN_ACTION_INPUT_NAMES } from "@profile-bits/core";
 import {
   createHttpClient,
   createRssClient,
   type HttpFetch,
   type HttpLookup,
 } from "@profile-bits/integrations";
-import { createActionClients } from "./clients.js";
-import { runEngine } from "./engine.js";
+import { type ActionClientFactories, createActionClients } from "./clients.js";
+import { EngineError, runEngine } from "./engine.js";
 import { createGistOutputPorts } from "./gist.js";
 import { createGitOutputPorts } from "./git.js";
 import {
@@ -18,6 +18,7 @@ import {
   loadConfig,
 } from "./load-config.js";
 import type { ActionRunOutputs, OutputPorts } from "./output.js";
+import { publishProbeFromGithubToken } from "./publish-probe.js";
 import { createRenderWidgetFromClients } from "./render.js";
 import { createFeedRenderWidget } from "./render-feed.js";
 import { createHttpRenderWidget } from "./render-http.js";
@@ -42,6 +43,8 @@ export type RunMainOptions = {
   httpFetch?: HttpFetch;
   /** Test-only DNS lookup. Production uses the client default. */
   httpLookup?: HttpLookup;
+  /** Test-only client constructors. Production uses package defaults. */
+  clientFactories?: ActionClientFactories;
 };
 
 /**
@@ -62,8 +65,15 @@ export async function runMain(
     ...(options.httpLookup !== undefined ? { lookup: options.httpLookup } : {}),
   });
   const rssClient = createRssClient();
-  const clients = createActionClients(loaded);
+  const clients = createActionClients(loaded, options.clientFactories);
   const github = clients.github;
+  const probe =
+    github === undefined
+      ? publishProbeFromGithubToken(loaded.inputs.github_token)
+      : {
+          tokenClass: github.tokenClass,
+          capabilities: github.capabilities,
+        };
   const writeCwd = options.cwd ?? env.GITHUB_WORKSPACE ?? process.cwd();
   const output = outputPortsFor(loaded, { cwd: options.cwd, env });
   const engine = await runEngine(loaded, {
@@ -72,12 +82,8 @@ export async function runMain(
       feed: createFeedRenderWidget({ client: rssClient }),
       github: createRenderWidgetFromClients(clients),
     }),
-    ...(github === undefined
-      ? {}
-      : {
-          probeCapabilities: () => github.capabilities,
-          tokenClass: github.tokenClass,
-        }),
+    probeCapabilities: () => probe.capabilities,
+    tokenClass: probe.tokenClass,
     writeFiles: createWriteWidgetFiles({ cwd: writeCwd }),
     ...(output === undefined ? {} : { output }),
   });
@@ -186,8 +192,12 @@ function isDirectRun(): boolean {
   }
 }
 
-function workflowError(message: string): void {
-  const escaped = message
+function workflowError(error: unknown): void {
+  const raw = error instanceof Error ? error.message : String(error);
+  const message = redactSecrets(raw);
+  const line =
+    error instanceof EngineError ? `${error.decision} ${message}` : message;
+  const escaped = line
     .replaceAll("%", "%25")
     .replaceAll("\r", "%0D")
     .replaceAll("\n", "%0A");
@@ -196,9 +206,11 @@ function workflowError(message: string): void {
 
 if (isDirectRun()) {
   void runMain().catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = redactSecrets(
+      error instanceof Error ? error.message : String(error),
+    );
     if (process.env.GITHUB_ACTIONS === "true") {
-      workflowError(message);
+      workflowError(error);
     }
     process.stderr.write(`${message}\n`);
     process.exitCode = 1;

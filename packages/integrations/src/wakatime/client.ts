@@ -17,7 +17,7 @@ import {
   isPublicUnicast,
   parseIpLiteral,
 } from "../http/ssrf.js";
-import { resolveStatsUrl } from "./api-domain.js";
+import { resolveStatsUrl, UnsafeApiDomainError } from "./api-domain.js";
 import { WakatimeRequestCache } from "./cache.js";
 import {
   classifyWakatimeHttp,
@@ -38,16 +38,93 @@ export type DnsLookup = typeof dnsLookup;
 export const WAKATIME_MAX_BYTES = HTTP_MAX_BYTES;
 export const WAKATIME_TIMEOUT_MS = 10_000;
 
+export type WakatimeClientErrorCode =
+  | "missing_token"
+  | "dns_no_addresses"
+  | "dns_blocked"
+  | "body_too_large"
+  | "invalid_response"
+  | "transport"
+  | "http_unauthorized"
+  | "http_not_found"
+  | "http_bad_request"
+  | "http_forbidden"
+  | "http_rate_limited"
+  | "http_redirect"
+  | "http_accepted"
+  | "http_server"
+  | "stale"
+  | "http_unclassified"
+  | "unsafe_api_domain";
+
 export class WakatimeClientError extends Error {
   override readonly name = "WakatimeClientError";
   readonly outcome: SkipFailOutcome;
   readonly status?: number;
+  readonly code: WakatimeClientErrorCode;
 
   constructor(outcome: SkipFailOutcome, message: string, status?: number) {
-    super(message);
+    super(redactSecrets(message));
     this.outcome = outcome;
     this.status = status;
+    this.code = defaultWakatimeClientErrorCode(outcome, status, message);
   }
+}
+
+function defaultWakatimeClientErrorCode(
+  outcome: SkipFailOutcome,
+  status: number | undefined,
+  message: string,
+): WakatimeClientErrorCode {
+  if (status === 401) {
+    return "http_unauthorized";
+  }
+  if (status === 404) {
+    return "http_not_found";
+  }
+  if (status === 400) {
+    return "http_bad_request";
+  }
+  if (status === 403) {
+    return "http_forbidden";
+  }
+  if (status === 429) {
+    return "http_rate_limited";
+  }
+  if (status === 302) {
+    return "http_redirect";
+  }
+  if (status === 202) {
+    return "http_accepted";
+  }
+  if (status != null && status >= 500 && status <= 599) {
+    return "http_server";
+  }
+  if (status === 200 && outcome === "fail_after_backoff") {
+    return "stale";
+  }
+  if (status === 200) {
+    return "invalid_response";
+  }
+  if (outcome === "fail_job") {
+    return "missing_token";
+  }
+  if (message === "api_domain resolved to no addresses") {
+    return "dns_no_addresses";
+  }
+  if (message === "api_domain resolved to a blocked address") {
+    return "dns_blocked";
+  }
+  if (message === "body exceeds 1 MiB") {
+    return "body_too_large";
+  }
+  if (message === "api_domain is not allowed") {
+    return "unsafe_api_domain";
+  }
+  if (outcome === "fail_widget") {
+    return "transport";
+  }
+  return "http_unclassified";
 }
 
 export function isBlockedAddress(address: string): boolean {
@@ -99,22 +176,34 @@ export function createWakatimeClient(
 
   return {
     async fetchStats({ range, include, limit }) {
-      const url = resolveStatsUrl(input.apiDomain, range);
-      const addresses = await assertPublicResolvedAddresses(
-        url.hostname,
-        lookup,
-      );
+      let url: URL;
+      try {
+        url = resolveStatsUrl(input.apiDomain, range);
+      } catch (error) {
+        if (error instanceof UnsafeApiDomainError) {
+          throw new WakatimeClientError(
+            "fail_widget",
+            "api_domain is not allowed",
+          );
+        }
+        throw error;
+      }
       const envelope = await cache.rest(
         { method: "GET", url: url.href, params: {} },
-        () =>
-          fetchStatsUncached({
+        async () => {
+          const addresses = await assertPublicResolvedAddresses(
+            url.hostname,
+            lookup,
+          );
+          return fetchStatsUncached({
             url,
             addresses,
             token,
             auth,
             fetchImpl,
             sleep,
-          }),
+          });
+        },
       );
       return selectCodingPayload(envelope.data, include, limit);
     },

@@ -149,6 +149,117 @@ function stubPinnedHttpsRequest(body: unknown): {
   return captured;
 }
 
+describe("WakatimeClientError", () => {
+  it("keeps ctor arity and derives code from outcome and status", () => {
+    const error = new WakatimeClientError("fail_widget", "not found", 404);
+    expect(error.outcome).toBe("fail_widget");
+    expect(error.message).toBe("not found");
+    expect(error.status).toBe(404);
+    expect(error.code).toBe("http_not_found");
+  });
+
+  it("redacts secrets from the constructor message", () => {
+    const error = new WakatimeClientError(
+      "fail_widget",
+      "Authorization: Basic leaked",
+    );
+    expect(error.message).not.toMatch(/Basic\s+\S+/i);
+    expect(error.message).toContain("[redacted]");
+    expect(error.code).toBe("transport");
+  });
+
+  it.each([
+    ["fail_job", "wakatime_token is required", undefined, "missing_token"],
+    [
+      "fail_widget",
+      "api_domain resolved to no addresses",
+      undefined,
+      "dns_no_addresses",
+    ],
+    [
+      "fail_widget",
+      "api_domain resolved to a blocked address",
+      undefined,
+      "dns_blocked",
+    ],
+    ["fail_widget", "body exceeds 1 MiB", undefined, "body_too_large"],
+    [
+      "fail_widget",
+      "WakaTime stats response is invalid",
+      200,
+      "invalid_response",
+    ],
+    ["fail_widget", "socket hang up", undefined, "transport"],
+    [
+      "fail_run",
+      "WakaTime stats request failed (401)",
+      401,
+      "http_unauthorized",
+    ],
+    [
+      "fail_widget",
+      "WakaTime stats request failed (404)",
+      404,
+      "http_not_found",
+    ],
+    [
+      "fail_widget",
+      "WakaTime stats request failed (400)",
+      400,
+      "http_bad_request",
+    ],
+    [
+      "fail_after_backoff",
+      "WakaTime stats request failed (403)",
+      403,
+      "http_forbidden",
+    ],
+    [
+      "fail_after_backoff",
+      "WakaTime stats request failed (429)",
+      429,
+      "http_rate_limited",
+    ],
+    [
+      "fail_after_backoff",
+      "WakaTime stats request failed (302)",
+      302,
+      "http_redirect",
+    ],
+    [
+      "fail_after_backoff",
+      "WakaTime stats request failed (202)",
+      202,
+      "http_accepted",
+    ],
+    [
+      "fail_after_backoff",
+      "WakaTime stats request failed (500)",
+      500,
+      "http_server",
+    ],
+    ["fail_after_backoff", "WakaTime stats request failed (200)", 200, "stale"],
+    [
+      "fail_run",
+      "WakaTime stats request failed",
+      undefined,
+      "http_unclassified",
+    ],
+    [
+      "fail_widget",
+      "api_domain is not allowed",
+      undefined,
+      "unsafe_api_domain",
+    ],
+  ] as const)(
+    "defaults %s + %s + %s to %s",
+    (outcome, message, status, code) => {
+      const error = new WakatimeClientError(outcome, message, status);
+      expect(error.code).toBe(code);
+    },
+  );
+});
+
 describe("isBlockedAddress", () => {
   it.each([
     "127.0.0.1",
@@ -182,7 +293,13 @@ describe("createWakatimeClient", () => {
   it("refuses a missing token before fetch", () => {
     expect(() =>
       createWakatimeClient({ token: "", apiDomain: "wakatime.com" }),
-    ).toThrow(WakatimeClientError);
+    ).toThrow(
+      expect.objectContaining({
+        name: "WakatimeClientError",
+        outcome: "fail_job",
+        code: "missing_token",
+      }),
+    );
   });
 
   it("GETs the Cloud URL with RFC Basic and fixture last_7_days", async () => {
@@ -267,7 +384,10 @@ describe("createWakatimeClient", () => {
         include: ["languages"],
         limit: 8,
       }),
-    ).rejects.toMatchObject({ outcome: "fail_widget" });
+    ).rejects.toMatchObject({
+      outcome: "fail_widget",
+      code: "dns_blocked",
+    });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -292,6 +412,7 @@ describe("createWakatimeClient", () => {
         }),
       ).rejects.toMatchObject({
         outcome: "fail_widget",
+        code: "dns_blocked",
         message: "api_domain resolved to a blocked address",
       });
       expect(fetchImpl).not.toHaveBeenCalled();
@@ -318,6 +439,7 @@ describe("createWakatimeClient", () => {
       }),
     ).rejects.toMatchObject({
       outcome: "fail_widget",
+      code: "dns_no_addresses",
       message: "api_domain resolved to no addresses",
     });
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -344,6 +466,7 @@ describe("createWakatimeClient", () => {
       }),
     ).rejects.toMatchObject({
       outcome: "fail_widget",
+      code: "dns_blocked",
       message: "api_domain resolved to a blocked address",
     });
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -373,6 +496,7 @@ describe("createWakatimeClient", () => {
       }),
     ).rejects.toMatchObject({
       outcome: "fail_widget",
+      code: "body_too_large",
       message: "body exceeds 1 MiB",
     });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -403,6 +527,7 @@ describe("createWakatimeClient", () => {
       }),
     ).rejects.toMatchObject({
       outcome: "fail_widget",
+      code: "body_too_large",
       message: "body exceeds 1 MiB",
     });
   });
@@ -457,11 +582,12 @@ describe("createWakatimeClient", () => {
 
   it("reuses the REST cache on a same-run hit", async () => {
     const fetchImpl = vi.fn(async () => jsonResponse(200, last7Days));
+    const lookup = vi.fn(publicLookup);
     const client = createWakatimeClient({
       token: TOKEN,
       apiDomain: "wakatime.com",
       fetch: fetchImpl,
-      lookup: publicLookup,
+      lookup,
     });
     const first = await client.fetchStats({
       range: "last_7_days",
@@ -475,6 +601,7 @@ describe("createWakatimeClient", () => {
     });
     expect(second).toEqual(first);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(lookup).toHaveBeenCalledTimes(1);
   });
 
   it("caches the unsliced envelope so a later include set can slice independently", async () => {
@@ -523,6 +650,7 @@ describe("createWakatimeClient", () => {
     expect(thrown).toMatchObject({
       outcome: "fail_widget",
       status: 200,
+      code: "invalid_response",
       message: "WakaTime stats response is invalid",
     });
   });
@@ -548,7 +676,9 @@ describe("createWakatimeClient", () => {
       thrown = error;
     }
     expect(thrown).toBeInstanceOf(WakatimeClientError);
-    const message = (thrown as WakatimeClientError).message;
+    const failed = thrown as WakatimeClientError;
+    expect(failed.code).toBe("transport");
+    const message = failed.message;
     expect(message).not.toContain(TOKEN);
     expect(message).not.toContain(encodeBasicAuthorization(TOKEN));
     expect(message).not.toMatch(/Basic\s+\S+/i);
@@ -576,6 +706,7 @@ describe("createWakatimeClient", () => {
     ).rejects.toMatchObject({
       outcome: "fail_after_backoff",
       status: 200,
+      code: "stale",
     });
     expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
@@ -594,7 +725,11 @@ describe("createWakatimeClient", () => {
         include: ["languages"],
         limit: 8,
       }),
-    ).rejects.toMatchObject({ outcome: "fail_run", status: 401 });
+    ).rejects.toMatchObject({
+      outcome: "fail_run",
+      status: 401,
+      code: "http_unauthorized",
+    });
   });
 
   it("maps 404 to fail_widget", async () => {
@@ -611,12 +746,21 @@ describe("createWakatimeClient", () => {
         include: ["languages"],
         limit: 8,
       }),
-    ).rejects.toMatchObject({ outcome: "fail_widget", status: 404 });
+    ).rejects.toMatchObject({
+      outcome: "fail_widget",
+      status: 404,
+      code: "http_not_found",
+    });
   });
 
-  it.each([403, 429, 202, 500])(
+  it.each([
+    [403, "http_forbidden"],
+    [429, "http_rate_limited"],
+    [202, "http_accepted"],
+    [500, "http_server"],
+  ] as const)(
     "retries then fails after backoff on %s",
-    async (status) => {
+    async (status, code) => {
       const fetchImpl = vi.fn(async () => jsonResponse(status));
       const client = createWakatimeClient({
         token: TOKEN,
@@ -634,6 +778,7 @@ describe("createWakatimeClient", () => {
       ).rejects.toMatchObject({
         outcome: "fail_after_backoff",
         status,
+        code,
       });
       expect(fetchImpl).toHaveBeenCalledTimes(3);
     },
@@ -659,7 +804,40 @@ describe("createWakatimeClient", () => {
     ).rejects.toMatchObject({
       outcome: "fail_after_backoff",
       status: 302,
+      code: "http_redirect",
     });
     expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it("wraps UnsafeApiDomainError as fail_widget without the hostname", async () => {
+    const fetchImpl = vi.fn();
+    const lookup = vi.fn(publicLookup);
+    const client = createWakatimeClient({
+      token: TOKEN,
+      apiDomain: "localhost",
+      fetch: fetchImpl,
+      lookup,
+    });
+    let thrown: unknown;
+    try {
+      await client.fetchStats({
+        range: "last_7_days",
+        include: ["languages"],
+        limit: 8,
+      });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(WakatimeClientError);
+    expect(thrown).toMatchObject({
+      outcome: "fail_widget",
+      code: "unsafe_api_domain",
+      message: "api_domain is not allowed",
+    });
+    const message = (thrown as WakatimeClientError).message;
+    expect(message).not.toContain("localhost");
+    expect(message).not.toContain("Unsafe api_domain");
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(lookup).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import type { CodingOptions } from "@profile-bits/core";
+import type { CodingOptions, SkipFailOutcome } from "@profile-bits/core";
 import {
   type WakatimeClient,
   WakatimeClientError,
@@ -10,6 +10,23 @@ import type {
   WidgetRenderRequest,
   WidgetRenderResult,
 } from "./engine.ts";
+
+const MAPPED_WAKATIME_OUTCOMES = [
+  "fail_widget",
+  "fail_run",
+  "fail_after_backoff",
+  "fail_job",
+] as const satisfies readonly SkipFailOutcome[];
+
+type MappedWakatimeOutcome = (typeof MAPPED_WAKATIME_OUTCOMES)[number];
+
+function isMappedWakatimeOutcome(
+  outcome: SkipFailOutcome,
+): outcome is MappedWakatimeOutcome {
+  return (MAPPED_WAKATIME_OUTCOMES as readonly SkipFailOutcome[]).includes(
+    outcome,
+  );
+}
 
 export class UnhandledWakatimeWidgetError extends Error {
   override readonly name = "UnhandledWakatimeWidgetError";
@@ -59,9 +76,9 @@ async function renderWakatimeWidget(
   } catch (error: unknown) {
     if (
       error instanceof WakatimeClientError &&
-      error.outcome === "fail_widget"
+      isMappedWakatimeOutcome(error.outcome)
     ) {
-      return { id: request.id, outcome: "fail_widget" };
+      return { id: request.id, outcome: error.outcome };
     }
     throw error;
   }
