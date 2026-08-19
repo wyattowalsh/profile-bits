@@ -26,7 +26,10 @@ export default function GitHubPackDocsPage() {
           Configure widgets in <code>.github/profile-bits.yml</code> and let the
           Action commit rendered files. <code>just render</code> is a local
           engine runner, not a public embed API. Embed with relative{" "}
-          <code>![](./profile-bits/…)</code>. Widget cards are{" "}
+          <code>![](./profile-bits/…)</code>. Gist is an optional{" "}
+          <code>output_action</code>, not a CDN. Customize via yaml plus
+          first-party <code>http</code> / <code>rss</code> /{" "}
+          <code>chips</code>, not a user plugin loader. Widget cards are{" "}
           <strong>480×160</strong>. Docs chrome (Fumadocs + shadcn + Tailwind)
           is not the README widget runtime — widgets render through Takumi (
           <code>renderSvg</code> / <code>render</code> /{" "}

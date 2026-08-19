@@ -45,7 +45,7 @@ A **plugin** is a pack of widgets plus declared integrations (1..N widgets, 0..N
 README delivery is the **Action committing widget files**. You paste relative `![](./profile-bits/…)` embeds. The Action does **not** patch `README.md`.
 
 > [!NOTE]
-> There is **no public embed API**. The docs playground is layout preview plus YAML/markdown codegen. `/generate/catalog` is a first-party visual gallery, not a marketplace. Gist is an optional `output_action`, not a CDN.
+> There is **no public embed API**. The docs playground is layout preview plus YAML/markdown codegen. `just render` / `profile-bits render` is a local engine runner, not an embed API. `/generate/catalog` is a first-party visual gallery, not a marketplace. Gist is an optional `output_action`, not a CDN. Customize via yaml plus first-party `http` / `rss` / `chips`, not a user plugin loader.
 
 ## Widgets
 

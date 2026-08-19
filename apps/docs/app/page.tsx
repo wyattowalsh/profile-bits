@@ -17,10 +17,12 @@ export default function HomePage() {
         <p>
           README delivery is the Action (commit widget files).{" "}
           <code>just render</code> is a local engine runner, not a public embed
-          API. Embed with relative <code>![](./profile-bits/…)</code>. Widget
-          cards are <strong>480×160</strong>. Docs chrome is not the widget
-          runtime — widgets render through Takumi, not Radix or shadcn DOM
-          primitives.
+          API. Embed with relative <code>![](./profile-bits/…)</code>. Gist is
+          an optional <code>output_action</code>, not a CDN. Customize via yaml
+          plus first-party <code>http</code> / <code>rss</code> /{" "}
+          <code>chips</code>, not a user plugin loader. Widget cards are{" "}
+          <strong>480×160</strong>. Docs chrome is not the widget runtime —
+          widgets render through Takumi, not Radix or shadcn DOM primitives.
         </p>
         <ul>
           <li>
@@ -30,6 +32,10 @@ export default function HomePage() {
           <li>
             <a href="/generate">Generate</a> — visual catalog, export, and
             share.
+          </li>
+          <li>
+            <a href="/generate/catalog">Catalog</a> — first-party visual
+            gallery, not a plugin marketplace.
           </li>
           <li>
             <a href="/docs">Docs</a> — usage notes for the github pack.
