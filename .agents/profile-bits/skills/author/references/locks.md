@@ -57,10 +57,10 @@ Catalog SSOT is `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`,
 Completing an id already in those lists is allowed. Adding a new id requires
 OpenSpec first. Do not create a second pack for an id already in
 `FIRST_PARTY_PLUGIN_IDS`. WakaTime-class **architecture** (client, auth, scopes,
-inputs, mocked HTTP) still applies to **new** data sources. Live types already
-include wakatime, rss, and http packs. Thin Action names: read
-`ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
-never invent `plugin_*_*_*`.
+inputs, mocked HTTP) still applies to **new** data sources. Read live types;
+never invent names. Today's packs (`github`, `wakatime`, `rss`, `http`) are a
+snapshot. Skills follow live `FIRST_PARTY_*` — not a frozen four-id table.
+Never invent `plugin_*_*_*`.
 
 Read the live constants **after** empty-args/help is ruled out. Do not paste a
 frozen github-only table into new work.
@@ -70,8 +70,8 @@ frozen github-only table into new work.
 - New card → existing pack unless the user asked for a new pack.
 - New pack → `author-plugin`, referencing existing or new integrations.
 - Integration dest: `packages/integrations/src/<id>/` (never without `src/`).
-- Completing `wakatime` / `rss` / `http` / `github` already in types is
-  allowed. A second pack for those ids is forbidden.
+- Completing `id in FIRST_PARTY_PLUGIN_IDS` (live) is allowed. A second pack
+  for that id is forbidden.
 - Pack-level `bitsUsed` missing on an existing `<id>Plugin` is rank **1b**
   (`kind=pack`, `handoff=author-plugin`, `openspec=no`). Widget-entry
   `bitsUsed` does not close that hole.
@@ -85,8 +85,7 @@ frozen github-only table into new work.
 - Root `action.yml` is **thin**. Never invent names. Never generate
   `plugin_<plugin>_<widget>_<option>` (including `plugin_github_stats_include`,
   `plugin_github_widgets` CSV, `plugin_github_filename_*`).
-- Allowed Action inputs: read `ActionInputsSchema` (includes optional
-  `wakatime_token`, `http_token_env`).
+- Allowed Action inputs: read `ActionInputsSchema`. Never invent names.
 - Empty / `""` / whitespace `github_token` fails the Action. Omitted token
   uses `${{ github.token }}`.
 - Action commits widget files under `output_dir` only. It does not patch
@@ -124,9 +123,10 @@ not scaffold `author-bit`. Do not copy widget or pack templates into
   false.
 - Widgets do not perform HTTP. One shared client per run. Cache keys: REST
   `(method, url, params)`, GraphQL `(query, variables)`.
-- github **is** in `packages/integrations/src/index.ts`. Missing pack-level
-  `bitsUsed` on an existing `githubPlugin` is rank **1b**, not a barrel hole
-  and not a missing pack dir.
+- Inventory live dests under `packages/integrations/src/<id>/` and barrel
+  `packages/integrations/src/index.ts`. Do not name only github/wakatime.
+  Missing pack-level `bitsUsed` on an existing `<id>Plugin` is rank **1b**,
+  not a barrel hole and not a missing pack dir.
 
 ## OpenSpec and codegen
 

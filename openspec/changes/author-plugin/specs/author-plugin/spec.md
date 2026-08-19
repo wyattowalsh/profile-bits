@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Pack-level bitsUsed on the pack plugin object
-Authoring skills MUST treat `bitsUsed` as pack-level. Pack templates MUST use `{{PLUGIN_ID}}` / `{{PLUGIN_ID_UPPER}}` and MUST export `<id>Plugin` and `<ID>_BITS_USED`, and MUST set `bitsUsed` on that pack object using `satisfies PluginIdentity & { bitsUsed: typeof … }` because `PluginIdentitySchema` has no `bitsUsed`. Starter `BITS_USED` MUST be Theme, Frame, Stack, Row, Text, and Muted. Frozen 11 is a membership allow-list only. The widget skill MUST union widget bits into that pack-level array. `bitsUsed` MUST NOT be yaml, MUST NOT live on a widget-entry-only SSOT, and MUST NOT require a `widget-bits.ts` module in `packages/core`. Skills MUST NOT edit `packages/core` to add `bitsUsed` to the core schema. Pack templates MUST use `docsPath: "{{DOCS_PATH}}"` and MUST NOT hardcode `/generate/<id>/`. Pack templates MUST NOT `export const plugin` as the pack identity.
+Authoring skills MUST treat `bitsUsed` as pack-level. Pack templates MUST use `{{PLUGIN_ID}}` / `{{PLUGIN_ID_UPPER}}` and MUST export `<id>Plugin` and `<ID>_BITS_USED`, and MUST set `bitsUsed` on that pack object using `satisfies PluginIdentity & { bitsUsed: typeof … }` because `PluginIdentitySchema` has no `bitsUsed`. Starter `BITS_USED` MUST be Theme, Frame, Stack, Row, Text, and Muted. Frozen 11 is a membership allow-list only. The widget skill MUST union widget bits into that pack-level array. When a live pack is missing pack-level `bitsUsed`, skills MUST union widget-entry `bitsUsed` onto that pack, MUST keep any widget registry, and MUST use the six-name starter for new packs only. GitHub (`githubWidgetRegistry`) is an example, not the only law. `bitsUsed` MUST NOT be yaml, MUST NOT live on a widget-entry-only SSOT, and MUST NOT require a `widget-bits.ts` module in `packages/core`. Skills MUST NOT edit `packages/core` to add `bitsUsed` to the core schema. Pack templates MUST use `docsPath: "{{DOCS_PATH}}"` and MUST NOT hardcode `/generate/<id>/`. Pack templates MUST NOT `export const plugin` as the pack identity.
 
 #### Scenario: Pack registry exports pack-level bitsUsed
 - **WHEN** `author-plugin` generates a pack registry
@@ -18,6 +18,10 @@ Authoring skills MUST treat `bitsUsed` as pack-level. Pack templates MUST use `{
 #### Scenario: Starter bitsUsed is six names
 - **WHEN** `author-plugin` generates a new pack registry
 - **THEN** `{{PLUGIN_ID_UPPER}}_BITS_USED` MUST start as Theme, Frame, Stack, Row, Text, and Muted, and frozen 11 MUST be a membership allow-list only
+
+#### Scenario: Missing pack-level bitsUsed unions widget-entry bits
+- **WHEN** a live pack is missing pack-level `bitsUsed` and widget entries already declare `bitsUsed` (github `githubWidgetRegistry` is an example, not the only law)
+- **THEN** the skills MUST union those widget-entry names onto pack-level `{{PLUGIN_ID_UPPER}}_BITS_USED` on `{{PLUGIN_ID}}Plugin`, MUST keep any widget registry, MUST NOT copy the six-name starter over that live pack, and MUST use the six-name starter for new packs only
 
 ## MODIFIED Requirements
 
@@ -91,7 +95,7 @@ Skill templates MUST live under the plugin root (skill-local `assets/templates/`
 
 #### Scenario: Complete-existing does not clobber live files
 - **WHEN** authoring skills run against a pack, widget, or integration that already exists on disk
-- **THEN** they MUST inventory live files, MUST extend rather than overwrite complete existing sources, MUST keep `githubWidgetRegistry` on the github pack, MUST NOT shrink live `WAKATIME_BITS_USED`, and MUST copy templates only into empty or new directories
+- **THEN** they MUST inventory live files, MUST extend rather than overwrite complete existing sources, MUST union widget-entry `bitsUsed` onto any live pack missing pack-level `bitsUsed`, MUST keep any widget registry (github `githubWidgetRegistry` is an example, not the only law), MUST use the six-name starter for new packs only, MUST NOT shrink live pack-level `bitsUsed` arrays, and MUST copy templates only into empty or new directories
 
 #### Scenario: Placeholder dialects stay pack widget and integration local
 - **WHEN** authoring templates are substituted
@@ -128,7 +132,7 @@ A change to the public API — yaml schema, thin Action inputs, or the first-par
 - **THEN** the skills MUST allow that work and MUST NOT treat it as a silent catalog expand
 
 ### Requirement: WakaTime-class integration uses existing architecture
-A WakaTime-class add for a **new** data source MUST reuse the existing integration architecture, not invent a plugin pack and not invent a new integration stack. The integration skill MUST generate a client, auth, scopes, inputs, and mocked HTTP tests using the existing `integration-contract` model (`static` = none; `github` = token required in the Action; shared client per run; REST cache key `(method, url, params)`; GraphQL cache key `(query, variables)`). Auth MAY also be constrained per widget option. Dest MUST be `packages/integrations/src/<id>/`. Completing the existing `wakatime` id MUST be allowed. Skills MUST NOT create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`.
+A WakaTime-class add for a **new** data source MUST reuse the existing integration architecture, not invent a plugin pack and not invent a new integration stack. WakaTime-class is the architecture name for new data sources, not a freeze of pack ids. The integration skill MUST generate a client, auth, scopes, inputs, and mocked HTTP tests using the existing `integration-contract` model (`static` = none; `github` = token required in the Action; shared client per run; REST cache key `(method, url, params)`; GraphQL cache key `(query, variables)`). Auth MAY also be constrained per widget option. Dest MUST be `packages/integrations/src/<id>/`. Completing an id already in `FIRST_PARTY_*` MUST be allowed. Skills MUST NOT create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`.
 
 #### Scenario: WakaTime request authors an integration only
 - **WHEN** the author asks to add a WakaTime integration or pack and `wakatime` is already in `FIRST_PARTY_*`
@@ -147,11 +151,19 @@ A WakaTime-class add for a **new** data source MUST reuse the existing integrati
 - **THEN** the skills MUST reuse the existing integration contract (client, auth, scopes, inputs, shared client, cache keys) and MUST NOT introduce a parallel fetch or auth architecture
 
 ### Requirement: Catalog SSOT is live FIRST_PARTY_* with no silent expand
-Catalog SSOT MUST be `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`, `FIRST_PARTY_WIDGET_IDS`, `FIRST_PARTY_INTEGRATION_IDS`, `WIDGET_INTEGRATIONS`, `INTEGRATION_AUTH`, and `ActionInputsSchema`. Skills MUST read those registries rather than hardcoding github-only. Completing an id already in those lists MUST be allowed. Adding a new id MUST require an OpenSpec delta first. Skills MUST NOT silently expand those lists. Skills MUST NOT create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`. `demo` MUST stay opt-in. Github pack defaults MUST remain `stats` and `languages`. Thin Action names MUST come from `ActionInputsSchema` (including optional `wakatime_token` and `http_token_env`); skills MUST NOT invent `plugin_*_*_*`.
+Catalog SSOT MUST be `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`, `FIRST_PARTY_WIDGET_IDS`, `FIRST_PARTY_INTEGRATION_IDS`, `WIDGET_INTEGRATIONS`, `INTEGRATION_AUTH`, and `ActionInputsSchema`. Skills MUST read those registries rather than hardcoding github-only. Skills MUST NOT encode a closed pack-id table to bump when packs are added. Completing an id already in those lists MUST be allowed. Adding a new id MUST require an OpenSpec delta first. Skills MUST NOT silently expand those lists. Skills MUST NOT create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`. Github pack defaults MUST remain `stats` and `languages`. `demo` MUST stay opt-in. Thin Action names MUST be read from live `ActionInputsSchema` / `types.ts`. Skills MUST NOT invent `plugin_*_*_*`.
 
 #### Scenario: Live catalog is read from types.ts
 - **WHEN** authoring skills decide whether an id is first-party
-- **THEN** they MUST read `FIRST_PARTY_*` from `packages/core/src/types.ts` and MUST NOT assume the catalog is github-only
+- **THEN** they MUST read `FIRST_PARTY_*` from `packages/core/src/types.ts`, MUST NOT assume the catalog is github-only, and MUST NOT encode a closed pack-id table to bump
+
+#### Scenario: Github pack defaults stay product locks
+- **WHEN** authoring skills emit or complete the github pack
+- **THEN** github pack defaults MUST remain `stats` and `languages` and `demo` MUST stay opt-in
+
+#### Scenario: Thin Action names are read from live ActionInputsSchema
+- **WHEN** authoring skills name thin Action inputs
+- **THEN** they MUST read live `ActionInputsSchema` / `types.ts` and MUST NOT invent `plugin_*_*_*`
 
 #### Scenario: No silent expand and no duplicate pack
 - **WHEN** the author asks for a new pack that uses github plus static, or for a pack whose id is already in `FIRST_PARTY_PLUGIN_IDS`
@@ -208,7 +220,7 @@ Each skill MUST ship Agent Skills evals (`evals/evals.json`) with `skill_name` a
 - **THEN** they MUST include an ideate case that ranks without writing and an empty-args case that galleries and does not inventory
 
 ### Requirement: Plugin validation suite
-The plugin MUST ship a validate script (`scripts/validate.sh`) that (1) validates `plugin.json` against Agent Plugins 1.0.0, (2) rejects `mcp.json` if present anywhere under the plugin root (recursive), (3) runs `pnpm dlx skills-ref@0.1.5 validate skills/<id>` on each `skills/<id>` (name MUST match directory) with no `agentskills` fallback, (4) runs `just generate-action --check` from the repo root when that recipe exists, (5) fails if any template path contains `../`, (6) contains template paths with Node 24 `fs.realpathSync` plus `path.relative` and MUST fail if the relative path starts with `..`, and (7) asserts `plugin.json` identity: `name` MUST equal `profile-bits`, `version` MUST equal `0.1.0`, `license` MUST equal `MIT`.
+The plugin MUST ship a validate script (`scripts/validate.sh`) that (1) validates `plugin.json` against Agent Plugins 1.0.0, (2) rejects `mcp.json` if present anywhere under the plugin root (recursive), (3) runs `pnpm dlx skills-ref@0.1.5 validate skills/<id>` on each `skills/<id>` (name MUST match directory) with no `agentskills` fallback, (4) runs `just generate-action --check` from the repo root when that recipe exists, (5) fails if any template path contains `../`, (6) contains template paths with Node 24 `fs.realpathSync` plus `path.relative` and MUST fail if the relative path starts with `..`, (7) asserts `plugin.json` identity: `name` MUST equal `profile-bits`, `version` MUST equal `0.1.0`, `license` MUST equal `MIT`, and (8) asserts the `skills/` directory set equals exactly `author`, `author-integration`, `author-widget`, and `author-plugin` and MUST fail on any other skill id.
 
 #### Scenario: Validate script fails on mcp.json or parent template paths
 - **WHEN** `mcp.json` is present anywhere under the plugin root or a template path contains `../` or resolves outside the plugin root via `realpathSync`
@@ -217,6 +229,10 @@ The plugin MUST ship a validate script (`scripts/validate.sh`) that (1) validate
 #### Scenario: skills-ref validate runs on each skill
 - **WHEN** plugin validation runs
 - **THEN** `pnpm dlx skills-ref@0.1.5 validate` MUST run on `author`, `author-integration`, `author-widget`, and `author-plugin`, MUST require each skill `name` to match its directory, and MUST NOT fall back to `agentskills`
+
+#### Scenario: Extra skill directory fails validation
+- **WHEN** `skills/` contains a fifth directory such as `author-bit` or any id other than `author`, `author-integration`, `author-widget`, and `author-plugin`
+- **THEN** the validate script MUST fail
 
 #### Scenario: plugin.json identity is asserted
 - **WHEN** plugin validation runs

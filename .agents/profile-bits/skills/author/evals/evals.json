@@ -89,25 +89,27 @@
     {
       "id": "ideate-next-best",
       "prompt": "What should I add next?",
-      "expected_output": "Loads next.md. Inventories live FIRST_PARTY_* plus on-disk holes. When no typed-id hole remains, ranks pack-level bitsUsed missing (rank 1b): kind=pack, handoff=author-plugin, openspec=no. Then 1-2 runners-up. Does not assume a missing github pack dir or an absent packages/bits tree. Writes no files and copies no templates.",
+      "expected_output": "Loads next.md. Inventories live FIRST_PARTY_* plus on-disk holes. Rank 1b is any live pack missing pack-level bitsUsed after a re-read (kind=pack, handoff=author-plugin, openspec=no). Does not assume github is that hole (githubPlugin.bitsUsed is on disk). If no live pack lacks pack-level bitsUsed, does not emit a 1b row. Then 1-2 runners-up. Prints the table, names the handoff skill, and stops. Does not assume a missing pack dir or an absent packages/bits tree. Writes no files, copies no templates, and does not recommend just generate-action / just generate-docs.",
       "assertions": [
         "Enters ideate/next mode (not empty-args gallery stop)",
         "Reads packages/core/src/types.ts FIRST_PARTY_* registries",
-        "Ranks pack-level bitsUsed missing (rank 1b) when no typed-id hole remains",
-        "Hands off to author-plugin with openspec=no for that existing catalog id",
-        "Does not treat a missing github pack dir or an absent packages/bits tree as today's assumed hole",
+        "Ranks pack-level bitsUsed missing (rank 1b) only when a live pack actually lacks pack-level bitsUsed",
+        "Does not treat github as today's missing pack-level bitsUsed hole",
+        "Prints the table, names the handoff skill, and stops (does not continue mutating Handoff)",
+        "Does not treat a named pack id's missing dir or an absent packages/bits tree as today's assumed hole",
         "Includes an output table with kind, why, target, openspec, handoff",
-        "Does not write files or copy templates"
+        "Does not write files or copy templates",
+        "Does not recommend just generate-action or just generate-docs"
       ]
     },
     {
       "id": "ideate-bit-vs-widget",
       "prompt": "What should I add next? Should we start with bits?",
-      "expected_output": "Does not always pick bits first. Rank 1b (pack present, pack-level bitsUsed missing) outranks bits when that hole exists. Rank 2 (frozen 11 / packages/bits) fires only when bits are actually missing and no rank 1/1b hole remains. Does not assume a missing github pack implementation or an absent bits tree. bit-checklist only when kind=bit wins. No author-bit skill. Writes no files.",
+      "expected_output": "Does not always pick bits first. Rank 1b (pack present, pack-level bitsUsed missing) outranks bits when that hole exists after a re-read. Rank 2 (frozen 11 / packages/bits) fires only when bits are actually missing and no rank 1/1b hole remains. Does not assume github is a missing pack or today's 1b hole. bit-checklist only when kind=bit wins. No author-bit skill. Writes no files.",
       "assertions": [
         "Does not always pick packages/bits first",
-        "Ranks pack-level bitsUsed missing (rank 1b) above bits when the pack exists without pack-level bitsUsed",
-        "Does not assume a missing github pack dir or an absent packages/bits tree",
+        "Ranks pack-level bitsUsed missing (rank 1b) above bits when a live pack exists without pack-level bitsUsed",
+        "Does not assume github is today's missing pack dir or missing pack-level bitsUsed hole",
         "Uses handoff bit-checklist only when kind=bit wins",
         "Does not create an author-bit skill",
         "Writes no files"
@@ -154,13 +156,13 @@
     {
       "id": "ideate-named-kind-honor",
       "prompt": "Add a widget on rss",
-      "expected_output": "Named kind is widget. Routes to author-widget on the existing rss pack. Does not load next.md. Does not inventory. Does not redirect to complete github pack-level bitsUsed (rank 1b) or any other unprompted hole.",
+      "expected_output": "Named kind is widget. Routes to author-widget on the existing rss pack. Does not load next.md. Does not inventory. Does not redirect to complete pack-level bitsUsed (rank 1b) on any pack id, or any other unprompted hole.",
       "assertions": [
         "Routes to author-widget",
         "Honors the named widget kind",
         "Targets the existing rss pack",
         "Does not load next.md",
-        "Does not redirect to complete github pack-level bitsUsed or another unprompted hole first",
+        "Does not redirect to complete pack-level bitsUsed (rank 1b) on any pack id or another unprompted hole first",
         "Does not create a second rss pack"
       ]
     },
@@ -216,6 +218,18 @@
         "Refuses openspec --json",
         "States engine JSON is a subcommand flag only",
         "Does not recommend or run openspec --json",
+        "Does not inventory the next product add as a consolation"
+      ]
+    },
+    {
+      "id": "refuse-local-cli-render",
+      "prompt": "Run just render / pnpm render so I can generate widgets locally without the Action.",
+      "expected_output": "Refuse to implement the local CLI engine here. Point to sibling plugin .agents/profile-bits-readme skill render. Does not implement runMain. Does not inventory a substitute add.",
+      "assertions": [
+        "Refuses to implement just render / pnpm render / local CLI in this authoring plugin",
+        "Names sibling plugin .agents/profile-bits-readme skill render",
+        "Does not implement runMain",
+        "Does not route to author-integration, author-widget, or author-plugin to build the local CLI",
         "Does not inventory the next product add as a consolation"
       ]
     }

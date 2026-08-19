@@ -1,10 +1,10 @@
 ## Why
 
-T320/T321 packaged Agent Plugin 1.0.0 and four authoring skills, but the in-flight contract still pins the plugin root at `agent-plugin/profile-bits`, documents dest paths without `src/`, omits pack-level `bitsUsed`, and still says v0 github-only / never a wakatime pack. Live `packages/core/src/types.ts` already lists `github`, `wakatime`, `rss`, and `http`. Without a follow-up delta, migrate, dest, catalog, and ideate will fight the spec.
+T320/T321 packaged Agent Plugin 1.0.0 and four authoring skills, but the in-flight contract pinned the plugin root at `agent-plugin/profile-bits`, documented dest paths without `src/`, omitted pack-level `bitsUsed`, and said v0 github-only / never a wakatime pack. Live `packages/core/src/types.ts` already lists `github`, `wakatime`, `rss`, and `http`. The follow-up delta, SSOT migrate, dest, catalog, and ideate close that fight.
 
 ## What Changes
 
-- Keep capability `author-plugin` (no three-layer rewrite). Canonical plugin root is `.agents/profile-bits` (real files). `agent-plugin/` MUST NOT exist as a directory, alias, or copy. Install is `npx skills add ./.agents/profile-bits --all`.
+- Keep capability `author-plugin` (no three-layer rewrite). Canonical plugin root is `.agents/profile-bits` (real files). `agent-plugin/` MUST NOT exist as a directory, alias, or copy. Install is a documented human command, not an agent step in this repo: `npx skills add ./.agents/profile-bits`. MUST NOT pass `--all`. MUST NOT pass `-a claude-code` or create `.claude/` / `.claude/skills`. This repo already commits relative symlinks (git `120000`): `.agents/skills/author{,-integration,-widget,-plugin}` → `../profile-bits/skills/<id>`. Agents MUST NOT run `skills add` here.
 - Harness projections are `.agents/skills/<id>` relative symlinks to `.agents/profile-bits/skills/<id>` only — not a second SSOT. Do not write `.cursor/skills/`. Do not require, create, or document `.claude/` or `.claude/skills` as authoring-skill projections.
 - Dest examples: `packages/integrations/src/<id>/` and `packages/plugins/src/<pack>/widgets/<id>/`. Templates stay inside the plugin root (no `../`).
 - ADD pack-level `bitsUsed`: `{{ID}}_BITS_USED` on `{{id}}Plugin`; widget skill unions into that array. Not yaml. Do not edit `packages/core`.
@@ -13,7 +13,7 @@ T320/T321 packaged Agent Plugin 1.0.0 and four authoring skills, but the in-flig
 - Portable-core frontmatter on all four skills (`name`, `description`, `license: MIT`, `compatibility`, `metadata.author: profile-bits`, `metadata.version: "0.1.0"`).
 - Engine JSON is a **subcommand flag**: `pnpm exec openspec status --change author-plugin --json`. Never `openspec --json`.
 
-T320/T321 (plugin tree + `.agents/skills` projections) are **applied**. Remaining work is follow-up: SSOT migrate, `src/` dest, pack-level `bitsUsed`, frontmatter, live catalog, and umbrella ideate. Do not write live `packages/**` from this change. Do not rewrite `plugin-contract`, `widget-contract`, or `integration-contract`. Do not sync, apply, or archive in this planning edit.
+T320/T321 (plugin tree + `.agents/skills` projections) and the follow-up (SSOT migrate to `.agents/profile-bits`, `src/` dest, pack-level `bitsUsed`, frontmatter, live catalog, umbrella ideate) are **applied**. S0 moved the plugin root; O1s synced `openspec/specs/author-plugin/`. Do not write live `packages/**` from this change. Do not rewrite `plugin-contract`, `widget-contract`, or `integration-contract`. Do not archive. Do not commit.
 
 ## Capabilities
 
@@ -27,6 +27,6 @@ T320/T321 (plugin tree + `.agents/skills` projections) are **applied**. Remainin
 
 ## Impact
 
-- Specs: delta only under `openspec/changes/author-plugin/specs/author-plugin/spec.md`. Synced `openspec/specs/author-plugin/` is updated later (O1s after S0), not in this edit. No edits to `plugin-contract`, `widget-contract`, `integration-contract`, `action-public-api`, `github-api-fetch-policy`, or `playground`.
-- Code: after S0 the plugin files live at `.agents/profile-bits/`. `agent-plugin/` is removed. Templates generate *into* `packages/**` only when those skills run; this change does not write live package source.
-- Out of scope: live `packages/**` / `apps/**` implementation, `.claude/` or `.claude/skills` creation, three-layer contract rewrites, MCP, Marketplace, `dist/`, tagging `v1` at `main`, archive, git commit, `openspec` sync/validate as a completion gate.
+- Specs: delta under `openspec/changes/author-plugin/specs/author-plugin/spec.md`. O1s already synced `openspec/specs/author-plugin/` to the live root `.agents/profile-bits`. No edits to `plugin-contract`, `widget-contract`, `integration-contract`, `action-public-api`, `github-api-fetch-policy`, or `playground`.
+- Code: plugin files live at `.agents/profile-bits/`. `agent-plugin/` MUST NOT exist. Templates generate *into* `packages/**` only when those skills run; this change does not write live package source.
+- Out of scope: live `packages/**` / `apps/**` implementation, `.claude/` or `.claude/skills` creation, three-layer contract rewrites, MCP, Marketplace, `dist/`, tagging `v1` at `main`, archive, git commit.

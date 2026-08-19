@@ -294,7 +294,7 @@ Routes: `/playground` → `/playground/github`. No `/playground/http` UI. `PREVI
 
 ## Authoring
 
-Canonical plugin: `.agents/profile-bits/` (`plugin.json`, four skills). Install: `npx skills add ./.agents/profile-bits --all`. Skills: `author` (router; ideate is a mode), `author-integration`, `author-widget`, `author-plugin`. No `author-bit`. Completing an id already in `FIRST_PARTY_*` is allowed. **Adding a new id requires OpenSpec first.**
+Canonical plugin: `.agents/profile-bits/` (`plugin.json`, four skills). Install is a documented human command, not an agent step: `npx skills add ./.agents/profile-bits`. MUST NOT pass `--all`. MUST NOT create `.claude/`. Agents MUST NOT run `skills add` in this repo. Skills: `author` (router; ideate is a mode), `author-integration`, `author-widget`, `author-plugin`. No `author-bit`. Catalog SSOT is live `packages/core/src/types.ts` — today’s packs (`github`, `wakatime`, `rss`, `http`) are a snapshot, not a frozen table the Agent Plugin must bump. Skills follow live `FIRST_PARTY_*`; a new pack is OpenSpec-first, then types, then skills. Completing an id already in `FIRST_PARTY_*` is allowed. **Adding a new id requires OpenSpec first.**
 
 ## Document map
 

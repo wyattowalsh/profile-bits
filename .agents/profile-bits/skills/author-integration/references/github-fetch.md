@@ -18,6 +18,7 @@ Stats and languages MUST share one run-scoped cache and the same ordered reposit
 1. Identity probe once (see [auth](auth.md)).
 2. REST `GET /users/{login}`.
 3. Paginated `GET /users/{login}/repos?type=owner&per_page=100`. When `include_private` and `canPrivate` and probe login equals `user`, use authenticated `GET /user/repos?type=owner&per_page=100`.
+   REST `{login}` path segments MUST use `encodeURIComponent(login)`. Do not interpolate raw login. Authenticated `GET /user/repos` has no login segment.
 4. **Filter** forks and archived first (unless the widget options include them).
 5. **Then cap 500** remaining. Cap-before-filter is forbidden.
 6. Stars and language bytes use that ordered id list.

@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
 # Agent Plugin gate for profile-bits (Agent Plugins 1.0.0).
 # 1. Validate plugin.json against the vendored closed schema ($schema const).
-# 2. Reject mcp.json if present.
-# 3. Run `pnpm dlx skills-ref validate` on each skills/<id> (agentskills fallback).
-#    Frontmatter name MUST match the skill directory.
-# 4. If generate-action exists, run `just generate-action --check` (or `pnpm generate-action --check`).
-# 5. Fail if any template path contains `../`.
-# Walking up to the repo root at runtime is allowed and is not a template `../`.
+# 2. Assert plugin.json identity (name profile-bits, version 0.1.0, license MIT).
+# 3. Reject mcp.json anywhere under the plugin root (recursive find).
+# 4. Run `pnpm dlx skills-ref@0.1.5 validate` on each skills/<id>.
+#    Frontmatter name MUST match the skill directory. Skill dirs MUST be
+#    exactly {author, author-integration, author-widget, author-plugin};
+#    any other id fails.
+# 5. If generate-action exists, run `just generate-action --check` (or `pnpm generate-action --check`).
+# 6. Fail if any template resolves outside the plugin root (Node fs.realpathSync +
+#    path.relative). Do not content-grep `../` (comments that say “do not use ../”
+#    must not false-fail). Walking up to the repo root at runtime is allowed.
 set -euo pipefail
+
+SKILLS_REF_PIN="0.1.5"
+ALLOWED_SKILL_IDS=(author author-integration author-widget author-plugin)
 
 die() {
   printf 'error: %s\n' "$*" >&2
@@ -162,6 +169,18 @@ try {
 }
 
 const errors = validate(schema, manifest, "$");
+const identity = [
+  ["name", "profile-bits"],
+  ["version", "0.1.0"],
+  ["license", "MIT"],
+];
+for (const [key, expected] of identity) {
+  if (manifest[key] !== expected) {
+    errors.push(
+      `$: ${key} must be ${JSON.stringify(expected)}, got ${JSON.stringify(manifest[key])}`,
+    );
+  }
+}
 if (errors.length > 0) {
   console.error("error: plugin.json failed Agent Plugins 1.0.0 validation:");
   for (const error of errors) {
@@ -174,80 +193,82 @@ EOF
 
 reject_mcp_json() {
   local plugin_root="$1"
-  if [[ -e "$plugin_root/mcp.json" ]]; then
-    die "mcp.json is not allowed in this plugin (v0 has no MCP)"
+  local matches
+  matches="$(find "$plugin_root" -name mcp.json -print)"
+  if [[ -n "$matches" ]]; then
+    printf 'error: mcp.json is not allowed in this plugin (v0 has no MCP):\n%s\n' "$matches" >&2
+    exit 1
   fi
 }
 
-template_paths_contain_parent() {
+assert_templates_contained() {
   local plugin_root="$1"
   local skills_dir="$plugin_root/skills"
   [[ -d "$skills_dir" ]] || return 0
 
-  local failed=0
-  local path rel target
-
-  while IFS= read -r -d '' path; do
-    rel="${path#"$plugin_root/"}"
-    if [[ "$rel" == *'..'* ]]; then
-      printf 'error: template path contains ../: %s\n' "$rel" >&2
-      failed=1
-    fi
-    if [[ -L "$path" ]]; then
-      target="$(readlink "$path")"
-      if [[ "$target" == *'..'* ]]; then
-        printf 'error: template path contains ../: %s -> %s\n' "$rel" "$target" >&2
-        failed=1
-      fi
-    fi
-    if [[ -f "$path" ]] && grep -n -E '\.\./' "$path" >/dev/null 2>&1; then
-      printf 'error: template path contains ../ in %s:\n' "$rel" >&2
-      grep -n -E '\.\./' "$path" >&2 || true
-      failed=1
-    fi
-  done < <(
+  PLUGIN_ROOT="$plugin_root" node --input-type=module 3< <(
     find "$skills_dir" \( -path '*/assets/templates/*' -o -name '*.template' \) -print0 2>/dev/null
-  )
+  ) <<'EOF'
+import { readFileSync, realpathSync } from "node:fs";
+import path from "node:path";
 
-  [[ "$failed" -eq 0 ]]
+const pluginRoot = process.env.PLUGIN_ROOT;
+if (!pluginRoot) {
+  console.error("error: PLUGIN_ROOT is required for template containment");
+  process.exit(1);
 }
 
-is_missing_package_error() {
-  printf '%s' "$1" | grep -Eqi \
-    'ERR_PNPM_FETCH_404|ERR_PNPM_NO_MATCHING_VERSION|404 Not Found|No matching version|Cannot find package|command not found|Unknown command'
+let rootReal;
+try {
+  rootReal = realpathSync(pluginRoot);
+} catch (error) {
+  console.error(`error: cannot resolve plugin root ${pluginRoot}: ${error.message}`);
+  process.exit(1);
+}
+
+let raw;
+try {
+  raw = readFileSync(3);
+} catch (error) {
+  console.error(`error: cannot read template path list: ${error.message}`);
+  process.exit(1);
+}
+
+const candidates = raw.toString("utf8").split("\0").filter(Boolean);
+let failed = false;
+
+for (const candidate of candidates) {
+  let resolved;
+  try {
+    resolved = realpathSync(candidate);
+  } catch (error) {
+    console.error(
+      `error: cannot resolve template path ${candidate}: ${error.message}`,
+    );
+    failed = true;
+    continue;
+  }
+  const rel = path.relative(rootReal, resolved);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    console.error(
+      `error: template path escapes plugin root: ${candidate} -> ${rel}`,
+    );
+    failed = true;
+  }
+}
+
+if (failed) {
+  process.exit(1);
+}
+EOF
 }
 
 validate_skill_dir() {
-  local skill_dir="$1"
-  local output status
-
-  set +e
-  output="$(pnpm dlx skills-ref validate "$skill_dir" 2>&1)"
-  status=$?
-  set -e
-  if [[ "$status" -eq 0 ]]; then
-    printf '%s\n' "$output"
-    return 0
-  fi
-
-  if is_missing_package_error "$output"; then
-    printf 'skills-ref unavailable; trying agentskills CLI\n' >&2
-    set +e
-    output="$(pnpm dlx agentskills validate "$skill_dir" 2>&1)"
-    status=$?
-    set -e
-    if [[ "$status" -eq 0 ]]; then
-      printf '%s\n' "$output"
-      return 0
-    fi
-    if command -v agentskills >/dev/null 2>&1; then
-      agentskills validate "$skill_dir"
-      return
-    fi
-  fi
-
-  printf '%s\n' "$output" >&2
-  return "$status"
+  local plugin_root="$1"
+  local skill_dir="$2"
+  local skill_id
+  skill_id="$(basename "$skill_dir")"
+  (cd "$plugin_root" && pnpm dlx "skills-ref@${SKILLS_REF_PIN}" validate "skills/${skill_id}")
 }
 
 skill_frontmatter_name() {
@@ -278,21 +299,49 @@ require_skill_name_matches_dir() {
     die "skill name '${declared}' must match directory '${skill_id}'"
 }
 
+is_allowed_skill_id() {
+  local candidate="$1"
+  local allowed
+  for allowed in "${ALLOWED_SKILL_IDS[@]}"; do
+    [[ "$candidate" == "$allowed" ]] && return 0
+  done
+  return 1
+}
+
 validate_skills() {
   local plugin_root="$1"
   local skills_dir="$plugin_root/skills"
-  [[ -d "$skills_dir" ]] || return 0
+  [[ -d "$skills_dir" ]] ||
+    die "skills/ directory set must be exactly {author, author-integration, author-widget, author-plugin}"
+  command -v pnpm >/dev/null 2>&1 || die "pnpm is required to run skills-ref@${SKILLS_REF_PIN}"
 
-  local skill_dir skill_id
+  local skill_dir skill_id allowed
+  local unexpected=()
+
   shopt -s nullglob
   for skill_dir in "$skills_dir"/*/; do
     skill_id="$(basename "$skill_dir")"
     [[ "$skill_id" == .* ]] && continue
-    require_skill_name_matches_dir "${skill_dir%/}"
-    printf 'validating skill %s\n' "$skill_id"
-    validate_skill_dir "${skill_dir%/}"
+    if ! is_allowed_skill_id "$skill_id"; then
+      unexpected+=("$skill_id")
+    fi
   done
   shopt -u nullglob
+
+  if (( ${#unexpected[@]} > 0 )); then
+    die "unexpected skill id(s): ${unexpected[*]} (allowed: ${ALLOWED_SKILL_IDS[*]})"
+  fi
+
+  for allowed in "${ALLOWED_SKILL_IDS[@]}"; do
+    [[ -d "$skills_dir/$allowed" ]] ||
+      die "missing required skill directory skills/${allowed}"
+  done
+
+  for allowed in "${ALLOWED_SKILL_IDS[@]}"; do
+    require_skill_name_matches_dir "$skills_dir/$allowed"
+    printf 'validating skill %s\n' "$allowed"
+    validate_skill_dir "$plugin_root" "$skills_dir/$allowed"
+  done
 }
 
 run_generate_action_check() {
@@ -315,8 +364,8 @@ validate_plugin_json \
   "$PLUGIN_ROOT/references/plugin.schema.json"
 reject_mcp_json "$PLUGIN_ROOT"
 validate_skills "$PLUGIN_ROOT"
-template_paths_contain_parent "$PLUGIN_ROOT" \
-  || die "template path contains ../ (Agent Plugins containment)"
+assert_templates_contained "$PLUGIN_ROOT" \
+  || die "template path escapes plugin root (Agent Plugins containment)"
 run_generate_action_check
 
 printf 'ok: %s\n' "$PLUGIN_ROOT"

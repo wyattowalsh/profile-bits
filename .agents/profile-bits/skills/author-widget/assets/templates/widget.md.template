@@ -2,7 +2,7 @@
 
 {{WIDGET_DESCRIPTION}}
 
-Do not put `import` / `export` or JSX (`<PascalCase`) in this file — those
+Do not put `import` / `export` or PascalCase tags in this file — those
 markers promote `.md` to `mdx`. Keep CommonMark/GFM only.
 
 Canonical filename: `widget.md`. Omit `source`. Pipeline: remark/rehype →

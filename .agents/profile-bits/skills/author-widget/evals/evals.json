@@ -4,18 +4,20 @@
     {
       "id": "empty-args",
       "prompt": "/author-widget",
-      "expected_output": "Empty-args gallery listing add/option/animation/mdx/stylesheet/families/discover modes and the refuse routes to author-integration and author-plugin. Does not write files.",
+      "expected_output": "Empty-args gallery listing add/option/animation/mdx/stylesheet/families/discover modes and the refuse routes to author-integration and author-plugin. Does not write files. Does not read types.ts. Does not load locks.md or generate.md.",
       "assertions": [
         "Dispatches to the empty-args gallery",
         "Lists add, option, animation, mdx, stylesheet, families, and discover",
         "Names author-integration for new data sources and author-plugin for new packs",
         "Does not copy templates or write packages/plugins",
-        "Does not invent a mutating default"
+        "Does not invent a mutating default",
+        "Does not read packages/core/src/types.ts",
+        "Does not load locks.md or generate.md"
       ]
     },
     {
       "id": "languages-option",
-      "prompt": "Add a new option to the languages widget so users can hide the percentage labels.",
+      "prompt": "Add a new option to the github languages widget so users can hide the percentage labels.",
       "expected_output": "Treats this as a yaml-schema public API change on the existing github languages widget. Requires an OpenSpec delta first, then LanguagesOptionsSchema / .github/profile-bits.yml. Does not add plugin_github_languages_* or any flattened Action input. Fetch still consumes the cached github payload with no HTTP. Tells the user to run just generate-action and just generate-docs.",
       "assertions": [
         "Stays on the existing github pack languages widget (not a new pack or new integration)",
@@ -30,13 +32,15 @@
     },
     {
       "id": "css-animation-gif-apng",
-      "prompt": "Add a widget with CSS animation for gif and apng output on the existing wakatime pack.",
-      "expected_output": "Targets the existing wakatime pack (not github-only). Copies keyframes.css.template as animation.css. Extends live coding files; does not overwrite complete existing schema.ts/fetch.ts/widget.*. Does not create a second wakatime pack. CSS @keyframes are authoring input to renderAnimation via @profile-bits/renderer (takumi-js 2.9.2). Formats allow-list includes gif and apng. APNG files are named .png. Default SVG remains a baked still with no <style>, @keyframes, SMIL, or foreignObject in renderSvg() output. Card 480×160.",
+      "prompt": "Add CSS animation for gif and apng output on the existing wakatime coding widget.",
+      "expected_output": "Targets the existing wakatime pack coding widget (not github-only; sole live widget on that pack; does not invent a new card). Copies keyframes.css.template as animation.css because that optional file is missing in the non-empty coding dir. Does not overwrite complete existing schema.ts/fetch.ts/widget.*. Does not rewrite inventoried docsPath. Does not create a second wakatime pack. CSS @keyframes are authoring input to renderAnimation via @profile-bits/renderer (takumi-js 2.9.2). Formats allow-list includes gif and apng. APNG files are named .png. Default SVG remains a baked still with no <style>, @keyframes, SMIL, or foreignObject in renderSvg() output. Card 480×160.",
       "assertions": [
-        "Does not assume github-only; targets the existing wakatime pack from FIRST_PARTY_PLUGIN_IDS",
+        "Does not assume github-only; targets the existing wakatime pack coding widget from the prompt",
         "Does not create a second wakatime pack or a new integration just to add animation",
-        "Copies assets/templates/keyframes.css.template into the widget dir (animation.css)",
+        "Does not invent a new card; uses the sole live wakatime widget id coding",
+        "Copies assets/templates/keyframes.css.template into the non-empty coding dir as animation.css only because animation.css is missing (no-clobber if it already exists)",
         "Extends live wakatime coding files rather than overwriting complete existing schema.ts/fetch.ts/widget.*",
+        "Does not rewrite inventoried wakatime docsPath",
         "Treats CSS @keyframes as authoring input to render / renderAnimation, not GitHub SVG runtime",
         "Includes gif and apng on the formats allow-list with default format svg",
         "Names APNG output with a .png extension",
@@ -47,9 +51,10 @@
     },
     {
       "id": "widget-mdx-no-source",
-      "prompt": "Drop in a widget.mdx file with no source field.",
-      "expected_output": "Writes canonical widget.mdx and omits the source field so discoverSource maps .mdx → mdx. Does not also write widget.md or widget.tsx. Maps MDX components to the bits index (all 11 names available). Does not require JSX to render Avatar. Unions only composed names into pack-level BITS_USED (no Avatar when the MDX scaffold omits it). Does not put tw on bits. MDX scaffold uses numeric bit props (Bar pct={0}, Stat value={0}) and omits Avatar when there is no src. `<Theme>` with no `theme` prop. Pipeline is @mdx-js/mdx → fromJsx. Sets md.presets / md.families for md/mdx. Ambiguous dual canonical files without source would fail.",
+      "prompt": "Drop in a widget.mdx file with no source field for the existing rss feed widget.",
+      "expected_output": "Dest is the existing rss pack feed widget. Writes canonical widget.mdx and omits the source field so discoverSource maps .mdx → mdx. Does not also write widget.md or widget.tsx. Does not rewrite inventoried rss docsPath. Maps MDX components to the bits index (all 11 names available). Does not require JSX to render Avatar. Unions only composed names into pack-level BITS_USED (no Avatar when the MDX scaffold omits it). Does not put tw on bits. MDX scaffold uses numeric bit props (Bar pct={0}, Stat value={0}) and omits Avatar when there is no src. `<Theme>` with no `theme` prop. Pipeline is @mdx-js/mdx → fromJsx. Sets md.presets / md.families for md/mdx. Ambiguous dual canonical files without source would fail.",
       "assertions": [
+        "Targets the existing rss pack feed widget (does not invent dest or default to github)",
         "Copies assets/templates/widget.mdx.template as widget.mdx",
         "Omits the source field (prefer omit when the file is named correctly)",
         "Relies on discoverSource extension .mdx → mdx (no explicit source override)",
@@ -64,10 +69,12 @@
     },
     {
       "id": "tailwind-stylesheets",
-      "prompt": "Make a Tailwind stylesheets widget.",
-      "expected_output": "Generates a bits-composed Takumi-safe template. `tw` / `className` only on native `div` / `span` / `img`. Bits use typed props (`gap`, `size`, `weight`, `pct`, `src`) and never take `tw`. Copies `stylesheet.css.template`, unions bit names into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on `{{PACK_ID}}Plugin`, and updates `plugin.test.ts` so it does not assert a stale literal `bitsUsed` list. No react-dom, useEffect, portals, or Radix/shadcn DOM. Bits are not yaml keys. Takumi via `@profile-bits/renderer`. Card 480×160.",
+      "prompt": "Make a Tailwind stylesheets widget for the existing http chips card.",
+      "expected_output": "Dest is the existing http pack chips widget (chips → http). Generates a bits-composed Takumi-safe template. `tw` / `className` only on native `div` / `span` / `img`. Bits use typed props (`gap`, `size`, `weight`, `pct`, `src`) and never take `tw`. Copies `stylesheet.css.template` as `styles.css` because that optional file is missing in the non-empty chips dir; does not overwrite complete existing widget.tsx. Unions bit names into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on `{{PACK_ID}}Plugin`, and updates `plugin.test.ts` so it does not assert a stale literal `bitsUsed` list. Does not rewrite inventoried http docsPath `/playground/http`. No react-dom, useEffect, portals, or Radix/shadcn DOM. Bits are not yaml keys. Takumi via `@profile-bits/renderer`. Card 480×160.",
       "assertions": [
-        "Copies assets/templates/stylesheet.css.template and a bits-based widget.tsx (or html) template",
+        "Targets the existing http pack chips widget (does not invent dest or default to github)",
+        "Copies assets/templates/stylesheet.css.template into the non-empty chips dir as styles.css only because styles.css is missing (no-clobber if it already exists)",
+        "Does not overwrite complete existing chips widget.tsx",
         "Uses Takumi-safe tw and/or className only on div/span/img, never on bits",
         "Does not put tw, className, or style on Theme/Frame/Stack/Row/Text/Muted/Stat/Bar/Chip/Avatar/Divider",
         "Updates plugin.test.ts when unioning bitsUsed; does not leave a hardcoded Theme…Muted six-name array",
@@ -81,9 +88,10 @@
     },
     {
       "id": "md-families-code-starry-night",
-      "prompt": "Swap md.families.code to starry-night.",
-      "expected_output": "Exclusive family swap: md.families.code becomes starry-night (rehype-starry-night) and rehype-pretty-code+shiki is not also used. Does not stack highlighters. rehype-twoslash only with starry-night. No flattened Action input. Kroki/plantuml.com stay off unless md.allow_network. No Playwright.",
+      "prompt": "Swap md.families.code to starry-night on the existing rss feed widget.",
+      "expected_output": "Dest is the existing rss pack feed widget. Exclusive family swap: md.families.code becomes starry-night (rehype-starry-night) and rehype-pretty-code+shiki is not also used. Does not stack highlighters. rehype-twoslash only with starry-night. Does not rewrite inventoried rss docsPath. No flattened Action input. Kroki/plantuml.com stay off unless md.allow_network. No Playwright.",
       "assertions": [
+        "Targets the existing rss pack feed widget (does not invent dest or default to github)",
         "Sets md.families.code to starry-night as a replacement, not an additional plugin",
         "Does not stack rehype-pretty-code + shiki with rehype-starry-night",
         "Does not .use() two members of the code family on one processor",
@@ -96,9 +104,10 @@
     },
     {
       "id": "bits-used-pack-union",
-      "prompt": "Register bitsUsed for a new card that composes Theme, Frame, Stack, Row, Text, and Stat.",
-      "expected_output": "Unions those names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin. Does not set bitsUsed on a widget registry entry. Does not put bits in yaml. Does not edit packages/core PluginIdentitySchema. Updates plugin.test.ts to keep toEqual({{PACK_ID_UPPER}}_BITS_USED) without a hardcoded six-name Theme, Frame, Stack, Row, Text, Muted array.",
+      "prompt": "Register bitsUsed for the existing rss feed widget that composes Theme, Frame, Stack, Row, Text, and Stat.",
+      "expected_output": "Dest is the existing rss pack feed widget. Unions those names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin. Does not set bitsUsed on a widget registry entry. Does not put bits in yaml. Does not edit packages/core PluginIdentitySchema. Does not rewrite inventoried rss docsPath. Updates plugin.test.ts to keep toEqual({{PACK_ID_UPPER}}_BITS_USED) without a hardcoded six-name Theme, Frame, Stack, Row, Text, Muted array.",
       "assertions": [
+        "Targets the existing rss pack feed widget (does not invent dest or default to github)",
         "Unions Theme, Frame, Stack, Row, Text, Stat into {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin",
         "Updates plugin.test.ts to keep toEqual({{PACK_ID_UPPER}}_BITS_USED) without a hardcoded six-name Theme, Frame, Stack, Row, Text, Muted array",
         "Does not set bitsUsed on a widget entry",
@@ -217,13 +226,13 @@
     },
     {
       "id": "animation-not-github-only",
-      "prompt": "Add CSS @keyframes animation for gif and apng. Animation is github-only, so scaffold it under github automatically.",
-      "expected_output": "Animation is not github-only. Requires a named existing pack from FIRST_PARTY_PLUGIN_IDS. Does not assume github, does not default dest to packages/plugins/src/github/, does not copy templates without a named pack id and widget id.",
+      "prompt": "Add CSS @keyframes animation for gif and apng on the existing wakatime coding widget. Animation is github-only, so scaffold it under github automatically.",
+      "expected_output": "Animation is not github-only. Uses the named wakatime pack and coding widget (sole live widget on that pack; does not invent a new card). Does not dest packages/plugins/src/github/. May copy missing animation.css into the non-empty coding dir; does not clobber existing coding files. Does not rewrite inventoried wakatime docsPath.",
       "assertions": [
         "Does not treat gif/apng animation as github-only",
-        "Requires a named existing pack from FIRST_PARTY_PLUGIN_IDS",
+        "Uses the named wakatime pack and coding widget from the prompt",
         "Does not default dest to packages/plugins/src/github/",
-        "Does not copy templates without a named pack id and widget id",
+        "Does not invent a new card on the one-widget wakatime pack",
         "Does not create a new pack or integration just to add animation"
       ]
     }

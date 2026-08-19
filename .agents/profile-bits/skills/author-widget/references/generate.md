@@ -7,14 +7,16 @@ not as skill-relative links). Do **not** copy into `apps/docs/**`,
 
 Catalog SSOT is `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`,
 `FIRST_PARTY_WIDGET_IDS`, `FIRST_PARTY_INTEGRATION_IDS`, `WIDGET_INTEGRATIONS`,
-`INTEGRATION_AUTH`, `ActionInputsSchema`. Do not hardcode github-only.
-Completing an id already in those lists is allowed. Adding a new id requires
-OpenSpec first. Do not create a second pack for an id already in
+`INTEGRATION_AUTH`, `ActionInputsSchema`. Read those registries every mutating
+run. Do not hardcode github-only. Do **not** maintain a closed
+widget→integration table in this skill (the collection grows). Resolve pack,
+widget, and integration from the live catalog:
+`WIDGET_INTEGRATIONS[widgetId]`. Do **not** update this skill when a pack is
+added. Completing an id already in those lists is allowed. Adding a new id
+requires OpenSpec first. Do not create a second pack for an id already in
 `FIRST_PARTY_PLUGIN_IDS`. WakaTime-class **architecture** (client, auth, scopes,
-inputs, mocked HTTP) still applies to **new** data sources. Live types already
-include wakatime, rss, and http packs. Thin Action names: read
-`ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
-never invent `plugin_*_*_*`.
+inputs, mocked HTTP) still applies to **new** data sources. Thin Action names:
+read live `ActionInputsSchema`; never invent `plugin_*_*_*`.
 
 ## Classify before copy
 
@@ -23,8 +25,12 @@ Stop before copying templates when:
 - The request is a **new card that also needs a new API** (id not in
   `FIRST_PARTY_INTEGRATION_IDS`, or WakaTime-class data source) →
   **`author-integration`**. Do not scaffold the card first.
-- `add` without a pack id **and** a widget id → **stop**. Do not invent
-  dest (do not default to github).
+- Write modes (`add`, `option`, `animation`, `mdx`, `stylesheet` /
+  `tailwind`, `families`) without a pack id **and** a widget id → **stop**.
+  Do not invent dest (do not default to github).
+- Animation on a **named** one-widget pack (example: wakatime → coding):
+  use the sole live widget id; do not invent a new card. Still stop if the
+  pack id is missing.
 - Dest uses `../` or `/generate/widgets` → **refuse**. Dest is repo-root
   `packages/plugins/src/{{PACK_ID}}/widgets/{{WIDGET_ID}}/`.
 - MCP / `mcp.json` → refuse.
@@ -37,19 +43,28 @@ Inventory the live pack and widget dirs before writing.
 
 - **Extend** live files. Do not overwrite a complete existing `schema.ts`,
   `fetch.ts`, `widget.*`, `styles.css`, `animation.css`, or `plugin.ts`.
-- Copy templates **only** when the widget dir
+- Copy full widget templates (`schema.ts`, `fetch.ts`, `widget.*`) **only**
+  when the widget dir
   `packages/plugins/src/{{PACK_ID}}/widgets/{{WIDGET_ID}}/` is **empty or
   new**. If that dir already has widget sources, edit those files in place.
   Never copy into `/generate/widgets`.
-- On the pack registry, **append** the new widget id to `widgets[]`. Do not
-  replace the live array. Do not drop existing widget ids.
-- Preserve `docsPath: "{{DOCS_PATH}}"`. Do not hardcode `/generate/<id>/`.
-  Do not rewrite a live pack's inventoried `docsPath` (github, wakatime,
-  rss, and http `/playground/http` stay as inventoried).
+- **Missing optional stylesheets:** if `animation.css` or `styles.css` is
+  absent in a non-empty widget dir, copy `keyframes.css.template` →
+  `animation.css` or `stylesheet.css.template` → `styles.css`. Do not
+  clobber those files when they already exist.
+- On the pack registry, **append** a **new** widget id to `widgets[]`. Do
+  not replace the live array. Do not drop existing widget ids. Do not
+  append a duplicate when extending a live widget (animation, stylesheet,
+  families, option, mdx on an existing id).
+- Leave inventoried `docsPath` **unchanged**. Do not rewrite a live pack's
+  `docsPath` to `"{{DOCS_PATH}}"`. That placeholder is for **new packs**
+  only (`author-plugin`). Read the inventoried live pack `docsPath`; do
+  not freeze values here. Do not hardcode `/generate/<id>/`.
 - Union bit names into `{{PACK_ID_UPPER}}_BITS_USED` (add-only). Do not
-  shrink a live list (including `WAKATIME_BITS_USED`).
-- `add` without a pack id **and** a widget id → **stop**. Do not invent
-  dest, do not copy templates.
+  shrink a live list.
+- Write modes without a pack id **and** a widget id → **stop**. Do not
+  invent dest, do not copy templates. Animation on a named one-widget pack
+  uses the sole live widget id; do not invent a new card.
 
 When this skill **runs** for a **new or empty** widget dir, copy into:
 
@@ -61,29 +76,34 @@ packages/plugins/src/{{PACK_ID}}/widgets/{{WIDGET_ID}}/
   styles.css          # optional; from stylesheet.css.template
   animation.css       # optional; from keyframes.css.template (gif/apng)
 packages/plugins/src/{{PACK_ID}}/plugin.ts
-  # append {{WIDGET_ID}} to widgets[]; preserve docsPath: "{{DOCS_PATH}}"
+  # append {{WIDGET_ID}} to widgets[] only when it is a new id
+  # leave inventoried docsPath unchanged (do not rewrite to "{{DOCS_PATH}}")
   # union bit names into {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin
 packages/plugins/src/{{PACK_ID}}/plugin.test.ts
   # keep toEqual({{PACK_ID_UPPER}}_BITS_USED); do not hardcode the six-name list
 ```
 
+When this skill **runs** animation or stylesheet on a **non-empty** live
+widget dir, copy only a **missing** `animation.css` / `styles.css`. Keep
+existing `schema.ts`, `fetch.ts`, `widget.*`, and `plugin.ts`.
+
 Do not assume a given pack dir exists. If `FIRST_PARTY_PLUGIN_IDS` lists an id
 but `packages/plugins/src/<pack>/` is missing, that is a typed hole:
 `author-plugin` first, then this skill. When the pack dir exists, append the
-widget id and union bits on that pack's `{{PACK_ID}}Plugin`. Do not claim
-`packages/plugins/src/github/` exists; complete typed holes when that pack
-dir is missing.
+widget id (new ids only) and union bits on that pack's `{{PACK_ID}}Plugin`.
+Do not claim `packages/plugins/src/github/` exists; complete typed holes when
+that pack dir is missing.
 
 ## Copy map
 
 | Template | Destination filename |
 | --- | --- |
 | `widget.tsx.template` | `widget.tsx` |
-| `widget.md.template` | `widget.md` |
+| `widget.md.template` | `widget.md` (CommonMark only; no PascalCase tags) |
 | `widget.mdx.template` | `widget.mdx` |
 | `widget.html.template` | `widget.html` |
-| `stylesheet.css.template` | `styles.css` (optional) |
-| `keyframes.css.template` | `animation.css` (gif/apng) |
+| `stylesheet.css.template` | `styles.css` (optional; copy when missing, no-clobber) |
+| `keyframes.css.template` | `animation.css` (gif/apng; copy when missing, no-clobber) |
 | `schema.ts.template` | `schema.ts` |
 | `fetch.ts.template` | `fetch.ts` |
 
@@ -98,6 +118,12 @@ MDX `<Muted>`), `{{INTEGRATION_ID}}`, `{{INTEGRATION_PASCAL}}`.
 statLabel, statValue, chip, barPct) and maps that cached payload →
 `{{WIDGET_PASCAL}}Payload`. Do not add HTTP. Do not import a missing
 payload type from the integration.
+
+Resolve `{{INTEGRATION_ID}}` / `{{INTEGRATION_PASCAL}}` from live
+`WIDGET_INTEGRATIONS[widgetId]` in `packages/core/src/types.ts`. Do not
+maintain a closed widget→integration table here. Do not update this skill
+when a pack is added. Completing an existing widget id uses that live row.
+A new widget id needs OpenSpec + types first, then this lookup.
 
 ## Pack-level `bitsUsed`
 
@@ -118,7 +144,8 @@ export const {{PACK_ID_UPPER}}_BITS_USED = [
 
 export const {{PACK_ID}}Plugin = {
   // ...
-  docsPath: "{{DOCS_PATH}}",
+  // complete-existing: keep inventoried docsPath (read live pack)
+  // new pack only: docsPath: "{{DOCS_PATH}}"
   widgets:  [/* existing ids */, "{{WIDGET_ID}}"],
   bitsUsed: {{PACK_ID_UPPER}}_BITS_USED,
 } as const satisfies PluginIdentity & { bitsUsed: typeof {{PACK_ID_UPPER}}_BITS_USED };
@@ -180,10 +207,13 @@ touches public API:
 1. OpenSpec change (do not silently edit `openspec/specs/` by hand).
 2. Align `packages/core/src/types.ts` (`FIRST_PARTY_WIDGET_IDS`, option
    schemas). This skill does not invent Action input names.
-3. Copy templates into the widget dir **only when that dir is empty or
-   new** and the pack dir exists.
-4. Append `{{WIDGET_ID}}` to pack `widgets[]`. Preserve
-   `docsPath: "{{DOCS_PATH}}"`. Union `bitsUsed` into
+3. Copy full widget templates into the widget dir **only when that dir is
+   empty or new** and the pack dir exists. A missing optional
+   `animation.css` / `styles.css` may still be copied into a non-empty dir
+   (no-clobber when the file exists).
+4. Append `{{WIDGET_ID}}` to pack `widgets[]` only when it is a **new** id.
+   Leave inventoried `docsPath` unchanged. Do not rewrite it to
+   `"{{DOCS_PATH}}"` (placeholder is new-pack only). Union `bitsUsed` into
    `{{PACK_ID_UPPER}}_BITS_USED` on `{{PACK_ID}}Plugin`.
 5. Tell the user to run `just generate-action` and `just generate-docs`.
 6. `just generate-action --check` must reject flattened
@@ -196,7 +226,10 @@ create a second pack.
 
 ## Fail closed
 
-- `add` without a named pack id and widget id.
+- Write modes (`add`, `option`, `animation`, `mdx`, `stylesheet`,
+  `families`) without a named pack id and widget id.
+- Animation that invents a new card on a named one-widget pack instead of
+  using the sole live widget id.
 - New card that also needs a new API (stop; `author-integration`).
 - Two canonical `widget.*` files without `source`.
 - Explicit `source` that does not match bytes.
@@ -215,6 +248,8 @@ create a second pack.
 - New first-party pack id, or a second pack for an existing id, from this skill.
 - `bitsUsed` on a widget entry instead of the pack-level union.
 - Overwriting a complete existing widget dir with templates.
-- Replacing live `widgets[]` or rewriting live `docsPath`.
+- Overwriting an existing `animation.css` or `styles.css`.
+- Replacing live `widgets[]` or rewriting inventoried `docsPath` (including
+  rewriting it to `"{{DOCS_PATH}}"`).
 - Copy dest under `/generate/widgets` or `apps/docs/**`.
 - Template or dest path containing `../`.

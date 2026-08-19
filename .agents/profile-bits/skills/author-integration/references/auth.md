@@ -3,31 +3,41 @@
 Load when scaffolding `auth.ts` or deciding token / capability behavior. Reuse `packages/core/src/auth-policy.ts`. Do not fork a second matrix.
 
 There is **no** default `auth.ts.template`. Copy **one** scheme file from the
-SKILL id→filename table onto `packages/integrations/src/<id>/auth.ts` only
-when dest is empty or new. If dest `client.ts` exists, **stop**. Never omit
-`src/` under `packages/integrations/`. Refuse dest `../`.
+SKILL four-file scheme→filename table onto
+`packages/integrations/src/<id>/auth.ts` only when dest is empty or new. Do
+not interpolate `auth.{{scheme}}.ts.template` as a path. If dest `client.ts`
+exists, **stop**. Never omit `src/` under `packages/integrations/`. Refuse
+dest `../`.
 
-Read live `INTEGRATION_AUTH` in `packages/core/src/types.ts`. This table **is**
-that live map (do not freeze a github-only subset):
+Read live `INTEGRATION_AUTH` in `packages/core/src/types.ts`. The id rows
+below are a **copy of that live map** plus this skill’s `{{scheme}}`
+(types.ts does not store scheme). Re-read `types.ts`; do not bump this
+table as law when packs are added. If live `INTEGRATION_AUTH` has an id
+not shown here, follow types.ts and OpenSpec. Never invent ids.
 
-`INTEGRATION_AUTH`: github Bearer; wakatime RFC Basic `base64(api_key:)`; http
-optional, whitespace `fail_widget`; no `decideActionToken` on wakatime/http.
+If `id` is already in live `INTEGRATION_AUTH`, copy that scheme file from
+this snapshot. Else OpenSpec names `{{scheme}}`.
 
-| Id | `INTEGRATION_AUTH` | Header / fail |
-| --- | --- | --- |
-| `static` | `none` | No `Authorization`. |
-| `github` | `optional` | Bearer. Empty/whitespace token is `fail_job`. `decideActionToken` is GitHub-only. |
-| `wakatime` | `required` | RFC Basic `base64(api_key:)`. Never Bearer. Never `decideActionToken`. |
-| `rss` | `none` | No `Authorization`. |
-| `http` | `optional` | Unset sends no `Authorization`. Whitespace is `fail_widget` (not `fail_job`). Never `decideActionToken`. |
+Today’s snapshot (header/fail is not in `types.ts`):
+
+| Id | `INTEGRATION_AUTH` | `{{scheme}}` | Header / fail |
+| --- | --- | --- | --- |
+| `static` | `none` | `none` | No `Authorization`. |
+| `github` | `optional` | `github-bearer` | Bearer. Empty/whitespace token is `fail_job`. `decideActionToken` is GitHub-only. |
+| `wakatime` | `required` | `wakatime-basic` | RFC Basic `base64(api_key:)`. Never Bearer. Never `decideActionToken`. |
+| `rss` | `none` | `none` | No `Authorization`. |
+| `http` | `optional` | `http-optional` | Unset sends no `Authorization`. Whitespace is `fail_widget` (not `fail_job`). Never `decideActionToken`. |
 
 Completing an id already in `FIRST_PARTY_INTEGRATION_IDS` is allowed. A new
-id needs OpenSpec first (OpenSpec must name `{{scheme}}`). Unknown id
-**stops**. Do not infer `github-bearer` from catalog `optional`. Do not
-create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`.
-Templates are for **new** ids; do not emit a parallel `auth.ts` onto live
-`github` / `wakatime` / `rss`. Thin Action names: read `ActionInputsSchema`
-(optional `wakatime_token`, `http_token_env`); never invent `plugin_*_*_*`.
+id needs OpenSpec first (OpenSpec must name `{{scheme}}` in
+`{none, github-bearer, wakatime-basic, http-optional}`). Copy that named
+file from the four-file list. Unknown **scheme** **stops**. A new id with a
+named allowed scheme does **not** stop. Do not infer `github-bearer` from
+catalog `optional`. Do not create a second pack for an id already in
+`FIRST_PARTY_PLUGIN_IDS`. Templates are for **new** ids; do not emit a
+parallel `auth.ts` onto any live dest from the catalog (any dest with
+`client.ts`). Thin Action names: read `ActionInputsSchema` (optional
+`wakatime_token`, `http_token_env`); never invent `plugin_*_*_*`.
 
 Shared export **names**: `{{ID}}_AUTH`, `is{{Id}}TokenMissing`,
 `assert{{Id}}ActionToken`, `{{id}}AuthorizationHeader`,
@@ -40,12 +50,16 @@ never `{ Authorization: "" }`.
 
 ## Per integration
 
+Runtime notes for today’s snapshot (same ids as live `INTEGRATION_AUTH`).
+Copy the named scheme file for a **new** dest only. Do not emit a parallel
+`auth.ts` onto any live dest from the catalog.
+
 | Id | `INTEGRATION_AUTH` | `{{scheme}}` | Runtime |
 | --- | --- | --- | --- |
 | `static` | `none` | `none` | No `Authorization`. No GitHub. Fixtures only (`demo`, tests, docs preview). Copy `auth.none.ts.template` for a **new** none-kind id. |
-| `rss` | `none` | `none` | No `Authorization`. https GET + cache inside the rss client. Copy `auth.none.ts.template` for a **new** none-kind id. Do not emit a parallel `auth.ts` onto live rss. |
+| `rss` | `none` | `none` | No `Authorization`. https GET + cache inside the rss client. Copy `auth.none.ts.template` for a **new** none-kind id. |
 | `github` | `optional` | `github-bearer` | **Not** unauthenticated. Action requires a non-empty token. Playground uses a GitHub App token or fixtures. Copy `auth.github-bearer.ts.template` for a **new** id only. |
-| `wakatime` | `required` | `wakatime-basic` | Missing API key fails the run. Never send the request without the secret. RFC Basic `base64(api_key:)`. Never Bearer. Never `?api_key=`. Never `decideActionToken`. Copy `auth.wakatime-basic.ts.template` for a **new** id only. Do not emit a parallel `auth.ts` onto live wakatime. |
+| `wakatime` | `required` | `wakatime-basic` | Missing API key fails the run. Never send the request without the secret. RFC Basic `base64(api_key:)`. Never Bearer. Never `?api_key=`. Never `decideActionToken`. Copy `auth.wakatime-basic.ts.template` for a **new** id only. |
 | `http` | `optional` | `http-optional` | Unset / `null` token sends no `Authorization`. `""` / whitespace is `fail_widget` before fetch, not `fail_job`. Else Bearer unless the value already has `Bearer` / `token` / `Basic`. Never `decideActionToken`. Copy `auth.http-optional.ts.template` for a **new** id only. Pack auth stays `optional` even when a request sets per-request `auth: "none"`. |
 
 `auth: optional` MUST NOT send a GitHub request without `Authorization`. Unauthenticated 60 requests/hour per IP MUST NEVER be used.

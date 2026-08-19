@@ -7,8 +7,19 @@ treat generated OpenSpec skill trees (`.cursor/skills/openspec-*`,
 
 Canonical plugin SSOT is `.agents/profile-bits/` (`plugin.json`, `skills/`,
 `scripts/`, `references/`, `AGENTS.md`). There is no `agent-plugin/`
-directory, alias, or copy. Install:
-`npx skills add ./.agents/profile-bits --all`.
+directory, alias, or copy.
+
+Install is a documented human command, not an agent step in this repo.
+
+```bash
+npx skills add ./.agents/profile-bits
+```
+
+MUST NOT pass `--all`. MUST NOT pass `-a claude-code` or create `.claude/` /
+`.claude/skills`. This repo already commits relative symlinks (git `120000`):
+`.agents/skills/author{,-integration,-widget,-plugin}` →
+`../profile-bits/skills/<id>`. Agents MUST NOT run `skills add` here (it can
+replace `120000` with copies).
 
 ## OpenSpec specs
 
@@ -30,18 +41,17 @@ not inventory.
 
 Live catalogs and schemas: `packages/core/src/types.ts`
 
-Catalog SSOT is `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`,
-`FIRST_PARTY_WIDGET_IDS`, `FIRST_PARTY_INTEGRATION_IDS`, `WIDGET_INTEGRATIONS`,
-`INTEGRATION_AUTH`, `ActionInputsSchema`. Do not hardcode github-only.
-Completing an id already in those lists is allowed. Adding a new id requires
-OpenSpec first. Do not create a second pack for an id already in
-`FIRST_PARTY_PLUGIN_IDS`. WakaTime-class **architecture** (client, auth, scopes,
-inputs, mocked HTTP) still applies to **new** data sources. Live types already
-include wakatime, rss, and http packs. Thin Action names: read
+Catalog SSOT is live `packages/core/src/types.ts` (`FIRST_PARTY_*`,
+`WIDGET_INTEGRATIONS`, `INTEGRATION_AUTH`, `ActionInputsSchema`). Completing
+an id already in those lists is allowed. Adding a new id requires OpenSpec
+first. Do not create a second pack for an id already in
+`FIRST_PARTY_PLUGIN_IDS`. Do not invent names or silently append catalog. A
+new pack is OpenSpec-first, then types, then skills. Today’s `github` /
+`wakatime` / `rss` / `http` is a snapshot — not a frozen table to bump.
+WakaTime-class **architecture** (client, auth, scopes, inputs, mocked HTTP)
+still applies to **new** data sources. Thin Action names: read
 `ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
 never invent `plugin_*_*_*`.
-
-Read the live `FIRST_PARTY_*` arrays. Do not assume github-only.
 
 Integration dest: `packages/integrations/src/<id>/`. Pack dest:
 `packages/plugins/src/<pack>/`. Pack export: `<id>Plugin` with pack-level

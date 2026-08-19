@@ -26,14 +26,16 @@ not invent Action input names.
 
 Catalog SSOT is `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`,
 `FIRST_PARTY_WIDGET_IDS`, `FIRST_PARTY_INTEGRATION_IDS`, `WIDGET_INTEGRATIONS`,
-`INTEGRATION_AUTH`, `ActionInputsSchema`. Do not hardcode github-only.
-Completing an id already in those lists is allowed. Adding a new id requires
-OpenSpec first. Do not create a second pack for an id already in
+`INTEGRATION_AUTH`, `ActionInputsSchema`. Read those registries every mutating
+run. Do not hardcode github-only. Do **not** maintain a closed
+widget→integration table in this skill (the collection grows). Resolve pack,
+widget, and integration from the live catalog:
+`WIDGET_INTEGRATIONS[widgetId]`. Do **not** update this skill when a pack is
+added. Completing an id already in those lists is allowed. Adding a new id
+requires OpenSpec first. Do not create a second pack for an id already in
 `FIRST_PARTY_PLUGIN_IDS`. WakaTime-class **architecture** (client, auth, scopes,
-inputs, mocked HTTP) still applies to **new** data sources. Live types already
-include wakatime, rss, and http packs. Thin Action names: read
-`ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
-never invent `plugin_*_*_*`.
+inputs, mocked HTTP) still applies to **new** data sources. Thin Action names:
+read live `ActionInputsSchema`; never invent `plugin_*_*_*`.
 
 Load references on demand. Frontmatter is for discovery; references carry
 deep procedure. Do not load all at once.
@@ -44,12 +46,12 @@ deep procedure. Do not load all at once.
 | --- | --- |
 | *(empty)* / `help` | Empty-args gallery |
 | `add [id] [pack]` | New card on a **named** existing pack. Missing pack or id → **stop** |
-| `option [widget] [field]` | Add a yaml option (OpenSpec first) |
-| `animation [gif\|apng]` | CSS `@keyframes` for `renderAnimation` (any existing pack, not github-only) |
-| `mdx` | Canonical `widget.mdx`; omit `source` |
-| `stylesheet` / `tailwind` | Takumi-safe `tw` / `className` only on native `div` / `span` / `img`; typed bit props |
-| `families [family] [member]` | Exclusive `md.families` swap |
-| `discover [path]` | `discoverSource` rules |
+| `option [pack] [widget] [field]` | Add a yaml option (OpenSpec first). Missing pack or widget → **stop** |
+| `animation [gif\|apng] [pack] [widget]` | CSS `@keyframes` for `renderAnimation` (named existing pack, not github-only). Missing pack → **stop**. Named one-widget pack → use the sole live widget id; do not invent a new card |
+| `mdx [pack] [widget]` | Canonical `widget.mdx`; omit `source`. Missing pack or id → **stop** |
+| `stylesheet` / `tailwind` `[pack] [widget]` | Takumi-safe `tw` / `className` only on native `div` / `span` / `img`; typed bit props. Missing pack or id → **stop** |
+| `families [family] [member] [pack] [widget]` | Exclusive `md.families` swap. Missing pack or id → **stop** |
+| `discover [path]` | `discoverSource` rules (read-only; no dest) |
 | New card + new API | Refuse → `author-integration` (do not copy widget templates first) |
 | New data source / WakaTime-class | Refuse → `author-integration` |
 | New pack / plugin id / second pack | Refuse → `author-plugin` |
@@ -60,12 +62,16 @@ Natural language uses the same table. Do not invent a mutating default.
 
 ### Auto-detect
 
-1. "option" / languages field / yaml schema on an existing widget → **option**
-2. `@keyframes` / gif / apng / animation → **animation** (named existing pack; not github-only)
-3. `widget.mdx` / "no source" / drop MDX → **mdx**
-4. Tailwind / `tw` / `className` / stylesheets → **stylesheet**
-5. `md.families` / starry-night / pretty-code / katex / mermaid → **families**
-6. "discover" / ambiguous `widget.md` + `widget.tsx` / MIME sniff → **discover**
+Write modes (`add`, `option`, `animation`, `mdx`, `stylesheet`, `families`)
+need a named pack id **and** widget id. Missing dest → **stop**. Do not
+invent dest. Do not default to github.
+
+1. "option" / languages field / yaml schema on an existing widget → **option** (named pack + widget; missing dest → **stop**)
+2. `@keyframes` / gif / apng / animation → **animation** (named existing pack; not github-only). Missing pack → **stop**. Named one-widget pack → use the sole live widget id; do not invent a new card
+3. `widget.mdx` / "no source" / drop MDX → **mdx** (named pack + widget; missing dest → **stop**)
+4. Tailwind / `tw` / `className` / stylesheets → **stylesheet** (named pack + widget; missing dest → **stop**)
+5. `md.families` / starry-night / pretty-code / katex / mermaid → **families** (named pack + widget; missing dest → **stop**)
+6. "discover" / ambiguous `widget.md` + `widget.tsx` / MIME sniff → **discover** (read-only)
 7. New card that also needs a **new API** / WakaTime-class data source → refuse (`author-integration`). Do not copy widget templates first.
 8. New card / widget / template on a **named** existing pack (pack id + widget id) → **add**. Missing pack or id → **stop**.
 9. New pack / second pack for an existing `FIRST_PARTY_PLUGIN_IDS` id → refuse (`author-plugin`)
@@ -74,22 +80,25 @@ Natural language uses the same table. Do not invent a mutating default.
 
 ### Empty args
 
-When `$ARGUMENTS` is empty (or the user only asks how widget authoring works),
-show this gallery and stop. Do not write files. Do not inventory the next
-product add (that is `author` ideate).
+When `$ARGUMENTS` is empty (or the user only asks how widget authoring works:
+`help`), show this gallery and **stop**. This path sits **above** Before
+generating and **never enters it**.
 
-1. **add** — new card on a **named** existing pack (read `FIRST_PARTY_PLUGIN_IDS`; missing pack or id → stop; do not assume github-only).
+Do not write files. Do not inventory the next product add (that is `author`
+ideate). Do not load [locks](references/locks.md) or
+[generate](references/generate.md). Do **not** read
+`packages/core/src/types.ts` or the OpenSpec contracts.
+
+1. **add** — new card on a **named** existing pack (missing pack or id → stop; do not assume github-only).
 2. **option** — yaml option on an existing widget; OpenSpec delta first.
-3. **animation** — `@keyframes` authoring for gif/apng on any existing pack (not github-only); APNG named `.png`.
+3. **animation** — `@keyframes` for gif/apng on a named existing pack (not github-only); APNG named `.png`.
 4. **mdx** — canonical `widget.mdx`; prefer omit `source`.
 5. **stylesheet** — Takumi-safe `tw` / `className` only on `div` / `span` / `img`; typed bit props; bits composition.
 6. **families** — exclusive `md.families` swap; do not stack.
 7. **discover** — extension → MIME → sniff; mismatch / ambiguous fail.
 
-Locks: live catalog from `types.ts`. Widgets do not HTTP. Default SVG is a
-baked still. Union bits into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on
-`{{PACK_ID}}Plugin`. Load [locks](references/locks.md) and
-[generate](references/generate.md) before copying templates.
+Gallery items are names only. Mutating modes load locks, generate, and the
+catalog after empty args is ruled out.
 
 ## Critical rules
 
@@ -101,10 +110,12 @@ baked still. Union bits into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on
 6. Never invent `plugin_<plugin>_<widget>_<option>` Action inputs. Read `ActionInputsSchema` (optional `wakatime_token`, `http_token_env`).
 7. Prefer omit `source`. Canonical `widget.tsx` \| `widget.md` \| `widget.mdx` \| `widget.html`. Ambiguous dual canonical files fail.
 8. Templates MUST NOT contain `../`. Dest is repo-root `packages/plugins/src/<pack>/widgets/<id>/`. Refuse dest `../` and `/generate/widgets`.
-9. `add` without a pack id **and** a widget id → **stop**. Do not invent dest.
+9. Write modes (`add`, `option`, `animation`, `mdx`, `stylesheet`, `families`) without a pack id **and** a widget id → **stop**. Do not invent dest. Animation on a named one-widget pack uses the sole live widget id; do not invent a new card.
 10. New card + new API → `author-integration` first. Refuse MCP / `mcp.json`.
 
 ## Before generating
+
+Empty args / `help` never enter this section.
 
 1. Read (repo-root prose paths — not skill-relative links):
    - `openspec/specs/plugin-contract/spec.md`
@@ -117,28 +128,41 @@ baked still. Union bits into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on
    a new API**, stop and name `author-integration`
    (dest `packages/integrations/src/<id>/`). Do not copy widget templates first.
 4. If they **asked for a new pack**, stop and name `author-plugin`.
-5. `add` without a pack id **and** a widget id → **stop**. MCP / dest `../`
-   / `/generate/widgets` → refuse.
-6. Otherwise pick an existing **named** pack from `FIRST_PARTY_PLUGIN_IDS`.
-   Do not invent extra first-party packs. Completing a typed widget id is
-   allowed. Animation is not github-only.
+5. Write modes without a pack id **and** a widget id → **stop**. Animation on
+   a named one-widget pack: use the sole live widget id; do not invent a new
+   card. MCP / dest `../` / `/generate/widgets` → refuse.
+6. Otherwise pick the **named** existing pack from live `FIRST_PARTY_PLUGIN_IDS`
+   / `WIDGET_INTEGRATIONS`. Skills follow that catalog — not a frozen four-id
+   table. Do not invent pack or widget names without OpenSpec + types.
+   Completing a typed widget id on an existing pack is allowed. Today’s
+   `github` / `wakatime` / `rss` / `http` is a snapshot. Animation is not
+   github-only.
 7. Public API (new widget id, yaml option, `FIRST_PARTY_WIDGET_IDS`, Action
-   inputs) → OpenSpec delta **first**. Then copy templates **only if** the
-   widget dir is empty or new. Fail closed on stale codegen.
+   inputs) → OpenSpec delta **first**. Then copy full widget templates only
+   if the widget dir is empty or new. A missing optional `animation.css` /
+   `styles.css` may still be copied into a non-empty dir (no-clobber when
+   the file already exists). Fail closed on stale codegen.
 
 ## Generate
 
-Load [generate](references/generate.md). Complete-existing: **extend** live
-files; copy templates **only** when
+Load [generate](references/generate.md) on mutating write modes only.
+Complete-existing: **extend** live files; copy full widget templates
+(`schema.ts`, `fetch.ts`, `widget.*`) **only** when
 `packages/plugins/src/<pack>/widgets/<id>/` is empty or new; **append**
-`widgets[]`; preserve `docsPath: "{{DOCS_PATH}}"`. Never copy into
-`/generate/widgets` or `apps/docs/**`. A new card that needs a new API
-stops (`author-integration`). `add` without pack id and widget id stops.
+`widgets[]` only for a **new** widget id (do not duplicate a live id).
+Leave inventoried `docsPath` unchanged — do not rewrite it to
+`"{{DOCS_PATH}}"`. That placeholder is for **new packs** (`author-plugin`).
+Read the live pack's `docsPath` from disk; do not freeze values here. A
+missing optional `animation.css` / `styles.css` may be copied into a
+**non-empty** dir; do not clobber those files when they already exist. Never copy into `/generate/widgets` or `apps/docs/**`. A new
+card that needs a new API stops (`author-integration`). Write modes without
+pack id and widget id stop.
 
 Copy templates from `assets/templates/` into the repo-root destination
-`packages/plugins/src/<pack>/widgets/<id>/` only for a new or empty widget
-dir. Destination paths are documented in [generate](references/generate.md).
-Template paths must not contain `../`.
+`packages/plugins/src/<pack>/widgets/<id>/` for a new or empty widget dir,
+or copy only a missing optional `animation.css` / `styles.css` into a
+non-empty dir. Destination paths are documented in
+[generate](references/generate.md). Template paths must not contain `../`.
 
 Replace `{{WIDGET_ID}}`, `{{WIDGET_PASCAL}}`, `{{PACK_ID}}`,
 `{{PACK_ID_UPPER}}`, `{{WIDGET_TITLE}}`, `{{WIDGET_DESCRIPTION}}`,
@@ -157,13 +181,15 @@ Replace `{{WIDGET_ID}}`, `{{WIDGET_PASCAL}}`, `{{PACK_ID}}`,
 | Examples | At least one yaml-shaped example. |
 | `bitsUsed` | Union into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on `{{PACK_ID}}Plugin`. Not yaml. Not a widget entry. |
 
-`demo` → integration `static`. `stats` / `languages` → `github`. `coding` →
-`wakatime`. `feed` → `rss`. `json` → `http`. A new card declares the
-integrations it consumes. Fetch maps cached payload → render props. Empty
-languages data → “No language data”, not a crash. Generic fetch does **not**
-read `include_private`. github-class widgets add that option via OpenSpec
-and fail closed on `canPrivate`. Do not paint contributions `0` when
-`canContributions` is false or viewer ≠ user.
+Resolve `{{INTEGRATION_ID}}` from live `WIDGET_INTEGRATIONS[widgetId]` in
+`packages/core/src/types.ts`. Do not copy a closed widget→integration table
+into this skill. A new card declares the integrations it consumes (OpenSpec
++ types first if the id is new). Fetch maps
+cached payload → render props. Empty languages data → “No language data”,
+not a crash. Generic fetch does **not** read `include_private`. github-class
+widgets add that option via OpenSpec and fail closed on `canPrivate`. Do
+not paint contributions `0` when `canContributions` is false or viewer ≠
+user.
 
 After public-API or docs-field work, tell the user:
 
@@ -226,11 +252,11 @@ Full matrix: [discover-source](references/discover-source.md).
 | File | When |
 | --- | --- |
 | `assets/templates/widget.tsx.template` | React (first-party `stats`/`languages` stay React) |
-| `assets/templates/widget.md.template` | Markdown → remark/rehype → `fromHtml` |
+| `assets/templates/widget.md.template` | Markdown → remark/rehype → `fromHtml` (CommonMark; no PascalCase tags) |
 | `assets/templates/widget.mdx.template` | MDX → `@mdx-js/mdx` → `fromJsx`; bits as `components` |
 | `assets/templates/widget.html.template` | HTML → `fromHtml` |
-| `assets/templates/stylesheet.css.template` | `tw` / `className` on `div` / `span` / `img` only; compiled `stylesheets[]` |
-| `assets/templates/keyframes.css.template` | gif/apng `@keyframes` → `renderAnimation` |
+| `assets/templates/stylesheet.css.template` | `tw` / `className` on `div` / `span` / `img` only; compiled `stylesheets[]`; copy when `styles.css` is missing |
+| `assets/templates/keyframes.css.template` | gif/apng `@keyframes` → `renderAnimation`; copy when `animation.css` is missing |
 | `assets/templates/schema.ts.template` | Option schema + formats + examples |
 | `assets/templates/fetch.ts.template` | Cached-payload fetch (no HTTP; `include_private` github-class only) |
 
@@ -302,7 +328,7 @@ present beats `plugin_github`. Read `ActionInputsSchema` — do not invent names
 
 - New data source / WakaTime-class / **new card + new API** → `author-integration`
 - New pack / second pack for an existing plugin id → `author-plugin`
-- `add` without pack id and widget id (do not invent dest)
+- Write modes (`add`, `option`, `animation`, `mdx`, `stylesheet`, `families`) without pack id and widget id (do not invent dest). Animation on a named one-widget pack uses the sole live widget id; do not invent a new card
 - Action runtime, thin `action.yml`, Marketplace flattened inputs
 - Takumi renderer internals (`packages/renderer`) except calling it
 - Docs `/playground` or `/generate`; copy dest `/generate/widgets`
@@ -327,10 +353,10 @@ Do not load all at once.
 
 | File | Load when |
 | --- | --- |
-| [locks](references/locks.md) | Catalog, yaml SSOT, Action, bits, fetch, OpenSpec |
-| [generate](references/generate.md) | Destinations, pack-level `bitsUsed` union, copy map |
+| [locks](references/locks.md) | Mutating modes only (after empty args). Catalog, yaml SSOT, Action, bits, fetch, OpenSpec |
+| [generate](references/generate.md) | Mutating write modes only. Destinations, pack-level `bitsUsed` union, copy map |
 | [discover-source](references/discover-source.md) | `discoverSource` matrix |
-| [md-families](references/md-families.md) | Exclusive `md.families` / presets |
+| [md-families](references/md-families.md) | Exclusive `md.families` / presets (mutating `families` / md/mdx write) |
 
 ## Proof
 

@@ -29,9 +29,11 @@
     {
       "id": "github-fetch-policy",
       "prompt": "Show me the GitHub fetch-policy / crawl locks for the github integration.",
-      "expected_output": "Load github-fetch crawl locks only: REST GET /users/{login} + paginated /repos, filter forks/archived then cap 500, GraphQL nodes(ids:) batches of 100, never REST /languages. Do not copy templates. Do not overwrite live github client.ts. Distinct from add-github.",
+      "expected_output": "Load github-fetch crawl locks only: REST GET /users/{login} + paginated /repos with encodeURIComponent(login) on REST {login} segments; when include_private and canPrivate and probe login equals user, authenticated GET /user/repos (no login segment); filter forks/archived then cap 500; GraphQL nodes(ids:) batches of 100; never REST /languages. Do not copy templates. Do not overwrite live github client.ts. Distinct from add-github.",
       "assertions": [
         "Treats fetch-policy as distinct from add-github",
+        "Requires encodeURIComponent(login) on REST {login} path segments",
+        "Requires authenticated GET /user/repos with no login segment when include_private and canPrivate and probe login equals user",
         "Requires filter forks/archived then cap 500",
         "Requires GraphQL nodes(ids:) batches of 100",
         "Refuses REST GET /repos/{owner}/{repo}/languages",
@@ -85,15 +87,17 @@
     {
       "id": "explicit-empty-gallery",
       "prompt": "/author-integration",
-      "expected_output": "Empty-args gallery listing add/github/fetch-policy/wakatime modes, destination table, auth copy map, overwrite gate, critical rules, and reference index without writing files.",
+      "expected_output": "Empty-args gallery of modes then stop. Mentions overwrite gate. Does not read types.ts, integration-contract, or AGENTS.md. Does not load dest copy-path refs or the auth filename copy table. No writes.",
       "assertions": [
         "Recognizes empty /author-integration and enters the empty-args handler",
         "Surfaces add/scaffold, add-github, fetch-policy, and WakaTime-class modes as distinct rows",
-        "Shows destination paths as packages/integrations/src/<id>/",
-        "Shows the four-row auth id→filename copy map (no default auth.ts.template)",
         "Mentions the overwrite gate (stop if dest client.ts exists)",
+        "Does not read packages/core/src/types.ts",
+        "Does not read openspec/specs/integration-contract/spec.md",
+        "Does not read packages/integrations/AGENTS.md",
+        "Does not load dest copy-path refs or the auth filename copy table",
         "Does not invent a mutating default or copy templates",
-        "Points at the reference index or critical rules"
+        "Points at the reference index names or critical rules"
       ]
     },
     {
@@ -225,13 +229,16 @@
     },
     {
       "id": "auth-scheme-id-filename",
-      "prompt": "Scaffold auth.ts from the default auth.ts.template. Use github Bearer and decideActionToken for WakaTime and http too; infer github-bearer whenever catalog auth is optional.",
-      "expected_output": "Copies the scheme file from the SKILL id→filename table, not a default auth.ts.template. static/rss → auth.none.ts.template; github (new-id only) → auth.github-bearer.ts.template; wakatime (new-id only) → auth.wakatime-basic.ts.template; http (new-id only) → auth.http-optional.ts.template. Unknown id stops; OpenSpec must name {{scheme}}. Templates are for new ids; do not emit a parallel auth.ts onto live github/wakatime/rss. WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=. http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken. Does not copy github decideActionToken into wakatime or http auth.",
+      "prompt": "Scaffold auth.ts from the default auth.ts.template. Use github Bearer and decideActionToken for WakaTime and http too; infer github-bearer whenever catalog auth is optional. For a new OpenSpec id linear whose named scheme is http-optional, copy whatever file you think is right. If OpenSpec named scheme oauth2, invent a new template.",
+      "expected_output": "There is no default auth.ts.template. Copy from the four-file scheme→filename table, not by interpolating auth.{{scheme}}.ts.template. static/rss → auth.none.ts.template; github (new-id only) → auth.github-bearer.ts.template; wakatime (new-id only) → auth.wakatime-basic.ts.template; http (new-id only) → auth.http-optional.ts.template. New id linear with OpenSpec-named scheme http-optional copies auth.http-optional.ts.template (does not stop). Unknown scheme oauth2 stops. Do not invent auth.ts.template. Templates are for new ids; do not emit a parallel auth.ts onto live github/wakatime/rss. WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=. http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken. Does not copy github decideActionToken into wakatime or http auth.",
       "assertions": [
         "WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=",
         "http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken",
         "Does not copy github decideActionToken into wakatime or http auth",
-        "Copies the scheme file from the SKILL id→filename table, not a default auth.ts.template"
+        "Copies the scheme file from the four-file scheme→filename table, not a default auth.ts.template",
+        "A new id whose OpenSpec-named scheme is http-optional copies auth.http-optional.ts.template and does not stop",
+        "Unknown scheme (oauth2) stops",
+        "Does not invent auth.ts.template or interpolate auth.{{scheme}}.ts.template as a path"
       ]
     }
   ]

@@ -31,15 +31,15 @@ gallery items **0–3 only** and **stop**. Do not inventory. Do not read
 `packages/core/src/types.ts` or the OpenSpec contracts. Do not load
 [next.md](references/next.md) or [locks.md](references/locks.md).
 
-Catalog SSOT is `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`,
+Catalog SSOT is live `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`,
 `FIRST_PARTY_WIDGET_IDS`, `FIRST_PARTY_INTEGRATION_IDS`, `WIDGET_INTEGRATIONS`,
-`INTEGRATION_AUTH`, `ActionInputsSchema`. Do not hardcode github-only.
+`INTEGRATION_AUTH`, `ActionInputsSchema`. Read those arrays from disk. Do not
+hardcode github-only. Do not paste a closed pack-id list into this skill.
 Completing an id already in those lists is allowed. Adding a new id requires
 OpenSpec first. Do not create a second pack for an id already in
 `FIRST_PARTY_PLUGIN_IDS`. WakaTime-class **architecture** (client, auth, scopes,
-inputs, mocked HTTP) still applies to **new** data sources. Live types already
-include wakatime, rss, and http packs. Thin Action names: read
-`ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
+inputs, mocked HTTP) still applies to **new** data sources. Thin Action names:
+read `ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
 never invent `plugin_*_*_*`.
 
 ## Dispatch
@@ -83,7 +83,7 @@ prove that.
 ## Critical rules
 
 1. Empty `$ARGUMENTS` / `help` → gallery items 0–3 (ideate is item 0); skip Before routing; stop; do not inventory; do not read `types.ts`; do not load `next.md`; do not write files.
-2. `ideate` / `next` / `brainstorm` / “what should I add” → load `next.md` only; rank one kind + 1–2 runners-up; write no files; copy no templates.
+2. `ideate` / `next` / `brainstorm` / “what should I add” → load `next.md` only; rank one kind + 1–2 runners-up; print the table; name the handoff skill; **stop**. Write no files; copy no templates. Do not continue Handoff steps 3–6.
 3. Honor a **named kind** unless a lock fires (MCP, flatten, unauth GitHub, REST `/languages`, `openspec --json`, second pack for an existing id, invented Action input).
 4. Named bits → `bit-checklist` (no `author-bit` skill). Do not load `next.md` for a named bit.
 5. Catalog SSOT is `types.ts` **after** empty-args/help is ruled out. Completing an existing id is allowed. New id → OpenSpec. No second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`.
@@ -142,6 +142,8 @@ Skip this entire section for empty `$ARGUMENTS` / `help` / how-do-I-author.
 4. Hand off to the matching specialized skill by **name**. Those skills live
    as siblings under the Agent Plugin `skills/` directory. Do not use
    parent-relative file paths. Do not copy this skill into a second tree.
+   Ideate and named bits **stop** after naming the skill (see Handoff); they
+   do not copy templates or run `just generate-action`.
 
 If the request includes a **new data source**, route `author-integration`
 **first**, even if they also want a card.
@@ -156,12 +158,13 @@ If the request includes a **new data source**, route `author-integration`
 | New card, widget file (`widget.tsx` / `.md` / `.mdx` / `.html`), yaml option, bits-in-a-card, Takumi template, CSS `@keyframes`, gif/apng, Tailwind `tw`/`className`, `md.families` | Card | `author-widget` |
 | New plugin id, pack registry, `docsPath`, derived integration union, expanding `FIRST_PARTY_PLUGIN_IDS` | Pack | `author-plugin` |
 | New card **and** they asked for a new pack | Pack then card | `author-plugin`, then `author-widget` |
-| New card on an existing pack id (including `rss` / `wakatime` / `http` / `github`) | Card on existing pack | `author-widget` only |
+| New card on an existing pack id (any id already in `FIRST_PARTY_PLUGIN_IDS`) | Card on existing pack | `author-widget` only |
 | MCP / `mcp.json` | Refuse | Stop |
 | Flattened `plugin_*_*_*` | Refuse | Stop |
 | Unauthenticated GitHub (empty / `""` / whitespace token) | Refuse | Stop |
 | REST `/languages` | Refuse | Stop |
 | `openspec --json` | Refuse | Stop |
+| consumer README / local CLI / `just render` / `pnpm render` | Refuse | Sibling `.agents/profile-bits-readme` skill `render`. Do not implement `runMain` |
 
 ### Routing examples
 
@@ -174,7 +177,7 @@ If the request includes a **new data source**, route `author-integration`
 | Drop in `widget.mdx` with no `source` | `author-widget` | Prefer omit `source`; canonical `widget.mdx` |
 | Tailwind stylesheets widget | `author-widget` | Takumi-safe tw/className only on div/span/img; typed bit props; pack-level bitsUsed union |
 | Swap `md.families.code` to starry-night | `author-widget` | Exclusive family swap; do not stack pretty-code + starry-night |
-| What should I add next? | ideate | Load `next.md`; no files |
+| What should I add next? | ideate | Load `next.md`; print table; name skill; stop. No files/templates |
 | Add a widget on rss | `author-widget` | Honor named kind; do **not** load `next.md`; existing `rss` pack |
 | Add a Theme / Frame bit | `bit-checklist` | No `author-bit` skill; do not inventory |
 | Add an MCP server | Refuse | No `mcp.json`. No inventory |
@@ -182,6 +185,7 @@ If the request includes a **new data source**, route `author-integration`
 | Call GitHub with an empty token | Refuse | Unauth. Empty / `""` / whitespace fails the Action |
 | Fetch REST `/languages` | Refuse | Filter-then-cap + GraphQL `nodes(ids:)` batches of 100 |
 | Run `openspec --json` | Refuse | Subcommand flag only |
+| `just render` / `pnpm render` / local CLI | Refuse | Sibling `.agents/profile-bits-readme` skill `render`. Do not implement `runMain` |
 
 ## Handoff
 
@@ -189,8 +193,16 @@ After classifying (never for empty args / help):
 
 1. Name the specialized skill and the kind (data source / card / pack / bit).
 2. Repeat the relevant locks from [shared locks](references/locks.md) for
-   mutating work. Ideate uses [next.md](references/next.md) instead. Named
-   bits use `bit-checklist` and stop.
+   mutating work. Ideate uses [next.md](references/next.md) instead: print
+   the table, name the handoff skill, **stop**. Named bits use
+   `bit-checklist` and **stop**.
+
+Do **not** continue this section after ideate or named bits. Write no files.
+Copy no templates.
+
+Steps 3–6 apply **only** to mutating integration / widget / pack routes
+(`author-integration`, `author-widget`, `author-plugin`).
+
 3. Follow that skill's instructions and copy from **its** templates. Do not
    hand-edit a second skills tree. Do not write live package source from this
    router.
@@ -211,10 +223,11 @@ After classifying (never for empty args / help):
 ## Gotchas
 
 - Empty args / help skip Before routing. They do **not** read `types.ts`.
-- `FIRST_PARTY_PLUGIN_IDS` is live in `types.ts` (github, wakatime, rss, http).
-  A new pack id is an OpenSpec + `packages/core/src/types.ts` change, not a
-  silent catalog add. Completing an existing id is allowed (including a
-  missing pack-level `bitsUsed` on an existing `<id>Plugin`).
+- `FIRST_PARTY_PLUGIN_IDS` is live in `types.ts` — read the file; do not keep a
+  closed pack-id list here. A new pack id is an OpenSpec +
+  `packages/core/src/types.ts` change, not a silent catalog add. Completing an
+  existing id is allowed (including a missing pack-level `bitsUsed` on an
+  existing `<id>Plugin`).
 - Yaml at `.github/profile-bits.yml` is config SSOT (`additionalProperties:
   false`). Yaml present beats `plugin_github`. Widget options live in yaml,
   never as flattened Action inputs.
@@ -225,10 +238,15 @@ After classifying (never for empty args / help):
   `renderAnimation`, not GitHub SVG runtime. APNG files are named `.png`.
 - Write from templates. Fail closed if codegen would emit flattened option
   inputs or if public API moved without an OpenSpec delta.
-- github **is** in `packages/integrations/src/index.ts`. Completing github
-  **pack-level** `bitsUsed` (when the pack dir already exists) is rank **1b**,
-  not a missing pack and not a barrel hole.
-- Named bits → `bit-checklist`. Empty args do not run ideate.
+- Rank **1b** is pack-id-agnostic ([next.md](references/next.md)): a live pack
+  dir and `<id>Plugin` exist, but pack-level `bitsUsed` is missing. Re-read
+  disk every ideate run. Widget-entry `bitsUsed` does not close it. An
+  integrations-barrel re-export is not a pack hole. Do not freeze any pack id
+  as the hole.
+- Named bits → `bit-checklist` and stop. After ideate: print the table, name
+  the handoff skill, stop the same way. Empty args do not run ideate.
+  Mutating Handoff (copy templates, `just generate-action`) is
+  integration/widget/pack only.
 - Never `openspec --json`.
 
 ## Reference index

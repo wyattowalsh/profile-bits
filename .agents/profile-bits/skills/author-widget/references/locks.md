@@ -22,10 +22,8 @@ Catalog SSOT is `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`,
 Completing an id already in those lists is allowed. Adding a new id requires
 OpenSpec first. Do not create a second pack for an id already in
 `FIRST_PARTY_PLUGIN_IDS`. WakaTime-class **architecture** (client, auth, scopes,
-inputs, mocked HTTP) still applies to **new** data sources. Live types already
-include wakatime, rss, and http packs. Thin Action names: read
-`ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
-never invent `plugin_*_*_*`.
+inputs, mocked HTTP) still applies to **new** data sources. Thin Action names:
+read live `packages/core/src/types.ts`; never invent names.
 
 - Plugin = pack: 1..N widgets, 0..N integrations. A new card stays on an
   existing pack unless the user asked for a new pack.
@@ -33,8 +31,8 @@ never invent `plugin_*_*_*`.
   `packages/integrations/src/<id>/`.
 - New pack → `author-plugin` (not this skill). Completing a typed pack hole
   (id in types, dir missing) is `author-plugin` first.
-- Do not add a second pack for `wakatime` / `rss` / `http` / `github` while
-  those ids remain in `FIRST_PARTY_PLUGIN_IDS`.
+- Do not add a second pack for an id already in live
+  `FIRST_PARTY_PLUGIN_IDS`.
 - A **new card that also needs a new API** → `author-integration` first.
   Do not copy widget templates first.
 - `add` without a pack id **and** a widget id → **stop**. Do not invent dest.
@@ -46,9 +44,12 @@ never invent `plugin_*_*_*`.
 - Dest is repo-root `packages/plugins/src/<pack>/widgets/<id>/`.
 - Refuse dest `../`. Templates MUST NOT contain `../`.
 - Never copy into `/generate/widgets`, `/generate/bits`, or `apps/docs/**`.
-- Complete-existing: **extend** live files. Copy templates **only** when the
-  widget dir is empty or new. **Append** `widgets[]`. Preserve
-  `docsPath: "{{DOCS_PATH}}"`. Do not rewrite live inventoried `docsPath`.
+- Complete-existing: **extend** live files. Copy full templates
+  (`schema.ts`, `fetch.ts`, `widget.*`) **only** when the widget dir is
+  empty or new. Missing optional `animation.css` / `styles.css` may copy
+  into a non-empty dir; do not clobber existing files. **Append**
+  `widgets[]`. `"{{DOCS_PATH}}"` is for **new packs** only; complete-existing
+  leaves inventoried `docsPath` unchanged (read live pack objects).
 - Refuse MCP / `mcp.json`.
 
 ## Config and Action
@@ -62,8 +63,7 @@ never invent `plugin_*_*_*`.
   `plugin_<plugin>_<widget>_<option>` (including `plugin_github_stats_include`,
   `plugin_github_languages_*`, `plugin_github_widgets` CSV,
   `plugin_github_filename_*`).
-- Allowed Action inputs: read `ActionInputsSchema` (includes optional
-  `wakatime_token`, `http_token_env`). Do not invent names.
+- Allowed Action inputs: read live `ActionInputsSchema`. Do not invent names.
 - Empty / `""` / whitespace `github_token` fails the Action. Omitted token
   uses `${{ github.token }}`.
 - Action commits widget files under `output_dir` only. It does not patch

@@ -43,15 +43,15 @@
     },
     {
       "id": "complete-existing-no-clobber",
-      "prompt": "Complete the existing github and wakatime packs. Overwrite plugin.ts from the six-name starter and replace githubWidgetRegistry.",
-      "expected_output": "Inventories live files first. Completing existing FIRST_PARTY_PLUGIN_IDS ids is allowed (no second directory, no silent enum append). Extends rather than overwriting complete sources. Keeps githubWidgetRegistry on the github pack. Does not shrink live WAKATIME_BITS_USED. Copies templates only into empty or new directories. Does not emit a per-pack index.ts. MUST NOT rewrite plugin-contract, widget-contract, or integration-contract.",
+      "prompt": "Complete existing FIRST_PARTY_PLUGIN_IDS packs (fixture: github and wakatime). Overwrite plugin.ts from the six-name starter and replace the existing widget registry export.",
+      "expected_output": "Inventories live files first. Completing existing FIRST_PARTY_PLUGIN_IDS ids is allowed (no second directory, no silent enum append). Extends rather than overwriting complete sources. Keeps any existing widget registry export (githubWidgetRegistry is one instance). Does not shrink any live pack-level bitsUsed (WAKATIME_BITS_USED is one instance). Copies templates only into empty or new directories. Does not emit a per-pack index.ts. MUST NOT rewrite plugin-contract, widget-contract, or integration-contract.",
       "assertions": [
         "Inventories live pack files before writing",
-        "Allows completing existing github and wakatime catalog ids without appending FIRST_PARTY_PLUGIN_IDS",
-        "Does not create a second github or wakatime pack directory",
+        "Allows completing existing FIRST_PARTY_PLUGIN_IDS ids without appending the enum",
+        "Does not create a second pack directory for an id already in FIRST_PARTY_PLUGIN_IDS",
         "Extends rather than overwrites complete existing sources",
-        "Keeps githubWidgetRegistry on the github pack",
-        "Does not shrink live WAKATIME_BITS_USED",
+        "Keeps any existing widget registry export (githubWidgetRegistry is one instance, not the only one)",
+        "Does not shrink any live pack-level bitsUsed",
         "Copies templates only into empty or new directories",
         "Does not copy index.ts.template or write a per-pack index.ts",
         "MUST NOT rewrite plugin-contract, widget-contract, or integration-contract"
@@ -92,6 +92,42 @@
         "Keeps plugin.test.ts asserting toEqual({{PLUGIN_ID_UPPER}}_BITS_USED) without a hardcoded six-name Theme, Frame, Stack, Row, Text, Muted array",
         "Does not set bitsUsed on a widget entry",
         "Does not put bitsUsed or bits keys in .github/profile-bits.yml"
+      ]
+    },
+    {
+      "id": "complete-pack-bits-used",
+      "prompt": "Complete a live pack already in FIRST_PARTY_PLUGIN_IDS whose pack-level bitsUsed is missing while widget-entry bitsUsed already exists. Copy the six-name starter over plugin.ts and add an author-bit skill if needed. (Fixture: githubPlugin / githubWidgetRegistry.)",
+      "expected_output": "Reads live types.ts. Completing an existing FIRST_PARTY_PLUGIN_IDS id is openspec=no. If that live pack has widget-entry bitsUsed and no pack-level bitsUsed, attaches pack-level {{PLUGIN_ID_UPPER}}_BITS_USED as the unique union of that pack's widget-entry arrays. Keeps any existing widget registry export (githubWidgetRegistry is one instance). Does not copy the six-name Theme, Frame, Stack, Row, Text, Muted starter over the existing pack. No fifth skill / no author-bit. MUST NOT rewrite plugin-contract, widget-contract, or integration-contract. Does not emit index.ts.template or a per-pack index.ts.",
+      "assertions": [
+        "Attaches pack-level bitsUsed as the unique union of that pack's widget-entry bitsUsed arrays when pack-level is missing",
+        "Keeps any existing widget registry export (githubWidgetRegistry is one instance, not the only one)",
+        "Does not copy the six-name Theme, Frame, Stack, Row, Text, Muted starter over an existing pack",
+        "Treats completing an existing FIRST_PARTY_PLUGIN_IDS id as openspec=no",
+        "Does not create a fifth skill or author-bit",
+        "MUST NOT rewrite plugin-contract, widget-contract, or integration-contract",
+        "Does not copy index.ts.template or write a per-pack index.ts"
+      ]
+    },
+    {
+      "id": "refuse-mcp",
+      "prompt": "Add an MCP server so agents can generate plugin packs over MCP.",
+      "expected_output": "Refuse. No mcp.json. Does not inventory a substitute add or copy templates.",
+      "assertions": [
+        "Refuses MCP",
+        "Does not create mcp.json",
+        "Does not copy templates",
+        "Does not inventory the next product add as a consolation"
+      ]
+    },
+    {
+      "id": "refuse-dest-parent",
+      "prompt": "Copy the pack templates using dest ../packages/plugins/src/github/ so we stay plugin-relative.",
+      "expected_output": "Refuse dest ../. Destination is repo-root packages/plugins/src/<id>/. Templates MUST NOT contain ../. No per-pack index.ts.",
+      "assertions": [
+        "Refuses dest paths that use ../",
+        "States dest is repo-root packages/plugins/src/<id>/",
+        "States templates MUST NOT contain ../",
+        "Does not copy templates to a ../ dest"
       ]
     }
   ]
