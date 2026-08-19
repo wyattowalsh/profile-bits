@@ -45,6 +45,11 @@ export const README_MODE_CHECKLIST = [
     label: `Embed with a relative path: ${README_EMBED_EXAMPLE}. Do not hotlink a CDN or Camo URL.`,
   },
   {
+    id: "gist-optional",
+    label:
+      "Gist is optional publish. Default embed is relative committed files. Do not hotlink gist raw as a CDN.",
+  },
+  {
     id: "not-camo-oracle",
     label:
       "This playground is a layout and time-axis preview. It is not a Camo, ?sanitize=true, or README HTML-sanitizer oracle. The checklist states baked-output constraints only and does not predict rewriting.",

@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@profile-bits/core": ["../core/src/index.ts"]
+    }
+  }
+}

@@ -56,7 +56,9 @@ export function githubWidgetIdsFromSchemas(): string[] {
 
 /**
  * Stub llms.txt: widget ids from plugin/widget option schemas, yaml SSOT,
- * thin Action, no flattened inputs. Not a dump of widget option fields.
+ * thin Action, no flattened inputs. Distinguishes Action delivery, local
+ * CLI, playground, catalog, gist, and first-party customization. Not a dump
+ * of widget option fields.
  */
 export function renderLlmsTxt(): string {
   const entries = pluginWidgetEntriesFromSchemas();
@@ -71,7 +73,7 @@ export function renderLlmsTxt(): string {
 
 > GitHub profile widget generator. A plugin is a pack of widgets plus declared integrations.
 
-README delivery is the Action (commit widget files). The docs playground is layout preview only, not a public embed API.
+README delivery is the Action (commit widget files). Local CLI (\`just render\` / \`profile-bits render\`) is a local engine runner, not a public embed API. The docs playground is layout preview only, not a public embed API. \`/generate/catalog\` is a first-party visual gallery, not a plugin marketplace. Gist is an optional \`output_action\`, not a CDN. Customize via yaml plus first-party packs \`github\` / \`wakatime\` / \`rss\` / \`http\` (http widgets include \`json\` and \`chips\`), not a user plugin loader.
 
 ## Widgets
 
@@ -83,12 +85,13 @@ ${pluginSections}
 
 Committed \`${ACTION_CONFIG_PATH_DEFAULT}\` is the config SSOT (\`additionalProperties: false\`). Widget options live in yaml and may change without a Marketplace input bump.
 
-Root \`action.yml\` is thin: \`user\`, \`github_token\`, \`committer_token\`, \`config\`, \`output_action\`, \`dry_run\`, optional format/theme overrides, optional \`plugin_github\`. There are no flattened \`plugin_<plugin>_<widget>_<option>\` Action inputs (including \`plugin_github_stats_include\`).
+Root \`action.yml\` is thin: \`user\`, \`github_token\`, \`committer_token\`, \`config\`, \`output_action\`, \`dry_run\`, optional format/theme overrides, optional \`plugin_github\`, optional \`wakatime_token\`, optional \`http_token_env\`. There are no flattened \`plugin_<plugin>_<widget>_<option>\` Action inputs (including \`plugin_github_stats_include\`).
 
 ## Docs
 
 - [Docs](/docs): github pack usage
 - [Playground](/playground): codegen (layout preview + YAML/markdown)
 - [Generate](/generate): visual catalog, export, and share
+- [Catalog](/generate/catalog): first-party visual gallery, not a plugin marketplace
 `;
 }

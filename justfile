@@ -16,9 +16,9 @@ docs:
 docs-dev:
     pnpm docs-dev
 
-# Renderer format smoke. Filled by T100/T101.
+# Local CLI (`profile-bits render`). Extra flags after `--`.
 render *args:
-    pnpm render {{ args }}
+    pnpm render -- {{ args }}
 
 # Core codegen (thin action.yml). Filled by T030c. Pass `--check` in pre-commit/CI.
 generate-action *args:

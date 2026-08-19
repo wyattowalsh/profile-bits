@@ -1,0 +1,8 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "profile-bits-readme",
+  "version": "0.1.0",
+  "description": "Write profile-bits yaml and thin workflows, then run the local CLI.",
+  "license": "MIT",
+  "keywords": ["profile-bits", "github-readme", "github-action"]
+}

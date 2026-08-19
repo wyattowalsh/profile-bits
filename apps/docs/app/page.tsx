@@ -8,18 +8,24 @@ export default function HomePage() {
         <h1>profile-bits</h1>
         <p>
           GitHub profile widget generator. A plugin is a pack of widgets plus
-          declared integrations. The v0 first-party pack is <code>github</code>{" "}
-          only (<code>demo</code>, <code>stats</code>, <code>languages</code>).
+          declared integrations. First-party packs: <code>github</code> (
+          <code>demo</code>, <code>stats</code>, <code>languages</code>),{" "}
+          <code>wakatime</code> (<code>coding</code>), <code>rss</code> (
+          <code>feed</code>), <code>http</code> (<code>json</code>,{" "}
+          <code>chips</code>).
         </p>
         <p>
-          README delivery is the Action (commit widget files). Widget cards are{" "}
-          <strong>480×160</strong>. Docs chrome is not the widget runtime —
-          widgets render through Takumi, not Radix or shadcn DOM primitives.
+          README delivery is the Action (commit widget files).{" "}
+          <code>just render</code> is a local engine runner, not a public embed
+          API. Embed with relative <code>![](./profile-bits/…)</code>. Widget
+          cards are <strong>480×160</strong>. Docs chrome is not the widget
+          runtime — widgets render through Takumi, not Radix or shadcn DOM
+          primitives.
         </p>
         <ul>
           <li>
-            <a href="/playground">Playground</a> — codegen (layout preview +
-            YAML/markdown).
+            <a href="/playground">Playground</a> — layout preview +
+            YAML/markdown codegen, not a public embed API.
           </li>
           <li>
             <a href="/generate">Generate</a> — visual catalog, export, and

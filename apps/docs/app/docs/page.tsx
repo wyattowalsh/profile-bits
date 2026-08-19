@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "GitHub pack",
   description:
-    "v0 first-party plugin github with widgets demo, stats, and languages. Cards are 480×160.",
+    "Github pack usage: widgets demo, stats, and languages. Cards are 480×160. Other first-party packs: wakatime, rss, http.",
 };
 
 export default function GitHubPackDocsPage() {
@@ -17,13 +17,16 @@ export default function GitHubPackDocsPage() {
     <DocsPage toc={[]}>
       <DocsTitle>GitHub pack</DocsTitle>
       <DocsDescription>
-        v0 ships one first-party plugin: github, with widgets demo, stats, and
-        languages.
+        Github pack widgets: demo, stats, and languages. Other first-party
+        packs are wakatime (<code>coding</code>), rss (<code>feed</code>), and
+        http (<code>json</code>, <code>chips</code>).
       </DocsDescription>
       <DocsBody>
         <p>
           Configure widgets in <code>.github/profile-bits.yml</code> and let the
-          Action commit rendered files. Widget cards are{" "}
+          Action commit rendered files. <code>just render</code> is a local
+          engine runner, not a public embed API. Embed with relative{" "}
+          <code>![](./profile-bits/…)</code>. Widget cards are{" "}
           <strong>480×160</strong>. Docs chrome (Fumadocs + shadcn + Tailwind)
           is not the README widget runtime — widgets render through Takumi (
           <code>renderSvg</code> / <code>render</code> /{" "}
@@ -31,7 +34,8 @@ export default function GitHubPackDocsPage() {
         </p>
         <p>
           Use <a href="/playground">/playground</a> to emit thin workflow YAML,{" "}
-          <code>.github/profile-bits.yml</code>, and README markdown.
+          <code>.github/profile-bits.yml</code>, and README markdown. The
+          playground is layout preview only, not a public embed API.
         </p>
       </DocsBody>
     </DocsPage>

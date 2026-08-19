@@ -24,5 +24,14 @@ catalog:
   zod: "4.4.3"
   yaml: "2.9.0"
   typescript: "5.9.3"
+  "@optique/core": "1.2.1"
+  "@optique/run": "1.2.1"
+  "@optique/zod": "1.2.1"
+  "@optique/env": "1.2.1"
+  "@optique/clack": "1.2.1"
+  "@clack/prompts": "1.7.0"
+  tsx: "4.23.12"
+  tsdown: "0.22.14"
 allowBuilds:
   "@fission-ai/openspec": true
+  esbuild: true

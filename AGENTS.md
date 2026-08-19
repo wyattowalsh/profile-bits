@@ -54,9 +54,12 @@ just docs
 just generate-action          # pass --check in CI
 just check
 just openspec <args>
+just render                   # local CLI (`profile-bits render`)
 ```
 
-Also: `just docs-dev`, `just render`, `just generate-docs`.
+`just render` / `pnpm render` run `@profile-bits/cli` around Action `runMain`. CLI default `output_action` is `none`; the Action Marketplace default remains `commit`.
+
+Also: `just docs-dev`, `just generate-docs`.
 
 ## Nested instructions
 

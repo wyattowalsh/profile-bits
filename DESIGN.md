@@ -214,6 +214,7 @@ flowchart LR
 | `bits` | Shared Takumi UI |
 | `renderer` | Only Takumi import site |
 | `action` | Engine + git/gist ports |
+| `cli` | `packages/cli` wraps action `runMain` |
 | `apps/docs` | Fumadocs playground + codegen |
 
 ## Catalog

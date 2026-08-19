@@ -94,6 +94,8 @@ describe("/generate/catalog page (server)", () => {
     for (const widget of CATALOG_WIDGET_IDS) {
       expect(html).toContain(`<code>${widget}</code>`);
     }
+    expect(html).toContain("First-party visual gallery");
+    expect(html).toContain("not a plugin marketplace");
     expect(html).toContain("480×160");
     expect(html).not.toContain("wakatime");
     expect(html).not.toContain("rss");

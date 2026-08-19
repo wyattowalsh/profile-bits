@@ -94,6 +94,29 @@ describe("llms.txt stub from schemas", () => {
     expect(txt).toContain("plugin_github_stats_include");
   });
 
+  it("distinguishes Action delivery, local CLI, playground, catalog, gist, and customization", () => {
+    const txt = renderLlmsTxt();
+
+    expect(txt).toContain(
+      "README delivery is the Action (commit widget files)",
+    );
+    expect(txt).toContain("`just render`");
+    expect(txt).toContain("`profile-bits render`");
+    expect(txt).toContain("local engine runner");
+    expect(txt).toContain("not a public embed API");
+    expect(txt).toContain("layout preview only");
+    expect(txt).toContain("`/generate/catalog`");
+    expect(txt).toContain("first-party visual gallery");
+    expect(txt).toContain("not a plugin marketplace");
+    expect(txt).toContain("optional `output_action`");
+    expect(txt).toContain("not a CDN");
+    expect(txt).toContain(
+      "first-party packs `github` / `wakatime` / `rss` / `http`",
+    );
+    expect(txt).toContain("http widgets include `json` and `chips`");
+    expect(txt).toContain("not a user plugin loader");
+  });
+
   it("is a stub, not a full widget option schema dump", () => {
     const txt = renderLlmsTxt();
     const optionKeys = [

@@ -135,11 +135,12 @@ export default function GenerateCatalogPage() {
         Catalog
       </h2>
       <p data-slot="generate-catalog-lede">
-        v0 visual catalog for the <code>{CATALOG_PLUGIN_ID}</code> pack (
+        First-party visual gallery for the <code>{CATALOG_PLUGIN_ID}</code> pack
+        (
         {CATALOG_WIDGET_IDS.map((id) => (
           <code key={id}>{id}</code>
         ))}
-        ). Card size is 480×160.
+        ), not a plugin marketplace. Card size is 480×160.
       </p>
       <ul data-slot="generate-catalog-indexes">
         {CATALOG_INDEX_HREFS.map((href) => (

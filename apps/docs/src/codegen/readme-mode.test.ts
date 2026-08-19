@@ -276,6 +276,9 @@ describe("ReadmeMode", () => {
     expect(labels).toMatch(/APNG is served and named as PNG/i);
     expect(labels).toMatch(/Action commits widget files/i);
     expect(labels).toMatch(/does not patch README\.md/i);
+    expect(labels).toMatch(/gist is optional publish/i);
+    expect(labels).toMatch(/relative committed files/i);
+    expect(labels).toMatch(/do not hotlink gist raw as a CDN/i);
     expect(labels).not.toMatch(/\.zip/i);
     for (const item of README_MODE_CHECKLIST) {
       expect(html).toContain(`data-checklist-id="${item.id}"`);
