@@ -1,5 +1,5 @@
 import type { FeedOptions } from "@profile-bits/core";
-import { type RssClient, RssClientError } from "@profile-bits/integrations";
+import type { RssClient } from "@profile-bits/integrations";
 import { renderFeedFromClient } from "@profile-bits/plugins";
 import { resolveWidgetTheme } from "@profile-bits/renderer";
 import type {
@@ -7,6 +7,8 @@ import type {
   WidgetRenderRequest,
   WidgetRenderResult,
 } from "./engine.ts";
+import { mapRenderError } from "./map-render-error.ts";
+import { logWorkflowWarning } from "./workflow-log.ts";
 
 export class UnhandledFeedWidgetError extends Error {
   override readonly name = "UnhandledFeedWidgetError";
@@ -48,10 +50,12 @@ async function renderFeedWidget(
       ],
     };
   } catch (error: unknown) {
-    if (error instanceof RssClientError) {
-      return { id: request.id, outcome: "fail_widget" };
-    }
-    throw error;
+    const mapped = mapRenderError(error);
+    logWorkflowWarning({
+      message: `rss feed fail_widget`,
+      group: "rss feed",
+    });
+    return { id: request.id, ...mapped };
   }
 }
 

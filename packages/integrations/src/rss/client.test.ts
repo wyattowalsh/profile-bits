@@ -1,3 +1,4 @@
+import type { RunLogEvent } from "@profile-bits/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRssClient, RssClientError } from "./client.js";
 import { loadFixture } from "./loadFixture.js";
@@ -45,6 +46,39 @@ describe("createRssClient", () => {
     expect(Object.isFrozen(items)).toBe(true);
     expect(Object.isFrozen(items[0])).toBe(true);
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("records one call event on a successful fixture GET", async () => {
+    const events: RunLogEvent[] = [];
+    const fetch = vi.fn<RssFetch>(async () =>
+      xmlResponse(loadFixture("atom.xml")),
+    );
+    const client = createRssClient({
+      fetch,
+      lookup: publicLookup(),
+      logger: (event) => {
+        events.push(event);
+      },
+    });
+
+    await client.fetchFeed(FEED_URL);
+    await client.fetchFeed(FEED_URL);
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      v: 1,
+      src: "profile-bits",
+      kind: "call",
+      pkg: "integrations",
+      integration: "rss",
+      op: "rest.get",
+      outcome: "ok",
+      status: 200,
+      host: "example.com",
+      path: "/feed.xml",
+    });
+    expect(events[0]?.duration_ms).toEqual(expect.any(Number));
+    expect(JSON.stringify(events)).not.toMatch(/Authorization|Bearer|token/i);
   });
 
   it("parses the RSS 2.0 fixture into a full frozen list", async () => {

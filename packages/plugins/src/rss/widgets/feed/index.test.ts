@@ -1,4 +1,5 @@
 import { loadFixture, parseRssXml } from "@profile-bits/integrations";
+import { resolveTheme, THEME_REGISTRY } from "@profile-bits/themes";
 import { describe, expect, it, vi } from "vitest";
 import {
   feedLines,
@@ -57,6 +58,22 @@ describe("feed widget", () => {
     const limit8 = await renderFeedSvg({ items: rssItems, limit: 8 });
     assertBakedStillSvg(limit1);
     assertBakedStillSvg(limit8);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it("bakes mocha card hex instead of Primer dark", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const items = parseRssXml(loadFixture("atom.xml"));
+    const svg = await renderFeedSvg({
+      items,
+      limit: 1,
+      theme: resolveTheme("catppuccin-mocha", THEME_REGISTRY),
+    });
+    assertBakedStillSvg(svg);
+    expect(svg).toContain("#181825");
+    expect(svg).not.toContain("#0d1117");
+    expect(svg).not.toMatch(/<style\b|@keyframes|<animate\b|foreignObject/i);
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

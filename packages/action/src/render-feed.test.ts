@@ -10,7 +10,7 @@ import {
   type RssFetch,
   type RssLookup,
 } from "@profile-bits/integrations";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runEngine, type WidgetRenderRequest } from "./engine.ts";
 import {
   createFeedRenderWidget,
@@ -19,6 +19,8 @@ import {
 
 const TOKEN = "ghs_test_token";
 const PUBLIC_V4 = "93.184.216.34";
+const FEED_URL = "https://example.com/feed.xml";
+const FEED_404_LINE = "rss feed fail_widget";
 
 const RSS_FEED_YAML = `version: 1
 format: svg
@@ -91,8 +93,33 @@ function assertNoAuthorization(
   }
 }
 
+function capturedWrites(spy: {
+  mock: { calls: readonly unknown[][] };
+}): string {
+  return spy.mock.calls.map((args) => String(args[0] ?? "")).join("");
+}
+
+function expectNoSecrets(haystack: string): void {
+  expect(haystack).not.toContain(TOKEN);
+  expect(haystack).not.toContain("Bearer");
+  expect(haystack).not.toContain("Authorization");
+  expect(haystack).not.toContain(FEED_URL);
+  expect(haystack).not.toContain("https://");
+  expect(haystack).not.toContain("/feed.xml");
+  expect(haystack).not.toContain("?");
+  expect(haystack).not.toContain("#");
+  expect(haystack).not.toContain("@");
+}
+
 describe("createFeedRenderWidget", () => {
+  beforeEach(() => {
+    vi.stubEnv("GITHUB_ACTIONS", "");
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -132,6 +159,60 @@ describe("createFeedRenderWidget", () => {
     expect(result.outcome).not.toBe("fail_run");
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetchSpy).not.toHaveBeenCalled();
+    expect(capturedWrites(vi.mocked(process.stdout.write))).not.toContain(
+      "::warning::",
+    );
+    expect(capturedWrites(vi.mocked(process.stderr.write))).toContain(
+      `${FEED_404_LINE}\n`,
+    );
+  });
+
+  it("emits ::warning:: and ::group::rss feed for 404 when GITHUB_ACTIONS is true", async () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    const fetch = vi.fn<RssFetch>(async () => xmlResponse("", { status: 404 }));
+    const render = createFeedRenderWidget({
+      client: createRssClient({ fetch, lookup: publicLookup() }),
+    });
+
+    const result = await render(feedRequest());
+    const stdout = capturedWrites(vi.mocked(process.stdout.write));
+    const stderr = capturedWrites(vi.mocked(process.stderr.write));
+    const haystack = `${stdout}${stderr}`;
+
+    expect(result.outcome).toBe("fail_widget");
+    expect(result.outcome).not.toBe("fail_run");
+    expect(stdout).toContain(`::warning::${FEED_404_LINE}\n`);
+    expect(stdout).toContain("::group::rss feed\n");
+    expect(stdout).toContain(`${FEED_404_LINE}\n`);
+    expect(stdout).toContain("::endgroup::\n");
+    expect(stdout.match(/::warning::/g)).toHaveLength(1);
+    expect(stdout.match(/::group::/g)).toHaveLength(1);
+    expect(stdout).not.toContain("::error::");
+    expect(stderr).toContain(`${FEED_404_LINE}\n`);
+    expectNoSecrets(haystack);
+    expect(haystack).not.toContain("code=");
+    expect(haystack).not.toContain("host=");
+    expect(haystack).not.toContain("attempt=");
+  });
+
+  it("does not warn when feed render succeeds", async () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    const fetch = vi.fn<RssFetch>(async () =>
+      xmlResponse(loadFixture("atom.xml")),
+    );
+    const render = createFeedRenderWidget({
+      client: createRssClient({ fetch, lookup: publicLookup() }),
+    });
+
+    const result = await render(feedRequest());
+    const haystack = `${capturedWrites(vi.mocked(process.stdout.write))}${capturedWrites(vi.mocked(process.stderr.write))}`;
+
+    expect(result.outcome).toBe("render");
+    expect(result.files).toHaveLength(1);
+    assertCardSvg(String(result.files?.[0]?.contents));
+    expect(haystack).not.toContain("::warning::");
+    expect(haystack).not.toContain("fail_widget");
+    expect(haystack).not.toContain("::group::rss feed");
   });
 
   it("throws UnhandledFeedWidgetError for non-feed ids", async () => {
@@ -152,7 +233,14 @@ describe("createFeedRenderWidget", () => {
 });
 
 describe("runEngine with createFeedRenderWidget", () => {
+  beforeEach(() => {
+    vi.stubEnv("GITHUB_ACTIONS", "");
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 

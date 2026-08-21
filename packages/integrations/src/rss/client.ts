@@ -1,4 +1,9 @@
-import type { SkipFailOutcome } from "@profile-bits/core";
+import {
+  publicUrlParts,
+  type RunLogEvent,
+  type RunLogSink,
+  type SkipFailOutcome,
+} from "@profile-bits/core";
 import { RssRequestCache } from "./cache.js";
 import { isGithubOwnedHost } from "./hosts.js";
 import {
@@ -37,6 +42,7 @@ export type CreateRssClientInput = {
   fetch?: RssFetch;
   lookup?: RssLookup;
   sleep?: (ms: number) => Promise<void>;
+  logger?: RunLogSink;
 };
 
 export type RssClient = {
@@ -52,6 +58,7 @@ export function createRssClient(input: CreateRssClientInput = {}): RssClient {
   const fetchImpl = input.fetch;
   const lookup = input.lookup;
   const sleep = input.sleep ?? defaultSleep;
+  const logger = input.logger;
   const cache = new RssRequestCache();
 
   return {
@@ -61,7 +68,7 @@ export function createRssClient(input: CreateRssClientInput = {}): RssClient {
         throw new RssClientError("fail_widget", "github-owned host");
       }
       return cache.get({ method: "GET", url: url.href, params: {} }, () =>
-        loadFeed(url.href, { fetch: fetchImpl, lookup, sleep }),
+        loadFeed(url.href, { fetch: fetchImpl, lookup, sleep, logger }),
       );
     },
   };
@@ -88,33 +95,53 @@ async function loadFeed(
     fetch?: RssFetch;
     lookup?: RssLookup;
     sleep: (ms: number) => Promise<void>;
+    logger?: RunLogSink;
   },
 ): Promise<readonly RssFeedItem[]> {
   let lastStatus: number | undefined;
   for (let attempt = 1; attempt <= RSS_MAX_ATTEMPTS; attempt += 1) {
+    const started = Date.now();
     let result: Awaited<ReturnType<typeof ssrfGet>>;
     try {
       result = await ssrfGet(url, { fetch: deps.fetch, lookup: deps.lookup });
     } catch (error: unknown) {
+      emitRssCall(deps.logger, url, started, { outcome: "fail_widget" });
       throw wrapFailWidget(error);
     }
 
+    lastStatus = result.status;
     if (result.status >= 200 && result.status < 300) {
       try {
-        return parseRssXml(result.body);
+        const items = parseRssXml(result.body);
+        emitRssCall(deps.logger, url, started, {
+          outcome: "ok",
+          status: result.status,
+        });
+        return items;
       } catch (error: unknown) {
+        emitRssCall(deps.logger, url, started, {
+          outcome: "fail_widget",
+          status: result.status,
+        });
         throw wrapFailWidget(error);
       }
     }
 
-    lastStatus = result.status;
     if (classifyRssHttp(result.status, attempt) === "retry") {
+      emitRssCall(deps.logger, url, started, {
+        outcome: "fail_widget",
+        status: result.status,
+      });
       await deps.sleep(
         rssRetryDelayMs(attempt - 1, result.headers.get("retry-after")),
       );
       continue;
     }
 
+    emitRssCall(deps.logger, url, started, {
+      outcome: "fail_widget",
+      status: result.status,
+    });
     throw new RssClientError(
       "fail_widget",
       `RSS feed request failed (${result.status})`,
@@ -127,6 +154,30 @@ async function loadFeed(
     `RSS feed request failed (${lastStatus ?? "unknown"})`,
     lastStatus,
   );
+}
+
+function emitRssCall(
+  logger: RunLogSink | undefined,
+  url: string,
+  started: number,
+  fields: Pick<RunLogEvent, "outcome" | "status">,
+): void {
+  if (logger === undefined) {
+    return;
+  }
+  const { host, path } = publicUrlParts(url);
+  logger({
+    v: 1,
+    src: "profile-bits",
+    kind: "call",
+    pkg: "integrations",
+    integration: "rss",
+    op: "rest.get",
+    host,
+    path,
+    duration_ms: Date.now() - started,
+    ...fields,
+  });
 }
 
 function wrapFailWidget(error: unknown): RssClientError {
