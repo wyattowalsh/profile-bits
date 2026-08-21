@@ -6,7 +6,8 @@ description: >-
   author-integration; card → author-widget; pack → author-plugin. Ideate ranks
   the next bit, palette, integration, widget, or pack and stops. Use for
   classify, ideate, next, brainstorm, or ambiguous theme/badge requests. This
-  router never mutates.
+  router never mutates. NOT for Action runtime, CLI engine, MCP, Marketplace
+  flatten, or implementing `just render` / `pnpm render` / `runMain`.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.
 metadata:
@@ -50,6 +51,7 @@ inventory, rank, mutate, or copy templates.
 | New card or widget on an existing pack | `author-widget` |
 | New or complete plugin pack | `author-plugin` |
 | Shields.io README `<img>` rows | sibling `.agents/profile-bits-readme` or `add-badges` |
+| consumer README / local CLI / `just render` / `pnpm render` | sibling plugin `.agents/profile-bits-readme` skill `render` (refuse to implement runtime / `runMain` here) |
 | MCP, flatten, unauth GitHub, REST `/languages`, `openspec --json` | Refuse |
 
 ### Badge routing
@@ -93,6 +95,25 @@ for a new pack.
 | Named family/flavor/swatches | `packages/themes/src/families/<family>.ts` | `author-palette` |
 | Ambiguous bare theme | none | gallery and stop |
 
+## Classification
+
+| Signal | Kind | Route |
+| --- | --- | --- |
+| Named frozen bit, `Theme bit`, in-card `Chip` | Bit | `author-bit` |
+| yaml `theme`, named palette/flavor, tokens | Palette | `author-palette` |
+| New API, client, auth, scopes | Data source | `author-integration` |
+| New card on an existing pack | Card | `author-widget` |
+| New pack / plugin id | Pack | `author-plugin` |
+| consumer README / local CLI / `just render` / `pnpm render` | Refuse | Sibling `.agents/profile-bits-readme` skill `render`. Do not implement `runMain` |
+
+### Routing examples
+
+| User intent | Route | Lock |
+| --- | --- | --- |
+| Add a Theme / Frame bit | `author-bit` | Do not inventory; no seventh skill |
+| Add a yaml theme / named flavor | `author-palette` | Not the Theme bit |
+| `just render` / `pnpm render` / local CLI | Refuse | Sibling `.agents/profile-bits-readme` skill `render`. Do not implement `runMain` |
+
 ## Catalog and public API
 
 After empty args is ruled out, read live `packages/core/src/types.ts`:
@@ -128,7 +149,9 @@ Name the lock and stop:
 - `openspec --json`; JSON is a subcommand flag
 - a second pack for a live first-party id
 - parent-traversal destinations or templates
-- local CLI/runtime work; use sibling `.agents/profile-bits-readme`
+- Do not implement the local CLI engine (`just render` / `pnpm render` /
+  `runMain`); point to sibling plugin `.agents/profile-bits-readme` skill
+  `render`
 
 ## Handoff
 

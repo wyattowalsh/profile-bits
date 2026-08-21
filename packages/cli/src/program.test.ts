@@ -1,8 +1,9 @@
-import { THIN_ACTION_INPUT_NAMES } from "./core-symbols.ts";
 import { describe, expect, it } from "vitest";
+import { THIN_ACTION_INPUT_NAMES } from "./core-symbols.ts";
 import { isCliExitError, throwCliExit } from "./errors.ts";
 import { CLI_OUTPUT_ACTION_DEFAULT, mapInputs } from "./map-inputs.ts";
 import {
+  detectColors,
   kebabFlag,
   parseCli,
   type RenderParserValue,
@@ -128,5 +129,35 @@ describe("program", () => {
   it("exits 2 for an unknown subcommand", async () => {
     const result = await parse(["build"]);
     expect(result.code).toBe(2);
+  });
+
+  it("exits 2 for an invalid --output-action", async () => {
+    const result = await parse(["render", "--output-action", "nope"]);
+    expect(result.code).toBe(2);
+  });
+
+  it("exits 2 for an invalid --format", async () => {
+    const result = await parse(["render", "--format", "nope"]);
+    expect(result.code).toBe(2);
+  });
+
+  it("parses --no-input", async () => {
+    const result = await parse(["render", "--no-input"]);
+    expect(result.code).toBe(0);
+    expect(result.value?.noInput).toBe(true);
+  });
+
+  it("detectColors is false for --no-color, NO_COLOR, and non-TTY stdout", () => {
+    const stdout = process.stdout as { isTTY?: boolean };
+    const original = stdout.isTTY;
+    try {
+      stdout.isTTY = true;
+      expect(detectColors(["--no-color"], {})).toBe(false);
+      expect(detectColors([], { NO_COLOR: "1" })).toBe(false);
+      stdout.isTTY = false;
+      expect(detectColors([], {})).toBe(false);
+    } finally {
+      stdout.isTTY = original;
+    }
   });
 });

@@ -5,7 +5,10 @@ import {
   formatHumanResult,
   formatJsonResult,
   redactOutput,
+  shouldShowSpinner,
+  shouldStartPromptPath,
   startRenderSpinner,
+  writeIgnoringEpipe,
 } from "./io.ts";
 
 vi.mock("@clack/prompts", () => ({
@@ -74,5 +77,67 @@ describe("io", () => {
     expect(createSpinner).toHaveBeenCalledWith(
       expect.objectContaining({ output: process.stderr }),
     );
+  });
+
+  it("swallows EPIPE from writeIgnoringEpipe", () => {
+    const error = Object.assign(new Error("broken pipe"), { code: "EPIPE" });
+    expect(() =>
+      writeIgnoringEpipe(() => {
+        throw error;
+      }, "hello"),
+    ).not.toThrow();
+  });
+
+  it("hides the spinner when json, quiet, or stderr is not a TTY", () => {
+    const presentation = {
+      json: false,
+      quiet: false,
+      verbose: false,
+      noInput: true,
+      noColor: true,
+    };
+    expect(shouldShowSpinner({ ...presentation, json: true }, true)).toBe(
+      false,
+    );
+    expect(shouldShowSpinner({ ...presentation, quiet: true }, true)).toBe(
+      false,
+    );
+    expect(shouldShowSpinner(presentation, false)).toBe(false);
+  });
+
+  it("shows the spinner when stderr is a TTY and not json or quiet", () => {
+    expect(
+      shouldShowSpinner(
+        {
+          json: false,
+          quiet: false,
+          verbose: false,
+          noInput: true,
+          noColor: true,
+        },
+        true,
+      ),
+    ).toBe(true);
+  });
+
+  it("does not start a prompt path when noInput is set", () => {
+    expect(
+      shouldStartPromptPath({
+        json: false,
+        quiet: false,
+        verbose: false,
+        noInput: true,
+        noColor: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldStartPromptPath({
+        json: false,
+        quiet: false,
+        verbose: false,
+        noInput: false,
+        noColor: true,
+      }),
+    ).toBe(true);
   });
 });

@@ -10,7 +10,7 @@ Constraints: Node 24, pnpm catalog SSOT, OpenSpec 1.9.0, Takumi 2.9.2 via `@prof
 
 - Typed CLI `profile-bits render` wrapping `runMain` with CLI-only default `output_action: none`.
 - Catalog-pin Optique + Clack + tsx + tsdown for the CLI package only. Action stays ncc.
-- Consumer skill at `.agents/profile-bits-readme` that shells out. Author plugin stays four skills.
+- Consumer skill at `.agents/profile-bits-readme` that shells out. Authoring plugin stays the live six authoring skills; the consumer is a sibling. The authoring plugin MUST NOT implement engine logic.
 - Docs honesty for CLI vs embed vs catalog vs gist vs customization valves.
 
 **Non-Goals:**
@@ -59,11 +59,11 @@ Constraints: Node 24, pnpm catalog SSOT, OpenSpec 1.9.0, Takumi 2.9.2 via `@prof
 - **Why:** Same publish policy as Action `dist/` on orphan `release/v1`.
 - **Alternative:** Publish `@profile-bits/cli` to npm now — rejected.
 
-### 7. Consumer plugin is a sibling, not a fifth author skill
+### 7. Consumer plugin is a sibling, not a runner skill on the authoring plugin
 
 - **Choice:** `.agents/profile-bits-readme` / skill `render`. Relative symlink `.agents/skills/render`. Author `NOT-for` points here. No `mcp.json`.
-- **Why:** `author-plugin` freezes four skills. Engine logic MUST NOT live in skill markdown.
-- **Alternative:** Fifth skill on `.agents/profile-bits` — rejected.
+- **Why:** Do not add a runner skill to the authoring plugin (live inventory is six: `author`, `author-bit`, `author-palette`, `author-integration`, `author-widget`, `author-plugin`). Engine logic MUST NOT live in skill markdown. Do not rewrite the `author-plugin` main spec in this change.
+- **Alternative:** Add `render` on `.agents/profile-bits` — rejected.
 
 ### 8. IO contract
 

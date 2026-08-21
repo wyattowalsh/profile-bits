@@ -16,7 +16,7 @@
 ## 4. Consumer plugin
 
 - [x] 4.1 Exclusive `.agents/profile-bits-readme/plugin.json` Agent Plugins 1.0.0 `name: profile-bits-readme`, no MCP fields, no `skills` array. Copy/adapt validate.sh from author plugin (schema vendor, reject `mcp.json`, skills-ref, no template `../`). Skill `skills/render/SKILL.md`: write yaml + thin workflow, run `just render` / `pnpm render`, relative README embeds, gist only if asked, `--json --no-input` for agents. Refuse authoring `packages/**`, MCP, marketplace, plugin loader, embed API. Relative symlink `.agents/skills/render` → `../profile-bits-readme/skills/render`. Do not write `.cursor/skills/`.
-- [x] 4.2 Exclusive `.agents/profile-bits/skills/author/SKILL.md` (+ plugin `AGENTS.md` if needed): dispatch consumer README / local CLI / `just render` to the sibling plugin. Keep four skills. Do not implement `runMain` in markdown.
+- [x] 4.2 Exclusive `.agents/profile-bits/skills/author/SKILL.md` (+ plugin `AGENTS.md` if needed): dispatch consumer README / local CLI / `just render` to the sibling plugin. Keep the live six authoring skills. Do not implement `runMain` in markdown.
 
 ## 5. Docs honesty
 

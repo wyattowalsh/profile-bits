@@ -8,7 +8,7 @@ README delivery is the Action committing widget files, but there is no local run
 - Parser stack is Optique (`@optique/core`, `@optique/run`, `@optique/zod`, `@optique/env`, `@optique/clack`) plus Clack stderr UX, catalog-pinned. Yaml SSOT stays `.github/profile-bits.yml` via core `parseConfig`. No `@optique/config`. No flattened `plugin_*_*_*` flags. No new Marketplace inputs.
 - CLI-only presentation flags: `--json`, `--quiet`, `--verbose`, `--no-input`, `--no-color`. Tokens never printed. Empty github token still fails.
 - New private workspace package `packages/cli` (tsx in dev, tsdown ESM bundle for a `bin` field). `packages/action` exports `runMain`. `just render` / `pnpm render` invoke the CLI. Package stays `private: true`; this change does not npm-publish or tag `v1`.
-- Consumer Agent Plugin 1.0.0 at `.agents/profile-bits-readme` (one skill `render`) that shells out to `just render`. Author plugin stays four skills and MUST NOT implement engine logic.
+- Consumer Agent Plugin 1.0.0 at `.agents/profile-bits-readme` (one skill `render`) that shells out to `just render`. The authoring plugin stays the live six authoring skills (`author`, `author-bit`, `author-palette`, `author-integration`, `author-widget`, `author-plugin`); the consumer is a sibling. The authoring plugin MUST NOT implement engine logic.
 - Docs honesty: CLI is a local engine; `/generate/catalog` is a first-party gallery not a store; gist is an advanced `output_action` not a CDN; customization is yaml plus first-party `http` / `rss` / `chips`, not a user plugin loader.
 
 ## Capabilities

@@ -111,4 +111,57 @@ describe("runCli", () => {
       "usage",
     );
   });
+
+  it("writes a human file list to stdout", async () => {
+    runMain.mockResolvedValue(RESULT);
+    const result = await invoke(["render"], { GITHUB_TOKEN: TOKEN });
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe("profile-bits/stats.svg");
+  });
+
+  it("writes skipped and did_commit to stderr when verbose", async () => {
+    runMain.mockResolvedValue(RESULT);
+    const result = await invoke(["render", "--verbose"], {
+      GITHUB_TOKEN: TOKEN,
+    });
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe("profile-bits/stats.svg");
+    expect(result.stderr).toContain("skipped: github/stats:contributions");
+    expect(result.stderr).toContain("did_commit: false");
+  });
+
+  it("exits 1 for a missing github token without prompting", async () => {
+    runMain.mockRejectedValue(
+      new Error(
+        'github_token is missing: empty, "", or whitespace fails the job (unauthenticated GitHub is not allowed)',
+      ),
+    );
+    const result = await invoke(["render", "--no-input"]);
+    expect(result.code).toBe(1);
+    expect(runMain).toHaveBeenCalledTimes(1);
+    expect(result.stdout).not.toContain("?");
+    expect(result.stderr).toMatch(/github_token is missing/i);
+  });
+
+  it("redacts unexpected errors in the outer catch", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const code = await runCli({
+      args: ["render", "--not-a-real-flag"],
+      env: { GITHUB_TOKEN: TOKEN },
+      cwd: "/repo",
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text),
+      colors: false,
+      stdinIsTTY: false,
+      stderrIsTTY: false,
+      installSignals: false,
+      onExit: (): never => {
+        throw new Error(`unexpected ${TOKEN}`);
+      },
+    });
+    expect(code).toBe(1);
+    expect(stderr.join("\n")).not.toContain(TOKEN);
+    expect(stderr.join("\n")).toContain("[redacted]");
+  });
 });

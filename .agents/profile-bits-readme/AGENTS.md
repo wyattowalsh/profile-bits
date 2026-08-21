@@ -26,9 +26,10 @@ second tree. Leave generated `.agents/skills/openspec-*` and
 `.openspec-target` untouched. Do not write `.cursor/skills/` (OpenSpec
 regenerates those).
 
-Pack authoring lives in the sibling plugin `.agents/profile-bits` (four
-skills: `author`, `author-integration`, `author-widget`, `author-plugin`).
-This consumer plugin ships **one** skill and MUST NOT implement `runMain`.
+Pack authoring lives in the sibling plugin `.agents/profile-bits` (six
+skills: `author`, `author-bit`, `author-palette`, `author-integration`,
+`author-widget`, `author-plugin`). This consumer plugin still ships **one**
+skill `render` and MUST NOT implement `runMain`.
 
 ## Skills
 

@@ -86,7 +86,7 @@ components:
 
 # profile-bits
 
-GitHub profile README widgets that read as dense GitHub-native stats cards: Geist, Primer-adjacent neutrals, **480×160**, flat 1px borders, no shadows. Dark is default. Motion is Takumi authoring input, not GitHub SVG runtime. Delivery is the Action committing widget files. The docs playground is codegen plus layout preview, not a public embed CDN.
+GitHub profile README widgets that read as dense GitHub-native stats cards: Geist, Primer-adjacent neutrals, **480×160**, flat 1px borders, no shadows. Dark is default. Motion is Takumi authoring input, not GitHub SVG runtime. Delivery is the Action committing widget files. The docs playground is codegen plus layout preview, not a public embed API. Gist is an optional `output_action`, not a CDN. `/generate/catalog` is a first-party visual gallery, not a marketplace. Local CLI (`just render` / `packages/cli`) wraps Action `runMain`; CLI default `output_action` is `none`. Customize via yaml plus first-party `http` / `rss` / `chips`, not a user plugin loader.
 
 ## Overview
 
@@ -182,7 +182,7 @@ Empty copy (exact strings): **No language data** · **No coding data** · **No f
 - Don't put `bits:` in yaml. Don't import `takumi-js` / `@takumi-rs/*` from widgets or the Action.
 - Don't invent first-party plugins beyond `github`, `wakatime`, `rss`, `http`.
 - Don't patch consumer `README.md`. Don't tag `v1` at `main`. `dist/` is gitignored on `main`.
-- Don't document `POST /api/preview` as an embed API. Don't add `/playground/http` UI.
+- Don't document `POST /api/preview` as an embed API. Don't treat gist as a CDN. Don't treat `/generate/catalog` as a plugin marketplace.
 
 ## Architecture
 
@@ -190,6 +190,7 @@ Empty copy (exact strings): **No language data** · **No coding data** · **No f
 flowchart LR
   yaml[".github/profile-bits.yml"]
   thin["thin action.yml"]
+  cli["packages/cli"]
   engine["packages/action engine"]
   plugins["packages/plugins"]
   integ["packages/integrations"]
@@ -198,6 +199,7 @@ flowchart LR
   files["widget files under output_dir"]
   yaml --> engine
   thin --> engine
+  cli --> engine
   engine --> plugins
   plugins --> integ
   plugins --> bits

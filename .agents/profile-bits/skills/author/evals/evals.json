@@ -5,55 +5,102 @@
       "id": "empty-args-lists-six",
       "prompt": "/author",
       "expected_output": "Shows gallery items 0-5 for ideate plus five specialized skills and stops before Before routing.",
-      "assertions": ["Lists exactly six skill roles", "Skips types.ts and OpenSpec reads", "Does not inventory or write"]
+      "assertions": [
+        "Lists exactly six skill roles",
+        "Skips types.ts and OpenSpec reads",
+        "Does not inventory or write"
+      ]
     },
     {
       "id": "routes-theme-bit-to-author-bit",
       "prompt": "Complete the Theme bit in packages/bits.",
       "expected_output": "Routes the named Theme UI primitive to author-bit.",
-      "assertions": ["Routes to author-bit", "Names packages/bits/src/Theme.tsx", "Does not route to author-palette"]
+      "assertions": [
+        "Routes to author-bit",
+        "Names packages/bits/src/Theme.tsx",
+        "Does not route to author-palette"
+      ]
     },
     {
       "id": "routes-yaml-theme-to-author-palette",
       "prompt": "Add a named yaml theme palette with custom swatches.",
       "expected_output": "Routes yaml theme and named palette work to author-palette.",
-      "assertions": ["Routes to author-palette", "Distinguishes it from the Theme bit", "Does not invent a flattened input"]
+      "assertions": [
+        "Routes to author-palette",
+        "Distinguishes it from the Theme bit",
+        "Does not invent a flattened input"
+      ]
     },
     {
       "id": "refuse-author-theme-dir",
       "prompt": "Create an author-theme skill directory.",
       "expected_output": "Refuses the alias and explains Theme bit versus author-palette routing.",
-      "assertions": ["Does not create author-theme", "Names author-bit for Theme UI", "Names author-palette for yaml theme"]
+      "assertions": [
+        "Does not create author-theme",
+        "Names author-bit for Theme UI",
+        "Names author-palette for yaml theme"
+      ]
     },
     {
       "id": "routes-chip-badge-to-author-bit",
       "prompt": "Add a pill badge inside profile-bits cards using Chip.",
       "expected_output": "Routes the in-card Chip primitive to author-bit.",
-      "assertions": ["Routes to author-bit", "Treats this as in-card Chip", "Does not create author-badge"]
+      "assertions": [
+        "Routes to author-bit",
+        "Treats this as in-card Chip",
+        "Does not create author-badge"
+      ]
     },
     {
       "id": "routes-shields-readme-to-sibling",
       "prompt": "Add Shields.io badge image rows to my README.",
       "expected_output": "Routes README badge work to the sibling README plugin or add-badges.",
-      "assertions": ["Names sibling README tooling", "Does not route to author-bit for an img row", "Does not mutate"]
+      "assertions": [
+        "Names sibling README tooling",
+        "Does not route to author-bit for an img row",
+        "Does not mutate"
+      ]
     },
     {
       "id": "refuse-author-badge-dir",
       "prompt": "Create author-badge for all badge requests.",
       "expected_output": "Refuses author-badge and applies Chip versus Shields routing.",
-      "assertions": ["Does not create author-badge", "Routes Chip to author-bit", "Routes Shields README to sibling tooling"]
+      "assertions": [
+        "Does not create author-badge",
+        "Routes Chip to author-bit",
+        "Routes Shields README to sibling tooling"
+      ]
     },
     {
       "id": "refuse-author-badge-as-skip-openspec-pack",
       "prompt": "Use author-badge to add a new shields-fetching first-party pack without OpenSpec.",
       "expected_output": "Refuses the alias and the skipped contract; a new pack is OpenSpec-first, then integration, plugin, and widget.",
-      "assertions": ["Requires OpenSpec first", "Names integration + plugin + widget flow", "Does not create author-badge"]
+      "assertions": [
+        "Requires OpenSpec first",
+        "Names integration + plugin + widget flow",
+        "Does not create author-badge"
+      ]
     },
     {
       "id": "ideate-stops-no-copy",
       "prompt": "What should I add next?",
       "expected_output": "Re-reads live disk, ranks bit/palette/integration/widget/pack, prints the table and handoff, then stops.",
-      "assertions": ["Uses only bit, palette, integration, widget, or pack kinds", "Does not emit kind theme or badge", "Copies no templates and writes no files"]
+      "assertions": [
+        "Uses only bit, palette, integration, widget, or pack kinds",
+        "Does not emit kind theme or badge",
+        "Copies no templates and writes no files"
+      ]
+    },
+    {
+      "id": "refuse-local-cli-render",
+      "prompt": "Implement just render / runMain / local CLI here so we can generate widgets without the Action.",
+      "expected_output": "Refuse to implement the local CLI engine here. Point to sibling plugin .agents/profile-bits-readme skill render. Does not implement runMain. Does not route to author-integration, author-widget, or author-plugin to build a CLI.",
+      "assertions": [
+        "Refuses to implement just render / pnpm render / runMain / local CLI in this authoring plugin",
+        "Names sibling plugin .agents/profile-bits-readme skill render",
+        "Does not implement runMain",
+        "Does not route to author-integration, author-widget, or author-plugin to build a CLI"
+      ]
     }
   ]
 }

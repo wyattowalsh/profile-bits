@@ -7,7 +7,13 @@ import {
   isCliExitError,
   throwCliExit,
 } from "./errors.ts";
-import { defaultStderr, defaultStdout, installStdoutEpipeGuard } from "./io.ts";
+import {
+  collectSecrets,
+  defaultStderr,
+  defaultStdout,
+  installStdoutEpipeGuard,
+  redactOutput,
+} from "./io.ts";
 import { type ParseCliOptions, parseCli } from "./program.ts";
 
 export type RunCliOptions = ParseCliOptions & {
@@ -56,7 +62,7 @@ export async function runCli(options: RunCliOptions = {}): Promise<number> {
     if (isCliExitError(error)) {
       return error.exitCode;
     }
-    stderr(error instanceof Error ? error.message : String(error));
+    stderr(formatUnexpectedError(error, env));
     return EXIT_OPERATIONAL;
   } finally {
     uninstallEpipe();
@@ -82,10 +88,15 @@ if (isMain()) {
       if (error instanceof CliExitError) {
         process.exit(error.exitCode);
       }
-      process.stderr.write(
-        `${error instanceof Error ? error.message : String(error)}\n`,
-      );
+      process.stderr.write(`${formatUnexpectedError(error, process.env)}\n`);
       process.exit(EXIT_OPERATIONAL);
     },
+  );
+}
+
+function formatUnexpectedError(error: unknown, env: NodeJS.ProcessEnv): string {
+  return redactOutput(
+    error instanceof Error ? error.message : String(error),
+    collectSecrets({}, env),
   );
 }

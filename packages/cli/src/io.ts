@@ -141,6 +141,10 @@ export function shouldShowSpinner(
   return !presentation.json && !presentation.quiet && stderrIsTTY;
 }
 
+export function shouldStartPromptPath(presentation: Presentation): boolean {
+  return !presentation.noInput;
+}
+
 export function startRenderSpinner(
   presentation: Presentation,
   options: {

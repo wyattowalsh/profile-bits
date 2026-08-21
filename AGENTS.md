@@ -74,6 +74,7 @@ Read the package file when working in that tree:
 - `packages/themes/AGENTS.md`
 - `apps/docs/AGENTS.md`
 - `.agents/profile-bits/AGENTS.md`
+- `.agents/profile-bits-readme/AGENTS.md`
 
 Agent Plugin skills follow live `packages/core/src/types.ts` `FIRST_PARTY_*`, not a frozen four-id table to bump when packs are added.
 The authoring plugin ships exactly `author`, `author-bit`, `author-palette`,

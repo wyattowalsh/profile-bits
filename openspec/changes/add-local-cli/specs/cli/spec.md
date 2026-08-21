@@ -82,15 +82,15 @@ Stdout MUST carry command results only (human file lists or `--json`). Stderr MU
 - **THEN** the process MUST exit `2`
 
 ### Requirement: Consumer skill shells out
-A consumer Agent Plugin 1.0.0 MUST live at `.agents/profile-bits-readme` with skill `render`. That skill MUST instruct agents to write yaml/workflow and run `just render` or `pnpm render`. It MUST NOT reimplement fetch or render. It MUST NOT include `mcp.json`. The authoring plugin at `.agents/profile-bits` MUST remain four skills and MUST NOT grow a fifth skill for this runner.
+A consumer Agent Plugin 1.0.0 MUST live at `.agents/profile-bits-readme` with skill `render`. That skill MUST instruct agents to write yaml/workflow and run `just render` or `pnpm render`. It MUST NOT reimplement fetch or render. It MUST NOT include `mcp.json`. The authoring plugin at `.agents/profile-bits` MUST NOT grow a `render` / CLI-runner skill. Inventory is the live six authoring skills (`author`, `author-bit`, `author-palette`, `author-integration`, `author-widget`, `author-plugin`).
 
 #### Scenario: consumer plugin has no MCP
 - **WHEN** `.agents/profile-bits-readme` is validated
 - **THEN** `mcp.json` MUST be absent and validation MUST fail if it is present
 
-#### Scenario: author plugin stays four skills
+#### Scenario: author plugin does not gain a render skill
 - **WHEN** the authoring plugin is inventoried after this change
-- **THEN** it MUST still ship only `author`, `author-integration`, `author-widget`, and `author-plugin`
+- **THEN** it MUST still ship the six authoring skills (`author`, `author-bit`, `author-palette`, `author-integration`, `author-widget`, and `author-plugin`) and MUST NOT include `render`
 
 ### Requirement: Docs distinguish local runner from embed and marketplace
 Published `llms.txt` and the docs home/docs pages MUST describe the CLI as a local engine runner. `/generate/catalog` MUST remain a first-party visual gallery and MUST NOT be described as a plugin marketplace. Default README embeds MUST remain relative committed files. Gist MUST be described as an optional `output_action`, not a CDN. Customization MUST be described as yaml plus first-party `http` / `rss` / `chips`, not a user plugin loader.

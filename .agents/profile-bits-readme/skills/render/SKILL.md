@@ -174,17 +174,20 @@ Empty / `""` / whitespace github token fails. Never unauthenticated GitHub.
 
 ## Catalog is not a marketplace
 
-`/generate/catalog` is a first-party visual gallery (github, wakatime, rss,
-http). It is not a plugin marketplace or a store. Customization is yaml plus
-first-party `http` / `rss` / `chips`, not a user plugin loader.
+`/generate/catalog` is a first-party visual gallery (currently github widgets
+`demo`, `stats`, and `languages`). It is not a plugin marketplace or a store.
+Product yaml packs remain `github` / `wakatime` / `rss` / `http`.
+Customization is yaml plus first-party `http` / `rss` / `chips`, not a user
+plugin loader. Do not add the word `yaml` to the catalog page.
 
 ## Refuse (NOT-for)
 
 Do not use this skill to:
 
 - Author `packages/**` (integrations, widgets, packs). Point at sibling plugin
-  `.agents/profile-bits` skills `author` / `author-integration` /
-  `author-widget` / `author-plugin`.
+  `.agents/profile-bits` skills `author` / `author-bit` /
+  `author-palette` / `author-integration` / `author-widget` /
+  `author-plugin`.
 - Reimplement fetch, Takumi render, or a second CLI engine
 - Add MCP (`mcp.json`) or Marketplace flattened `plugin_*_*_*` inputs
 - Build a plugin marketplace, local plugin loader, GitHub App, or VS Code
