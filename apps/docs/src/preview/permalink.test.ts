@@ -36,6 +36,13 @@ const YAML_OPTIONS: PreviewOptions = {
     include_forks: false,
     include_archived: false,
   },
+  repo: {
+    filename: "repo",
+    include: ["stars", "forks", "issues", "license"],
+    avatar: true,
+    animate: false,
+    repo: "octocat/Hello-World",
+  },
   format: "svg",
   theme: "dark",
   output_pair: false,
@@ -105,12 +112,13 @@ describe("serialize/parse round-trip", () => {
     expect(roundTrip(state)).toEqual(state);
   });
 
-  it("restores yaml-shaped demo/stats/languages options plus globals", () => {
+  it("restores yaml-shaped demo/stats/languages/repo options plus globals", () => {
     const restored = roundTrip(PLUGIN_STATE);
     expect(restored.options).toEqual(YAML_OPTIONS);
     expect(restored.options.demo).toEqual(YAML_OPTIONS.demo);
     expect(restored.options.stats).toEqual(YAML_OPTIONS.stats);
     expect(restored.options.languages).toEqual(YAML_OPTIONS.languages);
+    expect(restored.options.repo).toEqual(YAML_OPTIONS.repo);
     expect(restored.options.format).toBe("svg");
     expect(restored.options.theme).toBe("dark");
     expect(restored.options.output_pair).toBe(false);
@@ -163,6 +171,23 @@ describe("serialize/parse round-trip", () => {
     expect(restored.theme.custom.card).toBe("dark.card");
     expect(isPreviewCustomTheme(restored.theme)).toBe(false);
   });
+
+  it("defaults a missing theme param to dark", () => {
+    expect(parse("scope=plugin&plugin=github&format=svg").theme).toBe("dark");
+  });
+
+  it("defaults an empty theme param to dark", () => {
+    expect(parse("theme=").theme).toBe("dark");
+  });
+
+  it.each(["radical", "mocha"] as const)(
+    "does not parse unknown named theme=%s as Primer dark",
+    (id) => {
+      const restored = parse(`theme=${id}`);
+      expect(restored.theme).not.toBe("dark");
+      expect(restored.theme).toBe(id);
+    },
+  );
 
   it("restores output_pair true and false", () => {
     expect(roundTrip({ ...PLUGIN_STATE, output_pair: true }).output_pair).toBe(

@@ -1,6 +1,6 @@
 # profile-bits
 
-GitHub profile widget generator. A **plugin** is a pack of widgets plus declared integrations (1..N widgets, 0..N integrations) — not a single card and not a single API. First-party packs are `github` (`demo`, `stats`, `languages`), `wakatime` (`coding`), `rss` (`feed`), and `http` (`json`, `chips`). Do not invent extra first-party plugins.
+GitHub profile widget generator. A **plugin** is a pack of widgets plus declared integrations (1..N widgets, 0..N integrations) — not a single card and not a single API. First-party packs are `github` (`demo`, `stats`, `languages`, `repo`), `wakatime` (`coding`), `rss` (`feed`), and `http` (`json`, `chips`). Do not invent extra first-party plugins. `repo` is opt-in like `demo` (pack defaults stay `stats` + `languages`).
 
 README delivery is the **Action** (commit widget files). The docs playground is layout preview only, not a public embed API.
 

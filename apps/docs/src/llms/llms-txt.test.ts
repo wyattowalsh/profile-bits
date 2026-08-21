@@ -14,6 +14,7 @@ import {
   StatsOptionsSchema,
   WakatimeWidgetsConfigSchema,
 } from "@profile-bits/core";
+import { NAMED_THEME_IDS } from "@profile-bits/themes";
 import { describe, expect, it } from "vitest";
 import {
   githubWidgetIdsFromSchemas,
@@ -32,7 +33,7 @@ describe("llms.txt stub from schemas", () => {
     const fromSchema = githubWidgetIdsFromSchemas();
 
     expect(Object.keys(GithubWidgetsConfigSchema.shape)).toEqual(fromSchema);
-    expect(fromSchema).toEqual(["demo", "stats", "languages"]);
+    expect(fromSchema).toEqual(["demo", "stats", "languages", "repo"]);
 
     const txt = renderLlmsTxt();
     expect(txt).toContain("### `github`");
@@ -134,6 +135,47 @@ describe("llms.txt stub from schemas", () => {
     expect(txt).not.toContain("subtitle");
     expect(txt).not.toContain("api_domain");
     expect(optionKeys.length).toBeGreaterThan(0);
+  });
+
+  it("names named catalog theme, custom yaml object, and generate picker", () => {
+    const txt = renderLlmsTxt();
+
+    expect(txt).toContain("named catalog");
+    expect(txt).toContain(
+      "theme: { custom: { bg, card, text, muted, accent, border, pair? } }",
+    );
+    expect(txt).toContain("theme.custom");
+    expect(txt).toContain("family-grouped picker");
+    expect(txt).toContain(
+      "[Generate](/generate): visual catalog, theme picker, export, and share",
+    );
+    expect(txt).toContain("`theme: custom` as an Action input fails");
+  });
+
+  it("does not dump catalog flavor ids", () => {
+    const txt = renderLlmsTxt();
+    const dumped = NAMED_THEME_IDS.filter((id) => {
+      if (id === "dark") {
+        return false;
+      }
+      return txt.includes(`\`${id}\``);
+    });
+
+    expect(dumped).toEqual([]);
+    expect(txt).not.toContain("47");
+  });
+
+  it("does not treat POST /api/preview as an embed API or invite live fetches", () => {
+    const txt = renderLlmsTxt();
+
+    expect(txt).toContain("POST /api/preview");
+    expect(txt).toContain("layout/time-axis preview");
+    expect(txt).toContain("fixtures when no App token");
+    expect(txt).toContain("no live GitHub");
+    expect(txt).toContain("Do not cache or document it as an embed");
+    expect(txt).not.toMatch(
+      /POST \/api\/preview is (?:a |an )?(?:stable |public )?embed/i,
+    );
   });
 
   it("publishes the stub at apps/docs/public/llms.txt", () => {

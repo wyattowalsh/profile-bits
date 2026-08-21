@@ -33,11 +33,25 @@ export const LANGUAGES_BITS_USED = [
   "Chip",
 ] as const;
 
+export const REPO_BITS_USED = [
+  "Theme",
+  "Frame",
+  "Stack",
+  "Row",
+  "Text",
+  "Muted",
+  "Stat",
+  "Chip",
+  "Avatar",
+  "Divider",
+] as const;
+
 export const GITHUB_BITS_USED = [
   ...new Set([
     ...DEMO_BITS_USED,
     ...STATS_BITS_USED,
     ...LANGUAGES_BITS_USED,
+    ...REPO_BITS_USED,
   ]),
 ].toSorted();
 
@@ -45,13 +59,14 @@ export const githubWidgetRegistry = {
   demo: { id: "demo", bitsUsed: DEMO_BITS_USED },
   stats: { id: "stats", bitsUsed: STATS_BITS_USED },
   languages: { id: "languages", bitsUsed: LANGUAGES_BITS_USED },
+  repo: { id: "repo", bitsUsed: REPO_BITS_USED },
 } as const;
 
 export const githubPlugin = {
   id: "github",
   title: "GitHub",
   docsPath: "github",
-  widgets: ["demo", "stats", "languages"],
+  widgets: ["demo", "stats", "languages", "repo"],
   integrations: ["static", "github"],
   defaults: { widgets: ["stats", "languages"] },
   bitsUsed: GITHUB_BITS_USED,

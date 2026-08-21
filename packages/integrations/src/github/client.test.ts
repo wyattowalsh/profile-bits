@@ -2,6 +2,7 @@ import {
   classifyGithubHttp,
   decideActionToken,
   decideIncludePrivate,
+  type RunLogEvent,
 } from "@profile-bits/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GithubRequestCache } from "./cache.js";
@@ -11,12 +12,13 @@ import {
   GithubClientError,
   inferGithubTokenClass,
 } from "./client.js";
-import { classifyGithubRateLimit } from "./rate-limit.js";
 import {
-  GITHUB_API_ORIGIN,
-  GithubRestError,
-  type GithubRestFetch,
-} from "./rest.js";
+  CONTRIBUTIONS_QUERY,
+  GITHUB_GRAPHQL_NODE_BATCH,
+  LANGUAGES_NODES_QUERY,
+} from "./graphql.js";
+import { classifyGithubRateLimit } from "./rate-limit.js";
+import { GITHUB_API_ORIGIN, type GithubRestFetch } from "./rest.js";
 
 const OCTOCAT = "octocat";
 const HUBOT = "hubot";
@@ -86,6 +88,7 @@ function payloadInput(
   overrides: Partial<{
     user: string;
     widget: string;
+    repo: string;
     includePrivate: boolean;
     includeForks: boolean;
     includeArchived: boolean;
@@ -101,6 +104,91 @@ function payloadInput(
   };
 }
 
+function parseGraphqlBody(init?: RequestInit): {
+  query: string;
+  variables: Record<string, unknown>;
+} {
+  const parsed = JSON.parse(String(init?.body)) as {
+    query: string;
+    variables?: Record<string, unknown>;
+  };
+  return { query: parsed.query, variables: parsed.variables ?? {} };
+}
+
+function graphqlLanguageIds(variables: Record<string, unknown>): string[] {
+  const ids = variables.ids;
+  if (!Array.isArray(ids)) {
+    return [];
+  }
+  return ids.filter((id): id is string => typeof id === "string");
+}
+
+function languagesGraphqlBody(ids: readonly string[], bytes = 1): unknown {
+  return {
+    data: {
+      nodes: ids.map((id) => ({
+        id,
+        languages: {
+          edges: [{ size: bytes, node: { name: "TypeScript" } }],
+        },
+      })),
+      rateLimit: { cost: 1, remaining: 5000 },
+    },
+  };
+}
+
+function githubRepositoryJson() {
+  return {
+    full_name: `${OCTOCAT}/Hello-World`,
+    name: "Hello-World",
+    description: "My first repository",
+    html_url: `https://github.com/${OCTOCAT}/Hello-World`,
+    stargazers_count: 80,
+    forks_count: 9,
+    subscribers_count: 42,
+    open_issues_count: 3,
+    language: "TypeScript",
+    license: { spdx_id: "MIT", name: "MIT License" },
+    owner: {
+      login: OCTOCAT,
+      avatar_url: "https://avatars.githubusercontent.com/u/1?v=4",
+    },
+  };
+}
+
+function contributionsGraphqlBody(total = 42): unknown {
+  return {
+    data: {
+      user: {
+        contributionsCollection: {
+          contributionCalendar: { totalContributions: total },
+        },
+      },
+      rateLimit: { cost: 1, remaining: 5000 },
+    },
+  };
+}
+
+function mockGraphqlOk(init?: RequestInit): Response {
+  const { query, variables } = parseGraphqlBody(init);
+  if (query === LANGUAGES_NODES_QUERY) {
+    return jsonResponse(
+      200,
+      languagesGraphqlBody(graphqlLanguageIds(variables)),
+    );
+  }
+  if (query === CONTRIBUTIONS_QUERY) {
+    return jsonResponse(200, contributionsGraphqlBody());
+  }
+  throw new Error(`unexpected GraphQL query: ${query.slice(0, 80)}`);
+}
+
+function graphqlCalls(
+  calls: readonly [URL, RequestInit | undefined][],
+): [URL, RequestInit | undefined][] {
+  return calls.filter(([input]) => pathnameOf(input) === "/graphql");
+}
+
 function publicFetch(token: string) {
   return mockFetch(async (input, init) => {
     expect(authorization(init)).toBe(`Bearer ${token}`);
@@ -113,6 +201,9 @@ function publicFetch(token: string) {
     }
     if (path === `/users/${OCTOCAT}/repos`) {
       return jsonResponse(200, [repo(1)]);
+    }
+    if (path === "/graphql") {
+      return mockGraphqlOk(init);
     }
     return jsonResponse(404, { message: "Not Found" });
   });
@@ -176,12 +267,15 @@ describe("createGithubClient", () => {
     );
 
     expect(first.repositoryIds).toEqual(["R_1"]);
+    expect(first.languages).toEqual([{ name: "TypeScript", bytes: 1 }]);
+    expect(first.contributions).toBe(42);
     expect(second.repositoryIds).toEqual(first.repositoryIds);
+    expect(second.languages).toEqual(first.languages);
     const paths = fetchImpl.mock.calls.map(([input]) => pathnameOf(input));
     expect(paths.filter((path) => path === "/user")).toHaveLength(1);
     expect(paths.some((path) => path === `/users/${OCTOCAT}`)).toBe(true);
     expect(paths.some((path) => path.includes("/languages"))).toBe(false);
-    expect(paths.some((path) => path === "/graphql")).toBe(false);
+    expect(graphqlCalls(fetchImpl.mock.calls)).toHaveLength(2);
     expect(new URL(GITHUB_PROBE_URL).pathname).toBe("/user");
     for (const [, init] of fetchImpl.mock.calls) {
       expect(authorization(init)).toBe(`Bearer ${PAT}`);
@@ -201,6 +295,7 @@ describe("createGithubClient", () => {
     const payload = await client.loadPayload(payloadInput());
     expect(payload.user.login).toBe(OCTOCAT);
     expect(payload.repositoryIds).toEqual(["R_1"]);
+    expect(payload.languages).toEqual([{ name: "TypeScript", bytes: 1 }]);
     expect(payload).not.toEqual(octocatUser());
   });
 
@@ -373,6 +468,9 @@ describe("createGithubClient", () => {
       if (path === "/user/repos") {
         throw new Error("must not list /user/repos without canPrivate");
       }
+      if (path === "/graphql") {
+        return mockGraphqlOk(init);
+      }
       return jsonResponse(404, { message: "Not Found" });
     });
     const client = createGithubClient({
@@ -383,11 +481,20 @@ describe("createGithubClient", () => {
 
     const payload = await client.loadPayload(payloadInput());
     expect(payload.repositoryIds).toEqual(["R_1"]);
+    expect(payload.languages).toEqual([{ name: "TypeScript", bytes: 1 }]);
+    expect(payload).not.toHaveProperty("contributions");
     expect(client.tokenClass).toBe("actions_installation");
     expect(client.capabilities.canPrivate).toBe(false);
+    expect(client.capabilities.canContributions).toBe(false);
     const paths = fetchImpl.mock.calls.map(([input]) => pathnameOf(input));
     expect(paths).toContain("/user");
     expect(paths.some((path) => path === "/user/repos")).toBe(false);
+    expect(graphqlCalls(fetchImpl.mock.calls)).toHaveLength(1);
+    expect(
+      graphqlCalls(fetchImpl.mock.calls).map(
+        ([, init]) => parseGraphqlBody(init).query,
+      ),
+    ).toEqual([LANGUAGES_NODES_QUERY]);
   });
 
   it("lists private-capable owner repos for a matching user PAT", async () => {
@@ -404,6 +511,9 @@ describe("createGithubClient", () => {
       if (url.startsWith(`${AUTH_REPOS_URL}?`)) {
         return jsonResponse(200, [repo(1), repo(2)]);
       }
+      if (path === "/graphql") {
+        return mockGraphqlOk(init);
+      }
       throw new Error(`unexpected ${url}`);
     });
     const client = createGithubClient({
@@ -416,10 +526,14 @@ describe("createGithubClient", () => {
       payloadInput({ includePrivate: true }),
     );
     expect(payload.repositoryIds).toEqual(["R_1", "R_2"]);
+    expect(payload.languages).toEqual([{ name: "TypeScript", bytes: 2 }]);
+    expect(payload.contributions).toBe(42);
     expect(client.capabilities.canPrivate).toBe(true);
+    expect(client.capabilities.canContributions).toBe(true);
     const paths = fetchImpl.mock.calls.map(([input]) => pathnameOf(input));
     expect(paths).toContain("/user");
-    expect(paths).not.toContain("/graphql");
+    expect(paths).toContain("/graphql");
+    expect(paths.some((path) => path.includes("/languages"))).toBe(false);
   });
 
   it("maps crawl 404 to fail_widget from rest/rate-limit", async () => {
@@ -438,9 +552,10 @@ describe("createGithubClient", () => {
     });
 
     await expect(client.loadPayload(payloadInput())).rejects.toBeInstanceOf(
-      GithubRestError,
+      GithubClientError,
     );
     await expect(client.loadPayload(payloadInput())).rejects.toMatchObject({
+      name: "GithubClientError",
       outcome: "fail_widget",
       status: 404,
     });
@@ -496,5 +611,352 @@ describe("createGithubClient", () => {
     });
     expect(client.capabilities.canPrivate).toBe(false);
     expect(client.capabilities.canContributions).toBe(false);
+  });
+
+  it("POSTs GraphQL nodes(ids:) for languages and never REST /languages", async () => {
+    const fetchImpl = publicFetch(PAT);
+    const client = createGithubClient({
+      token: PAT,
+      configuredUser: OCTOCAT,
+      fetch: fetchImpl,
+      cache: new GithubRequestCache(),
+    });
+
+    const payload = await client.loadPayload(
+      payloadInput({ widget: "languages" }),
+    );
+
+    expect(payload.languages).toEqual([{ name: "TypeScript", bytes: 1 }]);
+    const paths = fetchImpl.mock.calls.map(([input]) => pathnameOf(input));
+    expect(paths).toContain("/graphql");
+    expect(paths.some((path) => path.includes("/languages"))).toBe(false);
+    expect(
+      graphqlCalls(fetchImpl.mock.calls).some(
+        ([, init]) => parseGraphqlBody(init).query === LANGUAGES_NODES_QUERY,
+      ),
+    ).toBe(true);
+  });
+
+  it("batches GraphQL nodes(ids:) of 100 for 101 repository ids", async () => {
+    const fetchImpl = mockFetch(async (input, init) => {
+      expect(authorization(init)).toBe(`Bearer ${INSTALLATION}`);
+      const path = pathnameOf(input);
+      if (path === "/user" || path === `/users/${OCTOCAT}`) {
+        return jsonResponse(200, octocatUser());
+      }
+      if (path === `/users/${OCTOCAT}/repos`) {
+        const page = Number(
+          new URL(input.href).searchParams.get("page") ?? "1",
+        );
+        if (page === 1) {
+          return jsonResponse(
+            200,
+            Array.from({ length: 100 }, (_, index) => repo(index + 1)),
+          );
+        }
+        if (page === 2) {
+          return jsonResponse(200, [repo(101)]);
+        }
+        return jsonResponse(200, []);
+      }
+      if (path === "/graphql") {
+        return mockGraphqlOk(init);
+      }
+      throw new Error(`unexpected ${input.href}`);
+    });
+    const client = createGithubClient({
+      token: INSTALLATION,
+      configuredUser: OCTOCAT,
+      fetch: fetchImpl,
+      cache: new GithubRequestCache(),
+    });
+
+    const payload = await client.loadPayload(
+      payloadInput({ widget: "languages" }),
+    );
+
+    expect(payload.repositoryIds).toHaveLength(101);
+    expect(payload.languages).toEqual([{ name: "TypeScript", bytes: 101 }]);
+    expect(payload).not.toHaveProperty("contributions");
+    const languageBatches = graphqlCalls(fetchImpl.mock.calls)
+      .map(([, init]) => parseGraphqlBody(init))
+      .filter((body) => body.query === LANGUAGES_NODES_QUERY)
+      .map((body) => graphqlLanguageIds(body.variables));
+    expect(languageBatches).toHaveLength(2);
+    expect(languageBatches[0]).toHaveLength(GITHUB_GRAPHQL_NODE_BATCH);
+    expect(languageBatches[1]).toHaveLength(1);
+    expect(
+      graphqlCalls(fetchImpl.mock.calls).some(
+        ([, init]) => parseGraphqlBody(init).query === CONTRIBUTIONS_QUERY,
+      ),
+    ).toBe(false);
+    expect(
+      fetchImpl.mock.calls.some(([input]) =>
+        pathnameOf(input).includes("/languages"),
+      ),
+    ).toBe(false);
+  });
+
+  it("skips crawl and GraphQL for demo and only probes GET /user", async () => {
+    const fetchImpl = mockFetch(async (input, init) => {
+      expect(authorization(init)).toBe(`Bearer ${PAT}`);
+      const path = pathnameOf(input);
+      if (path === "/user") {
+        return jsonResponse(200, octocatUser());
+      }
+      if (path === `/users/${OCTOCAT}/repos` || path === "/graphql") {
+        throw new Error(`demo must not call ${path}`);
+      }
+      throw new Error(`unexpected ${input.href}`);
+    });
+    const client = createGithubClient({
+      token: PAT,
+      configuredUser: OCTOCAT,
+      fetch: fetchImpl,
+      cache: new GithubRequestCache(),
+    });
+
+    const payload = await client.loadPayload(payloadInput({ widget: "demo" }));
+
+    expect(payload.user.login).toBe(OCTOCAT);
+    expect(payload.repositories).toEqual([]);
+    expect(payload.repositoryIds).toEqual([]);
+    expect(payload.languages).toEqual([]);
+    expect(payload).not.toHaveProperty("contributions");
+    expect(payload).not.toHaveProperty("repository");
+    expect(fetchImpl.mock.calls.map(([input]) => pathnameOf(input))).toEqual([
+      "/user",
+    ]);
+    expect(graphqlCalls(fetchImpl.mock.calls)).toHaveLength(0);
+  });
+
+  it("fetches GET /repos/{owner}/{repo} for widget repo and skips crawl and GraphQL", async () => {
+    const fetchImpl = mockFetch(async (input, init) => {
+      expect(authorization(init)).toBe(`Bearer ${PAT}`);
+      const path = pathnameOf(input);
+      if (path === "/user") {
+        return jsonResponse(200, octocatUser());
+      }
+      if (path === `/repos/${OCTOCAT}/Hello-World`) {
+        return jsonResponse(200, githubRepositoryJson());
+      }
+      if (path === `/users/${OCTOCAT}/repos` || path === "/graphql") {
+        throw new Error(`repo widget must not call ${path}`);
+      }
+      throw new Error(`unexpected ${input.href}`);
+    });
+    const client = createGithubClient({
+      token: PAT,
+      configuredUser: OCTOCAT,
+      fetch: fetchImpl,
+      cache: new GithubRequestCache(),
+    });
+
+    const payload = await client.loadPayload(
+      payloadInput({ widget: "repo", repo: `${OCTOCAT}/Hello-World` }),
+    );
+
+    expect(payload.user.login).toBe(OCTOCAT);
+    expect(payload.repositories).toEqual([]);
+    expect(payload.repositoryIds).toEqual([]);
+    expect(payload.languages).toEqual([]);
+    expect(payload).not.toHaveProperty("contributions");
+    expect(payload.repository).toEqual({
+      fullName: `${OCTOCAT}/Hello-World`,
+      name: "Hello-World",
+      description: "My first repository",
+      htmlUrl: `https://github.com/${OCTOCAT}/Hello-World`,
+      stargazersCount: 80,
+      forksCount: 9,
+      subscribersCount: 42,
+      openIssuesCount: 3,
+      language: "TypeScript",
+      license: "MIT",
+      ownerLogin: OCTOCAT,
+      ownerAvatarUrl: "https://avatars.githubusercontent.com/u/1?v=4",
+    });
+    const paths = fetchImpl.mock.calls.map(([input]) => pathnameOf(input));
+    expect(paths).toEqual(["/user", `/repos/${OCTOCAT}/Hello-World`]);
+    expect(paths.some((path) => path === `/users/${OCTOCAT}/repos`)).toBe(
+      false,
+    );
+    expect(graphqlCalls(fetchImpl.mock.calls)).toHaveLength(0);
+    expect(paths.some((path) => path.includes("/languages"))).toBe(false);
+  });
+
+  it("returns empty languages and zero GraphQL when repository ids are empty", async () => {
+    const fetchImpl = mockFetch(async (input, init) => {
+      expect(authorization(init)).toBe(`Bearer ${INSTALLATION}`);
+      const path = pathnameOf(input);
+      if (path === "/user" || path === `/users/${OCTOCAT}`) {
+        return jsonResponse(200, octocatUser());
+      }
+      if (path === `/users/${OCTOCAT}/repos`) {
+        return jsonResponse(200, []);
+      }
+      if (path === "/graphql") {
+        throw new Error("GraphQL must not run for empty repositoryIds");
+      }
+      throw new Error(`unexpected ${input.href}`);
+    });
+    const client = createGithubClient({
+      token: INSTALLATION,
+      configuredUser: OCTOCAT,
+      fetch: fetchImpl,
+      cache: new GithubRequestCache(),
+    });
+
+    const payload = await client.loadPayload(
+      payloadInput({ widget: "languages" }),
+    );
+
+    expect(payload.repositoryIds).toEqual([]);
+    expect(payload.languages).toEqual([]);
+    expect(payload).not.toHaveProperty("contributions");
+    expect(graphqlCalls(fetchImpl.mock.calls)).toHaveLength(0);
+  });
+
+  it("maps GraphQL 200 + errors[] to GithubClientError fail_after_backoff", async () => {
+    const fetchImpl = mockFetch(async (input, init) => {
+      expect(authorization(init)).toBe(`Bearer ${PAT}`);
+      const path = pathnameOf(input);
+      if (path === "/user" || path === `/users/${OCTOCAT}`) {
+        return jsonResponse(200, octocatUser());
+      }
+      if (path === `/users/${OCTOCAT}/repos`) {
+        return jsonResponse(200, [repo(1)]);
+      }
+      if (path === "/graphql") {
+        return jsonResponse(200, {
+          data: null,
+          errors: [{ message: "Something went wrong" }],
+          rateLimit: { cost: 1, remaining: 5000 },
+        });
+      }
+      throw new Error(`unexpected ${input.href}`);
+    });
+    const client = createGithubClient({
+      token: PAT,
+      configuredUser: OCTOCAT,
+      fetch: fetchImpl,
+      cache: new GithubRequestCache(),
+    });
+
+    await expect(client.loadPayload(payloadInput())).rejects.toMatchObject({
+      name: "GithubClientError",
+      outcome: "fail_after_backoff",
+      status: 200,
+    });
+  });
+
+  it("records REST crawl call events on runLog without tokens or Authorization", async () => {
+    const events: RunLogEvent[] = [];
+    const fetchImpl = publicFetch(PAT);
+    const client = createGithubClient({
+      token: PAT,
+      configuredUser: OCTOCAT,
+      fetch: fetchImpl,
+      cache: new GithubRequestCache(),
+      runLog: (event) => {
+        events.push(event);
+      },
+    });
+
+    const stats = await client.loadPayload(payloadInput({ widget: "stats" }));
+    const languages = await client.fetchPayload(
+      payloadInput({ widget: "languages" }),
+    );
+
+    expect(stats.repositoryIds).toEqual(["R_1"]);
+    expect(languages.languages).toEqual([{ name: "TypeScript", bytes: 1 }]);
+    expect(events.length).toBeGreaterThanOrEqual(1);
+    for (const event of events) {
+      expect(event).toMatchObject({
+        kind: "call",
+        integration: "github",
+        host: "api.github.com",
+      });
+      expect(event.path).toMatch(/^\//);
+      expect(event.path).not.toContain("?");
+      expect(event.path).not.toContain("@");
+      expect(event.path).not.toBe("/user");
+      expect(event.path).not.toBe("/graphql");
+    }
+    expect(events.some((event) => event.path === `/users/${OCTOCAT}`)).toBe(
+      true,
+    );
+    const serialized = JSON.stringify(events);
+    expect(serialized).not.toContain(PAT);
+    expect(serialized).not.toContain("TOKEN");
+    expect(serialized).not.toContain("Bearer");
+    expect(serialized).not.toContain("Authorization");
+    expect(
+      fetchImpl.mock.calls.some(([input]) =>
+        pathnameOf(input).includes("/languages"),
+      ),
+    ).toBe(false);
+  });
+
+  it("forwards runLog on an installation languages crawl and never REST /languages", async () => {
+    const events: RunLogEvent[] = [];
+    const fetchImpl = mockFetch(async (input, init) => {
+      expect(authorization(init)).toBe(`Bearer ${INSTALLATION}`);
+      const path = pathnameOf(input);
+      if (path === "/user") {
+        return jsonResponse(200, octocatUser());
+      }
+      if (path === `/users/${OCTOCAT}`) {
+        return jsonResponse(200, octocatUser());
+      }
+      if (path === `/users/${OCTOCAT}/repos`) {
+        return jsonResponse(200, [repo(1)]);
+      }
+      if (path === "/user/repos") {
+        throw new Error("must not list /user/repos without canPrivate");
+      }
+      if (path === "/graphql") {
+        return mockGraphqlOk(init);
+      }
+      throw new Error(`unexpected ${input.href}`);
+    });
+    const client = createGithubClient({
+      token: INSTALLATION,
+      configuredUser: OCTOCAT,
+      fetch: fetchImpl,
+      cache: new GithubRequestCache(),
+      runLog: (event) => {
+        events.push(event);
+      },
+    });
+
+    const payload = await client.loadPayload(
+      payloadInput({ widget: "languages" }),
+    );
+
+    expect(payload.languages).toEqual([{ name: "TypeScript", bytes: 1 }]);
+    expect(payload).not.toHaveProperty("contributions");
+    expect(graphqlCalls(fetchImpl.mock.calls)).toHaveLength(1);
+    expect(
+      graphqlCalls(fetchImpl.mock.calls).map(
+        ([, init]) => parseGraphqlBody(init).query,
+      ),
+    ).toEqual([LANGUAGES_NODES_QUERY]);
+    expect(
+      fetchImpl.mock.calls.some(([input]) =>
+        pathnameOf(input).includes("/languages"),
+      ),
+    ).toBe(false);
+    expect(events.length).toBeGreaterThanOrEqual(1);
+    expect(events[0]).toMatchObject({
+      kind: "call",
+      integration: "github",
+      host: "api.github.com",
+    });
+    expect(typeof events[0]?.path).toBe("string");
+    const serialized = JSON.stringify(events);
+    expect(serialized).not.toContain(INSTALLATION);
+    expect(serialized).not.toContain("TOKEN");
+    expect(serialized).not.toContain("Bearer");
+    expect(serialized).not.toContain("Authorization");
   });
 });

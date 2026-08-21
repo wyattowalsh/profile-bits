@@ -398,7 +398,10 @@ describe("runEngine rss feed", () => {
     const config = parseConfig({ yaml: RSS_FEED_YAML });
     const feed = config.plugins.rss?.widgets.feed;
     expect(feed).toBeDefined();
-    const trappedFeed = new Proxy(feed!, {
+    if (feed === undefined) {
+      throw new Error("expected rss feed options");
+    }
+    const trappedFeed = new Proxy(feed, {
       get(target, prop, receiver) {
         if (prop === "include_private") {
           throw new Error("include_private must not be read on feed");
@@ -671,7 +674,10 @@ describe("runEngine http json", () => {
     const config = parseConfig({ yaml: HTTP_JSON_YAML });
     const json = config.plugins.http?.widgets?.json;
     expect(json).toBeDefined();
-    const trappedJson = new Proxy(json!, {
+    if (json === undefined) {
+      throw new Error("expected http json options");
+    }
+    const trappedJson = new Proxy(json, {
       get(target, prop, receiver) {
         if (prop === "include_private") {
           throw new Error("include_private must not be read on json");
@@ -887,7 +893,10 @@ describe("runEngine http chips", () => {
     const config = parseConfig({ yaml: HTTP_CHIPS_YAML });
     const chips = config.plugins.http?.widgets?.chips;
     expect(chips).toBeDefined();
-    const trappedChips = new Proxy(chips!, {
+    if (chips === undefined) {
+      throw new Error("expected http chips options");
+    }
+    const trappedChips = new Proxy(chips, {
       get(target, prop, receiver) {
         if (prop === "include_private") {
           throw new Error("include_private must not be read on chips");
@@ -1160,7 +1169,10 @@ describe("runEngine wakatime coding", () => {
     const config = parseConfig({ yaml: WAKATIME_ONLY_YAML });
     const coding = config.plugins.wakatime?.widgets?.coding;
     expect(coding).toBeDefined();
-    const trappedCoding = new Proxy(coding!, {
+    if (coding === undefined) {
+      throw new Error("expected wakatime coding options");
+    }
+    const trappedCoding = new Proxy(coding, {
       get(target, prop, receiver) {
         if (prop === "include_private") {
           throw new Error("include_private must not be read on coding");

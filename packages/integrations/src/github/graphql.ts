@@ -6,7 +6,7 @@
 
 import { isMissingToken, type SkipFailOutcome } from "@profile-bits/core";
 import type { GithubRequestCache } from "./cache.js";
-import { classifyGraphqlResponse } from "./rate-limit.js";
+import { classifyGraphqlResponse, type RateLimitLogger } from "./rate-limit.js";
 import {
   GITHUB_API_ORIGIN,
   GITHUB_API_VERSION,
@@ -69,8 +69,12 @@ export async function fetchRepositoryLanguages(input: {
   token: string | undefined | null;
   cache: GithubRequestCache;
   fetchImpl?: GithubGraphqlFetch;
+  logger?: RateLimitLogger;
 }): Promise<readonly GithubLanguageBytes[]> {
   assertToken(input.token);
+  if (input.repositoryIds.length === 0) {
+    return [];
+  }
   const token = input.token.trim();
   const fetchImpl = input.fetchImpl ?? fetch;
   const totals = new Map<string, number>();
@@ -88,6 +92,7 @@ export async function fetchRepositoryLanguages(input: {
       query: LANGUAGES_NODES_QUERY,
       variables: { ids },
       operation: "languages",
+      logger: input.logger,
     });
     mergeLanguageBytes(totals, body);
   }
@@ -103,6 +108,7 @@ export async function fetchContributionTotal(input: {
   cache: GithubRequestCache;
   canContributions: boolean;
   fetchImpl?: GithubGraphqlFetch;
+  logger?: RateLimitLogger;
 }): Promise<number | undefined> {
   if (!input.canContributions) {
     return undefined;
@@ -115,6 +121,7 @@ export async function fetchContributionTotal(input: {
     query: CONTRIBUTIONS_QUERY,
     variables: { login: input.login },
     operation: "contributions",
+    logger: input.logger,
   });
   return readContributionTotal(body);
 }
@@ -137,13 +144,8 @@ async function graphqlPost(input: {
   query: string;
   variables: unknown;
   operation: string;
+  logger?: RateLimitLogger;
 }): Promise<unknown> {
-  if (
-    input.query.includes("/languages") &&
-    !input.query.includes("languages(")
-  ) {
-    throw new GithubGraphqlError("fail_run", "REST /languages is forbidden");
-  }
   return input.cache.graphql(
     { query: input.query, variables: input.variables },
     () => graphqlUncached(input),
@@ -156,6 +158,7 @@ async function graphqlUncached(input: {
   query: string;
   variables: unknown;
   operation: string;
+  logger?: RateLimitLogger;
 }): Promise<unknown> {
   const url = new URL(GITHUB_GRAPHQL_URL);
   let response: Response;
@@ -198,6 +201,7 @@ async function graphqlUncached(input: {
     graphqlErrors: readGraphqlErrors(body),
     remaining,
     operation: input.operation,
+    logger: input.logger,
   });
   if (outcome !== "render") {
     throw new GithubGraphqlError(

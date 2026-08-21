@@ -36,6 +36,15 @@ const PNG_FILE: PreviewFile = {
   filename: "stats.png",
 };
 
+const DARK_PNG_FILE: PreviewFile = {
+  id: "github-stats-dark",
+  mime: "image/png",
+  bytesBase64: BYTES_BASE64,
+  filename: "stats-dark.png",
+};
+
+const PAIR_FILES: readonly PreviewFile[] = [PNG_FILE, DARK_PNG_FILE];
+
 const ZIP_FILE: PreviewFile = {
   id: "pack",
   mime: "application/zip",
@@ -82,16 +91,31 @@ function renderStage(
     reducedMotion: boolean;
   }> = {},
 ): string {
+  const { output_pair, ...rest } = overrides;
   return renderToStaticMarkup(
     createElement(PackStage, {
-      request: overrides.request ?? PLUGIN_STATE,
-      files: overrides.files ?? [PNG_FILE],
-      loading: overrides.loading,
-      output_pair: overrides.output_pair,
-      origin: overrides.origin ?? ORIGIN,
-      reducedMotion: overrides.reducedMotion,
+      request: rest.request ?? PLUGIN_STATE,
+      files: rest.files ?? [PNG_FILE],
+      loading: rest.loading,
+      origin: rest.origin ?? ORIGIN,
+      reducedMotion: rest.reducedMotion,
+      ...(output_pair === undefined ? {} : { output_pair }),
     }),
   );
+}
+
+function withoutStyles(html: string): string {
+  return html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, "");
+}
+
+function countFigures(html: string): number {
+  return [...withoutStyles(html).matchAll(/<figure\b/g)].length;
+}
+
+function countSlot(html: string, slot: string): number {
+  return [
+    ...withoutStyles(html).matchAll(new RegExp(`data-slot="${slot}"`, "g")),
+  ].length;
 }
 
 function sourceUrl(): URL {
@@ -120,6 +144,12 @@ describe("PackStage primary CTAs", () => {
     expect(html).toContain(`data-slot="pack-download"`);
     expect(html).toContain(`data-slot="pack-share"`);
     expect(html).toContain(`data-slot="pack-copy-link"`);
+    expect(html).toContain('[data-slot="pack-download"]:focus-visible');
+    expect(html).toContain('[data-slot="pack-share"]:focus-visible');
+    expect(html).toContain(
+      "outline: 2px solid var(--color-fd-ring, currentColor);",
+    );
+    expect(html).toContain("outline-offset: 2px;");
   });
 
   it("renders a 480x160 hero figure", () => {
@@ -155,6 +185,50 @@ describe("PackStage primary CTAs", () => {
     expect(html).not.toContain("application/zip");
     expect(html).not.toContain("widgets.zip");
     expect(html).not.toContain(".zip");
+  });
+});
+
+describe("pair mode", () => {
+  it("renders one figure when request.output_pair is false", () => {
+    const html = renderStage({
+      request: { ...PLUGIN_STATE, output_pair: false },
+      files: PAIR_FILES,
+    });
+
+    expect(html).toContain('data-output-pair="false"');
+    expect(countFigures(html)).toBe(1);
+    expect(countSlot(html, "pack-card")).toBe(1);
+    expect(html).toContain("stats.png");
+    expect(html).not.toContain("stats-dark.png");
+    expect(html).not.toContain("stats-light.png");
+  });
+
+  it("renders two figures when request.output_pair is true without an extra prop", () => {
+    const html = renderStage({
+      request: { ...PLUGIN_STATE, output_pair: true },
+      files: PAIR_FILES,
+    });
+
+    expect(html).toContain('data-output-pair="true"');
+    expect(countFigures(html)).toBe(2);
+    expect(countSlot(html, "pack-card")).toBe(2);
+    expect(html).toContain("stats.png");
+    expect(html).toContain("stats-dark.png");
+    expect(html).not.toContain("stats-light.png");
+  });
+
+  it("shows two Skeleton figures while loading when request.output_pair is true", () => {
+    const html = renderStage({
+      request: { ...PLUGIN_STATE, output_pair: true },
+      files: PAIR_FILES,
+      loading: true,
+    });
+
+    expect(html).toContain('data-output-pair="true"');
+    expect(html).toContain('data-loading="true"');
+    expect(countFigures(html)).toBe(2);
+    expect(countSlot(html, "pack-skeleton")).toBe(2);
+    expect(html).not.toContain(`data:${PNG_FILE.mime};base64,`);
   });
 });
 
@@ -232,6 +306,13 @@ describe("pack-stage source contract", () => {
     expect(source).toContain("export const CARD_WIDTH");
     expect(source).toContain("480");
     expect(source).toContain("160");
+    expect(source).toContain("output_pair = request.output_pair");
+    expect(source).toContain('[data-slot="pack-download"]:focus-visible');
+    expect(source).toContain('[data-slot="pack-share"]:focus-visible');
+    expect(source).toContain(
+      "outline: 2px solid var(--color-fd-ring, currentColor);",
+    );
+    expect(source).toContain("outline-offset: 2px;");
 
     expect(source).not.toContain("source-drop");
     expect(source).not.toContain("SourceDrop");

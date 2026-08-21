@@ -117,6 +117,8 @@ describe("exportWorkflow", () => {
     expect(workflowYml).not.toMatch(/^on:\s*push\s*$/m);
     expect(workflowYml).not.toMatch(/on:\s*\n\s*push:/);
     expect(workflowYml).toContain(`uses: ${EXPORT_ACTION_USES}`);
+    expect(EXPORT_ACTION_USES).toBe("wyattowalsh/profile-bits@v1");
+    expect(EXPORT_ACTION_USES).not.toContain("@main");
   });
 
   it("uses only thin with: keys", () => {
@@ -191,6 +193,7 @@ describe("exportWorkflow", () => {
     expect(config.timezone).toBe("UTC");
     expect(config.output_dir).toBe("profile-bits");
     expect(config.plugins.github?.widgets?.demo).toBeUndefined();
+    expect(config.plugins.github?.widgets?.repo).toBeUndefined();
     expect(config.plugins.github?.widgets?.stats).toMatchObject({
       filename: "stats",
       include: ["followers", "repos", "stars"],
@@ -234,6 +237,73 @@ describe("exportWorkflow", () => {
     expect(config.plugins.github?.widgets?.languages?.exclude).toEqual([
       "HTML",
     ]);
+  });
+
+  it("emits github repo yaml from widgets.repo without flattened inputs", () => {
+    const { workflowYml, configYml } = exportWorkflow({
+      ...DEFAULT_STATE,
+      widgets: {
+        repo: {
+          filename: "repo",
+          repo: "wyattowalsh/profile-bits",
+          include: ["stars", "forks", "issues", "license"],
+          avatar: true,
+          animate: false,
+        },
+      },
+      enabled: ["repo"],
+    });
+    const config = parseConfig({ yaml: configYml });
+
+    expect(configYml).toMatch(/repo:\s*$/m);
+    expect(configYml).toContain("repo: wyattowalsh/profile-bits");
+    expect(configYml).toMatch(/include: \[stars, forks, issues, license\]/);
+    expect(config.plugins.github?.widgets?.repo).toMatchObject({
+      filename: "repo",
+      repo: "wyattowalsh/profile-bits",
+      include: ["stars", "forks", "issues", "license"],
+      avatar: true,
+      animate: false,
+    });
+    expect(config.plugins.github?.widgets?.stats).toBeUndefined();
+    expect(config.plugins.github?.widgets?.languages).toBeUndefined();
+    expect(workflowYml).not.toContain("plugin_github_repo_");
+    expect(findFlattenedActionInputs(workflowYml)).toEqual([]);
+    expect(findFlattenedActionInputs(configYml)).toEqual([]);
+  });
+
+  it("emits github repo yaml from options.repo", () => {
+    const { configYml } = exportWorkflow({
+      ...DEFAULT_STATE,
+      options: {
+        repo: {
+          repo: "wyattowalsh/profile-bits",
+          include: ["stars", "license"],
+        },
+      },
+    });
+    const config = parseConfig({ yaml: configYml });
+
+    expect(config.plugins.github?.widgets?.repo).toMatchObject({
+      filename: "repo",
+      repo: "wyattowalsh/profile-bits",
+      include: ["stars", "license"],
+      avatar: true,
+      animate: false,
+    });
+    expect(config.plugins.github?.widgets?.stats).toBeUndefined();
+  });
+
+  it("does not emit repo without owner/name", () => {
+    const { configYml } = exportWorkflow({
+      ...DEFAULT_STATE,
+      enabled: ["repo"],
+      widgets: { repo: { filename: "repo" } },
+    });
+    const config = parseConfig({ yaml: configYml });
+
+    expect(configYml).toMatch(/plugins: \{\}\s*$/m);
+    expect(config.plugins.github).toBeUndefined();
   });
 
   it("emits pair for custom + output_pair and parseConfig succeeds", () => {

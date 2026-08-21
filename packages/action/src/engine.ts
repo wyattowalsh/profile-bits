@@ -18,6 +18,7 @@ import {
   type JsonOptions,
   type LanguagesOptions,
   parseConfig,
+  type RepoOptions,
   type SkipFailOutcome,
   type StatsOptions,
   type ThemeMember,
@@ -81,6 +82,7 @@ export type EnabledWidget =
   | { id: "demo"; options: DemoOptions }
   | { id: "stats"; options: StatsOptions }
   | { id: "languages"; options: LanguagesOptions }
+  | { id: "repo"; options: RepoOptions }
   | { id: "coding"; options: CodingOptions }
   | { id: "feed"; options: FeedOptions }
   | { id: "json"; options: JsonOptions }
@@ -374,6 +376,9 @@ function enabledWidgets(config: Config): EnabledWidget[] {
     if (widgets.languages !== undefined) {
       enabled.push({ id: "languages", options: widgets.languages });
     }
+    if (widgets.repo !== undefined) {
+      enabled.push({ id: "repo", options: widgets.repo });
+    }
   }
   const coding = config.plugins.wakatime?.widgets?.coding;
   if (coding !== undefined) {
@@ -402,6 +407,7 @@ function preflightWidget(
     usesHttpIntegration(widget.id) ||
     widget.id === "feed" ||
     widget.id === "demo" ||
+    widget.id === "repo" ||
     widget.id === "coding"
   ) {
     return "render";

@@ -334,7 +334,7 @@ export function PackStage({
   request,
   origin = "",
   loading = false,
-  output_pair = false,
+  output_pair = request.output_pair,
   format = "svg",
   motion = false,
   reducedMotion: reducedMotionProp,
@@ -416,7 +416,7 @@ export function PackStage({
           data-output-pair={output_pair ? "true" : "false"}
         >
           {showSkeleton
-            ? (output_pair ? ["dark", "light"] : ["hero"]).map((slot) => (
+            ? (output_pair ? ["light", "dark"] : ["hero"]).map((slot) => (
                 <PackSkeleton
                   key={`pack-skel-${slot}`}
                   label={
@@ -428,7 +428,7 @@ export function PackStage({
               ))
             : slots.map((file, index) => {
                 const slot = output_pair
-                  ? (["dark", "light"] as const)[index]
+                  ? (["light", "dark"] as const)[index]
                   : "hero";
                 return (
                   <PackCard

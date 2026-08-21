@@ -8,7 +8,7 @@ import {
   type GithubClient,
   GithubClientError,
 } from "@profile-bits/integrations";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WidgetRenderRequest } from "./engine.ts";
 import {
   createGithubRenderWidget,
@@ -16,6 +16,7 @@ import {
 } from "./render-github.ts";
 
 const TOKEN = "ghs_test_token";
+const STATS_FAIL_LINE = "github stats fail_widget";
 
 const GITHUB_YAML = `version: 1
 format: svg
@@ -25,7 +26,11 @@ plugins:
       demo: {}
       stats: {}
       languages: {}
+      repo:
+        repo: octocat/hello-world
 `;
+
+const REPO_FULL_NAME = "octocat/hello-world";
 
 const PUBLIC_CAPABILITIES: Capabilities = {
   canPrivate: false,
@@ -34,16 +39,11 @@ const PUBLIC_CAPABILITIES: Capabilities = {
 };
 
 function githubRequest(
-  id: "demo" | "stats" | "languages",
+  id: "demo" | "stats" | "languages" | "repo",
 ): WidgetRenderRequest {
   const config = parseConfig({ yaml: GITHUB_YAML });
   const widgets = config.plugins.github?.widgets;
-  const options =
-    id === "demo"
-      ? widgets?.demo
-      : id === "stats"
-        ? widgets?.stats
-        : widgets?.languages;
+  const options = widgets?.[id];
   if (options === undefined) {
     throw new Error(`expected ${id} widget options`);
   }
@@ -82,8 +82,52 @@ function assertCardSvg(svg: string): void {
   expect(svg).toMatch(/height="160"/);
 }
 
+function capturedWrites(spy: {
+  mock: { calls: readonly unknown[][] };
+}): string {
+  return spy.mock.calls.map((args) => String(args[0] ?? "")).join("");
+}
+
+function expectNoSecrets(haystack: string): void {
+  expect(haystack).not.toContain(TOKEN);
+}
+
+function repoPayload(): unknown {
+  return {
+    user: { login: "octocat" },
+    repositories: [],
+    repositoryIds: [],
+    languages: [],
+    repository: {
+      fullName: REPO_FULL_NAME,
+      name: "hello-world",
+      stargazersCount: 10,
+      forksCount: 2,
+      openIssuesCount: 1,
+      license: "MIT",
+    },
+  };
+}
+
+function assertNeverLanguagesRest(fetchSpy: {
+  mock: { calls: readonly unknown[][] };
+}): void {
+  expect(fetchSpy.mock.calls).toHaveLength(0);
+  const haystack = fetchSpy.mock.calls
+    .map((args) => String(args[0] ?? ""))
+    .join("");
+  expect(haystack).not.toMatch(/\/languages/);
+}
+
 describe("createGithubRenderWidget", () => {
+  beforeEach(() => {
+    vi.stubEnv("GITHUB_ACTIONS", "");
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -176,6 +220,87 @@ describe("createGithubRenderWidget", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("renders repo from a mocked payload as repo.svg", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const loadPayload = loadPayloadMock(repoPayload());
+    const render = createGithubRenderWidget({
+      client: mockClient(loadPayload),
+    });
+
+    const result = await render(githubRequest("repo"));
+
+    expect(result.id).toBe("repo");
+    expect(result.outcome).toBe("render");
+    expect(result.files).toHaveLength(1);
+    expect(result.files?.[0]?.path).toBe("repo.svg");
+    expect(typeof result.files?.[0]?.contents).toBe("string");
+    assertCardSvg(String(result.files?.[0]?.contents));
+    expect(loadPayload).toHaveBeenCalledWith({
+      user: "octocat",
+      widget: "repo",
+      repo: REPO_FULL_NAME,
+      includePrivate: false,
+      includeForks: false,
+      includeArchived: false,
+    });
+    expect(loadPayload).toHaveBeenCalledOnce();
+    assertNeverLanguagesRest(fetchSpy);
+  });
+
+  it("maps repo GithubClientError 404 fail_widget to no files", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const loadPayload = vi.fn(async () => {
+      throw new GithubClientError(
+        "fail_widget",
+        "GitHub repository not found",
+        {
+          status: 404,
+        },
+      );
+    });
+    const render = createGithubRenderWidget({
+      client: mockClient(loadPayload),
+    });
+
+    const result = await render(githubRequest("repo"));
+
+    expect(result).toEqual({ id: "repo", outcome: "fail_widget" });
+    expect(result.files).toBeUndefined();
+    expect(loadPayload).toHaveBeenCalledWith({
+      user: "octocat",
+      widget: "repo",
+      repo: REPO_FULL_NAME,
+      includePrivate: false,
+      includeForks: false,
+      includeArchived: false,
+    });
+    assertNeverLanguagesRest(fetchSpy);
+  });
+
+  it("rethrows repo GithubClientError fail_run for 401", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const error = new GithubClientError("fail_run", "GitHub unauthorized", {
+      status: 401,
+    });
+    const loadPayload = vi.fn(async () => {
+      throw error;
+    });
+    const render = createGithubRenderWidget({
+      client: mockClient(loadPayload),
+    });
+
+    await expect(render(githubRequest("repo"))).rejects.toBe(error);
+    expect(loadPayload).toHaveBeenCalledWith({
+      user: "octocat",
+      widget: "repo",
+      repo: REPO_FULL_NAME,
+      includePrivate: false,
+      includeForks: false,
+      includeArchived: false,
+    });
+    assertNeverLanguagesRest(fetchSpy);
+  });
+
   it("maps GithubClientError fail_widget to no files", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const loadPayload = vi.fn(async () => {
@@ -195,6 +320,63 @@ describe("createGithubRenderWidget", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("maps stats GithubClientError fail_widget without ::warning:: when GITHUB_ACTIONS is unset", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const loadPayload = vi.fn(async () => {
+      throw new GithubClientError(
+        "fail_widget",
+        `include_private requires canPrivate ${TOKEN}`,
+      );
+    });
+    const render = createGithubRenderWidget({
+      client: mockClient(loadPayload),
+    });
+
+    const result = await render(githubRequest("stats"));
+    const stdout = capturedWrites(vi.mocked(process.stdout.write));
+    const stderr = capturedWrites(vi.mocked(process.stderr.write));
+    const haystack = `${stdout}${stderr}`;
+
+    expect(result).toEqual({ id: "stats", outcome: "fail_widget" });
+    expect(result.files).toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(stderr).toContain(STATS_FAIL_LINE);
+    expect(stdout).not.toContain("::warning::");
+    expectNoSecrets(haystack);
+  });
+
+  it("emits ::warning:: and ::group::github stats for fail_widget when GITHUB_ACTIONS is true", async () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const loadPayload = vi.fn(async () => {
+      throw new GithubClientError(
+        "fail_widget",
+        `include_private requires canPrivate ${TOKEN}`,
+      );
+    });
+    const render = createGithubRenderWidget({
+      client: mockClient(loadPayload),
+    });
+
+    const result = await render(githubRequest("stats"));
+    const stdout = capturedWrites(vi.mocked(process.stdout.write));
+    const stderr = capturedWrites(vi.mocked(process.stderr.write));
+    const haystack = `${stdout}${stderr}`;
+
+    expect(result).toEqual({ id: "stats", outcome: "fail_widget" });
+    expect(result.files).toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(stdout).toContain(`::warning::${STATS_FAIL_LINE}`);
+    expect(stdout).toContain("::group::github stats");
+    expect(stdout).toContain(`${STATS_FAIL_LINE}\n`);
+    expect(stdout).toContain("::endgroup::\n");
+    expect(stdout.match(/::warning::/g)).toHaveLength(1);
+    expect(stdout.match(/::group::/g)).toHaveLength(1);
+    expect(stdout).not.toContain("::error::");
+    expect(stderr).toContain(`${STATS_FAIL_LINE}\n`);
+    expectNoSecrets(haystack);
+  });
+
   it("throws UnhandledGithubWidgetError for non-github ids", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const loadPayload = vi.fn();
@@ -208,6 +390,23 @@ describe("createGithubRenderWidget", () => {
     );
     expect(loadPayload).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not throw UnhandledGithubWidgetError for repo", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const loadPayload = loadPayloadMock(repoPayload());
+    const render = createGithubRenderWidget({
+      client: mockClient(loadPayload),
+    });
+
+    await expect(render(githubRequest("repo"))).resolves.toMatchObject({
+      id: "repo",
+      outcome: "render",
+    });
+    expect(loadPayload).toHaveBeenCalledWith(
+      expect.objectContaining({ widget: "repo", repo: REPO_FULL_NAME }),
+    );
+    assertNeverLanguagesRest(fetchSpy);
   });
 
   it.each(["fail_run", "fail_job", "fail_after_backoff"] as const)(
@@ -226,4 +425,27 @@ describe("createGithubRenderWidget", () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     },
   );
+
+  it("does not emit ::warning:: when GithubClientError fail_run is rethrown", async () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const error = new GithubClientError("fail_run", `github fail_run ${TOKEN}`);
+    const loadPayload = vi.fn(async () => {
+      throw error;
+    });
+    const render = createGithubRenderWidget({
+      client: mockClient(loadPayload),
+    });
+
+    await expect(render(githubRequest("stats"))).rejects.toBe(error);
+    const stdout = capturedWrites(vi.mocked(process.stdout.write));
+    const stderr = capturedWrites(vi.mocked(process.stderr.write));
+    const haystack = `${stdout}${stderr}`;
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(stdout).not.toContain("::warning::");
+    expect(stdout).not.toContain("::group::github stats");
+    expect(stderr).not.toContain(STATS_FAIL_LINE);
+    expectNoSecrets(haystack);
+  });
 });

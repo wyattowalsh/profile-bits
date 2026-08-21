@@ -1,7 +1,11 @@
 /**
- * Authenticated GitHub client: one identity probe per instance, then REST crawl.
- * Never unauthenticated (60/h/IP). Empty token fails before any HTTP.
- * FORBIDDEN: graphql.ts (T112); REST /languages; rewriting rest.ts.
+ * Authenticated GitHub client: one identity probe per instance, then REST
+ * crawl plus GraphQL `nodes(ids:)` language bytes (T112) for stats/languages.
+ * Widget demo: probe only. Widget repo: probe + GET /repos/{owner}/{repo}.
+ * Never unauthenticated (60/h/IP). Empty token fails before any HTTP. Never
+ * REST `/languages`. FORBIDDEN: rewriting rest.ts; implementing GraphQL
+ * inside this file. `logger` is GraphQL RateLimitLogger; `runLog` is REST
+ * crawl RunLogSink.
  */
 
 import {
@@ -9,6 +13,7 @@ import {
   decideActionToken,
   decideIncludePrivate,
   isMissingToken,
+  type RunLogSink,
   type SkipFailOutcome,
   type TokenClass,
 } from "@profile-bits/core";
@@ -17,11 +22,19 @@ import {
   type GithubProbeResult,
   mapGithubCapabilities,
 } from "./capabilities.js";
-import { classifyGithubRateLimit } from "./rate-limit.js";
+import {
+  fetchContributionTotal,
+  fetchRepositoryLanguages,
+  GithubGraphqlError,
+  type GithubLanguageBytes,
+} from "./graphql.js";
+import { classifyGithubRateLimit, type RateLimitLogger } from "./rate-limit.js";
 import {
   crawlGithubRest,
+  fetchGithubRepo,
   GITHUB_API_ORIGIN,
   GITHUB_API_VERSION,
+  type GithubRepository,
   type GithubRestCrawlResult,
   GithubRestError,
   type GithubRestFetch,
@@ -36,24 +49,31 @@ export type CreateGithubClientInput = {
   configuredUser: string;
   fetch?: GithubRestFetch;
   cache?: GithubRequestCache;
+  logger?: RateLimitLogger;
+  runLog?: RunLogSink;
 };
 
 export type GithubPayloadInput = {
   user: string;
   widget?: string;
+  repo?: string;
   includePrivate: boolean;
   includeForks: boolean;
   includeArchived: boolean;
 };
 
-/** REST crawl payload. GraphQL languages/contributions stay in T112. */
-export type GithubWidgetPayload = GithubRestCrawlResult;
+/** REST crawl plus GraphQL language bytes; contributions iff capable. */
+export type GithubWidgetPayload = GithubRestCrawlResult & {
+  languages: readonly GithubLanguageBytes[];
+  contributions?: number;
+  repository?: GithubRepository;
+};
 
 export type GithubClient = {
   readonly tokenClass: TokenClass;
   readonly capabilities: Capabilities;
-  loadPayload: (input: GithubPayloadInput) => Promise<GithubRestCrawlResult>;
-  fetchPayload: (input: GithubPayloadInput) => Promise<GithubRestCrawlResult>;
+  loadPayload: (input: GithubPayloadInput) => Promise<GithubWidgetPayload>;
+  fetchPayload: (input: GithubPayloadInput) => Promise<GithubWidgetPayload>;
 };
 
 export class GithubClientError extends Error {
@@ -75,9 +95,15 @@ export class GithubClientError extends Error {
   }
 }
 
+const NOOP_RATE_LIMIT_LOGGER: RateLimitLogger = {
+  info() {},
+};
+
 /**
  * One client per Action / playground request. Probe is capability-only
- * (`GET /user`). Payload is T111d `crawlGithubRest` through the run cache.
+ * (`GET /user`). Payload is T111d `crawlGithubRest` plus T112 GraphQL
+ * `nodes(ids:)` language bytes through the run cache, except demo (probe
+ * only) and repo (`fetchGithubRepo`).
  */
 export function createGithubClient(
   input: CreateGithubClientInput | string,
@@ -96,6 +122,8 @@ export function createGithubClient(
   const configuredUser = options.configuredUser;
   const fetchImpl = options.fetch ?? fetch;
   const cache = options.cache ?? new GithubRequestCache();
+  const logger = options.logger ?? NOOP_RATE_LIMIT_LOGGER;
+  const runLog = options.runLog;
   let tokenClass = inferGithubTokenClass(token);
   // Probe has not run yet: never invent matching "_"/"_" logins so a
   // ghp_/github_pat_ looks like canPrivate for every requested user.
@@ -121,7 +149,7 @@ export function createGithubClient(
 
   async function loadPayload(
     payloadInput: GithubPayloadInput,
-  ): Promise<GithubRestCrawlResult> {
+  ): Promise<GithubWidgetPayload> {
     const identity = await ensureProbe();
     const login = resolveLogin(payloadInput.user, configuredUser);
     tokenClass = inferGithubTokenClass(token, identity);
@@ -130,6 +158,32 @@ export function createGithubClient(
       configuredUser: login,
       tokenClass,
     });
+
+    if (payloadInput.widget === "demo") {
+      return { ...emptyGithubCrawl(login), languages: [] };
+    }
+
+    if (payloadInput.widget === "repo") {
+      try {
+        const repository = await fetchGithubRepo({
+          repo: payloadInput.repo ?? "",
+          token,
+          cache,
+          fetchImpl,
+          logger: runLog,
+        });
+        return {
+          ...emptyGithubCrawl(login),
+          languages: [],
+          repository,
+        };
+      } catch (error) {
+        throw wrapGithubDataError(
+          error,
+          "GitHub crawl failed before a classified response",
+        );
+      }
+    }
 
     if (
       decideIncludePrivate({
@@ -144,7 +198,7 @@ export function createGithubClient(
     }
 
     try {
-      return await crawlGithubRest({
+      const crawl = await crawlGithubRest({
         login,
         token,
         cache,
@@ -153,18 +207,30 @@ export function createGithubClient(
         includeForks: payloadInput.includeForks,
         includeArchived: payloadInput.includeArchived,
         fetchImpl,
+        logger: runLog,
       });
+      const languages = await fetchRepositoryLanguages({
+        repositoryIds: crawl.repositoryIds,
+        token,
+        cache,
+        fetchImpl,
+        logger,
+      });
+      const contributions = await fetchContributionTotal({
+        login,
+        token,
+        cache,
+        canContributions: capabilities.canContributions,
+        fetchImpl,
+        logger,
+      });
+      return contributions === undefined
+        ? { ...crawl, languages }
+        : { ...crawl, languages, contributions };
     } catch (error) {
-      if (
-        error instanceof GithubRestError ||
-        error instanceof GithubClientError
-      ) {
-        throw error;
-      }
-      throw new GithubClientError(
-        "fail_run",
+      throw wrapGithubDataError(
+        error,
         "GitHub crawl failed before a classified response",
-        { cause: error },
       );
     }
   }
@@ -232,6 +298,22 @@ function resolveLogin(payloadUser: string, configuredUser: string): string {
     return fromPayload;
   }
   return configuredUser.trim();
+}
+
+function emptyGithubCrawl(login: string): GithubRestCrawlResult {
+  return {
+    user: {
+      login,
+      id: 0,
+      nodeId: "",
+      followers: 0,
+      following: 0,
+      publicRepos: 0,
+      publicGists: 0,
+    },
+    repositories: [],
+    repositoryIds: [],
+  };
 }
 
 async function fetchIdentityProbe(input: {
@@ -326,6 +408,22 @@ function headersRecord(headers: Headers): Record<string, string> {
     record[key] = value;
   });
   return record;
+}
+
+function wrapGithubDataError(
+  error: unknown,
+  fallback: string,
+): GithubClientError {
+  if (error instanceof GithubClientError) {
+    return error;
+  }
+  if (error instanceof GithubGraphqlError || error instanceof GithubRestError) {
+    return new GithubClientError(error.outcome, error.message, {
+      status: error.status,
+      cause: error,
+    });
+  }
+  return new GithubClientError("fail_run", fallback, { cause: error });
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

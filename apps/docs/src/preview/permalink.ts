@@ -1,8 +1,8 @@
 import {
   type BitPreviewRequest,
-  isPreviewNamedTheme,
   isPreviewOutputFormat,
   isPreviewPluginId,
+  isPreviewRepoIncludeToken,
   isPreviewScope,
   isPreviewStatsIncludeToken,
   isPreviewTheme,
@@ -16,6 +16,8 @@ import {
   type PreviewOptions,
   type PreviewOutputFormat,
   type PreviewPluginId,
+  type PreviewRepoIncludeToken,
+  type PreviewRepoOptions,
   type PreviewRequest,
   type PreviewScope,
   type PreviewStatsIncludeToken,
@@ -174,6 +176,47 @@ function pickLanguages(value: unknown): PreviewLanguagesOptions {
   return out;
 }
 
+function pickRepoInclude(
+  value: unknown,
+): PreviewRepoIncludeToken[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return value.filter(
+    (item): item is PreviewRepoIncludeToken =>
+      typeof item === "string" && isPreviewRepoIncludeToken(item),
+  );
+}
+
+function pickRepo(value: unknown): PreviewRepoOptions {
+  const rec = asRecord(value);
+  if (!rec) {
+    return {};
+  }
+  const out: PreviewRepoOptions = {};
+  const filename = pickString(rec.filename);
+  const include = pickRepoInclude(rec.include);
+  const avatar = pickBoolean(rec.avatar);
+  const animate = pickBoolean(rec.animate);
+  const repo = pickString(rec.repo);
+  if (filename !== undefined) {
+    out.filename = filename;
+  }
+  if (include !== undefined) {
+    out.include = include;
+  }
+  if (avatar !== undefined) {
+    out.avatar = avatar;
+  }
+  if (animate !== undefined) {
+    out.animate = animate;
+  }
+  if (repo !== undefined) {
+    out.repo = repo;
+  }
+  return out;
+}
+
 function pickFormat(value: unknown): PreviewOutputFormat | undefined {
   return typeof value === "string" && isPreviewOutputFormat(value)
     ? value
@@ -199,6 +242,9 @@ export function pickOptions(value: unknown): PreviewOptions {
   }
   if ("languages" in rec) {
     out.languages = pickLanguages(rec.languages);
+  }
+  if ("repo" in rec) {
+    out.repo = pickRepo(rec.repo);
   }
   const format = pickFormat(rec.format);
   const theme = pickTheme(rec.theme);
@@ -389,10 +435,11 @@ function parseThemeParam(params: URLSearchParams): PreviewTheme {
   if (value === "custom") {
     return { custom: readCustomRoles(params) };
   }
-  if (value != null && isPreviewNamedTheme(value)) {
-    return value;
+  // Missing/empty defaults; a present unknown id must not become "dark".
+  if (value == null || value === "") {
+    return "dark";
   }
-  return "dark";
+  return value;
 }
 
 /**

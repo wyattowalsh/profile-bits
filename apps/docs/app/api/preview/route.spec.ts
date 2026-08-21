@@ -37,6 +37,17 @@ const PREVIEW_BODY: PreviewRequest = {
   user: "octocat",
 };
 
+const MOCHA_CUSTOM_THEME = {
+  custom: {
+    bg: "#1e1e2e",
+    card: "#181825",
+    text: "#cdd6f4",
+    muted: "#a6adc8",
+    accent: "#cba6f7",
+    border: "#6c7086",
+  },
+} as const;
+
 const PREVIEW_RESULT: PreviewResponse = {
   files: [
     {
@@ -96,19 +107,9 @@ describe("POST /api/preview", () => {
   });
 
   it("accepts a custom theme object with no token fields", async () => {
-    const customTheme = {
-      custom: {
-        bg: "#1e1e2e",
-        card: "#181825",
-        text: "#cdd6f4",
-        muted: "#a6adc8",
-        accent: "#cba6f7",
-        border: "#6c7086",
-      },
-    };
     const body = {
       ...PREVIEW_BODY,
-      theme: customTheme,
+      theme: MOCHA_CUSTOM_THEME,
       github_token: "ghp_secret",
       token: "secret-token",
     };
@@ -119,10 +120,54 @@ describe("POST /api/preview", () => {
     expect(response.headers.get("Cache-Control")).toBe(PREVIEW_CACHE_CONTROL);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(mocks.renderPreview).toHaveBeenCalledOnce();
-    expect(forwarded.theme).toEqual(customTheme);
+    expect(forwarded.theme).toEqual(MOCHA_CUSTOM_THEME);
     expect(forwarded).not.toHaveProperty("github_token");
     expect(forwarded).not.toHaveProperty("token");
     expect(JSON.stringify(forwarded)).not.toContain("ghp_secret");
+  });
+
+  it("returns 400 for a custom theme with an unknown swatch", async () => {
+    const response = await POST(
+      postRequest({
+        ...PREVIEW_BODY,
+        theme: {
+          custom: {
+            bg: "catppuccin-mocha.bg",
+            card: "catppuccin-mocha.card",
+            text: "catppuccin-mocha.text",
+            muted: "catppuccin-mocha.muted",
+            accent: "catppuccin-mocha.mau",
+            border: "catppuccin-mocha.border",
+          },
+        },
+      }),
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(response.status).not.toBe(500);
+    expect(json).toEqual({ error: "Invalid preview body" });
+    expect(json).not.toHaveProperty("stack");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(mocks.renderPreview).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when custom output_pair is true without pair", async () => {
+    const response = await POST(
+      postRequest({
+        ...PREVIEW_BODY,
+        theme: MOCHA_CUSTOM_THEME,
+        output_pair: true,
+      }),
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(response.status).not.toBe(500);
+    expect(json).toEqual({ error: "Invalid preview body" });
+    expect(json).not.toHaveProperty("stack");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(mocks.renderPreview).not.toHaveBeenCalled();
   });
 
   it("rejects the string custom as a catalog id", async () => {
@@ -137,22 +182,33 @@ describe("POST /api/preview", () => {
     expect(mocks.renderPreview).not.toHaveBeenCalled();
   });
 
-  it("does not forward token fields to renderPreview", async () => {
+  it("does not forward token fields or zip to renderPreview", async () => {
     const response = await POST(
       postRequest({
         ...PREVIEW_BODY,
         github_token: "ghp_secret",
         committer_token: "ghs_secret",
         token: "secret-token",
+        wakatime_token: "waka_secret",
+        http_token_env: "HTTP_TOKEN",
+        http_token: "http_secret",
+        zip: "widgets.zip",
       }),
     );
     const forwarded = mocks.renderPreview.mock.calls[0]?.[0];
+    const serialized = JSON.stringify(forwarded);
 
     expect(response.status).toBe(200);
     expect(forwarded).toEqual(PREVIEW_BODY);
     expect(forwarded).not.toHaveProperty("github_token");
     expect(forwarded).not.toHaveProperty("committer_token");
     expect(forwarded).not.toHaveProperty("token");
+    expect(forwarded).not.toHaveProperty("wakatime_token");
+    expect(forwarded).not.toHaveProperty("http_token_env");
+    expect(forwarded).not.toHaveProperty("http_token");
+    expect(forwarded).not.toHaveProperty("zip");
+    expect(serialized).not.toContain("ghp_secret");
+    expect(serialized).not.toContain("widgets.zip");
   });
 
   it("returns 400 for an empty body instead of 200 empty files", async () => {
@@ -192,6 +248,47 @@ describe("POST /api/preview", () => {
     expect(mocks.renderPreview).not.toHaveBeenCalled();
   });
 
+  it("returns 400 for plugin http and widgets chips|json", async () => {
+    const pluginHttp = await POST(
+      postRequest({
+        ...PREVIEW_BODY,
+        plugin: "http",
+      }),
+    );
+    const widgetChips = await POST(
+      postRequest({
+        scope: "widget",
+        plugin: "github",
+        widget: "chips",
+        options: {},
+        format: "svg",
+        theme: "dark",
+        output_pair: false,
+        user: "octocat",
+      }),
+    );
+    const widgetJson = await POST(
+      postRequest({
+        scope: "widget",
+        plugin: "github",
+        widget: "json",
+        options: {},
+        format: "svg",
+        theme: "dark",
+        output_pair: false,
+        user: "octocat",
+      }),
+    );
+
+    expect(pluginHttp.status).toBe(400);
+    expect(widgetChips.status).toBe(400);
+    expect(widgetJson.status).toBe(400);
+    expect(await pluginHttp.json()).toEqual({ error: "Invalid preview body" });
+    expect(pluginHttp.headers.get("Cache-Control")).toBe("no-store");
+    expect(pluginHttp.headers.get("X-Robots-Tag")).toBe("noindex");
+    expect(mocks.renderPreview).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when required fields are missing", async () => {
     const response = await POST(
       postRequest({
@@ -219,6 +316,21 @@ describe("POST /api/preview", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(mocks.renderPreview).not.toHaveBeenCalled();
   });
+
+  it("returns 422 JSON when renderPreview throws TakumiRenderError", async () => {
+    const { TakumiRenderError } = await import("@profile-bits/renderer");
+    mocks.renderPreview.mockRejectedValue(
+      new TakumiRenderError("empty Takumi tree"),
+    );
+
+    const response = await POST(postRequest(PREVIEW_BODY));
+    const json = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(json).toEqual({ error: "Preview render failed" });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
+  });
 });
 
 describe("GET /api/preview", () => {
@@ -227,16 +339,20 @@ describe("GET /api/preview", () => {
     mocks.renderPreview.mockReset();
   });
 
-  it("rejects GET with 405", () => {
+  it("rejects GET with 405 Allow POST", () => {
     const response = GET(new Request("https://docs.local/api/preview"));
 
     expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("POST");
     expect(mocks.renderPreview).not.toHaveBeenCalled();
+    expect(mocks.assertPreviewOrigin).not.toHaveBeenCalled();
   });
 
   it("sends no-store and noindex on GET 405", () => {
     const response = GET(new Request("https://docs.local/api/preview"));
 
+    expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("POST");
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
   });

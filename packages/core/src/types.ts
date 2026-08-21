@@ -1,3 +1,4 @@
+import { NAMED_THEME_IDS } from "@profile-bits/themes";
 import * as z from "zod";
 import {
   dedupePreserveOrder,
@@ -45,6 +46,7 @@ export const FIRST_PARTY_WIDGET_IDS = [
   "demo",
   "stats",
   "languages",
+  "repo",
   "coding",
   "feed",
   "json",
@@ -79,6 +81,7 @@ export const WIDGET_INTEGRATIONS = {
   demo: ["static"],
   stats: ["github"],
   languages: ["github"],
+  repo: ["github"],
   coding: ["wakatime"],
   feed: ["rss"],
   json: ["http"],
@@ -108,56 +111,8 @@ export const OUTPUT_FORMATS = [
 export const OutputFormatSchema = z.enum(OUTPUT_FORMATS);
 export type OutputFormat = z.infer<typeof OutputFormatSchema>;
 
-/** Named catalog ids. Keep in lockstep with `@profile-bits/themes` `NAMED_THEME_IDS`. */
-export const THEMES = [
-  "ayu-dark",
-  "ayu-light",
-  "ayu-mirage",
-  "bluloco-dark",
-  "bluloco-light",
-  "catppuccin-frappe",
-  "catppuccin-latte",
-  "catppuccin-macchiato",
-  "catppuccin-mocha",
-  "dark",
-  "dawnfox",
-  "dayfox",
-  "dracula",
-  "dracula-alucard",
-  "everforest-dark",
-  "everforest-light",
-  "flexoki-dark",
-  "flexoki-light",
-  "github-dimmed",
-  "gruvbox-dark",
-  "gruvbox-light",
-  "horizon-dark",
-  "horizon-light",
-  "iceberg-dark",
-  "iceberg-light",
-  "kanagawa-dragon",
-  "kanagawa-lotus",
-  "kanagawa-wave",
-  "light",
-  "light-owl",
-  "night-owl",
-  "nightfox",
-  "nord",
-  "nord-light",
-  "one-dark",
-  "one-light",
-  "papercolor-dark",
-  "papercolor-light",
-  "rose-pine",
-  "rose-pine-dawn",
-  "rose-pine-moon",
-  "solarized-dark",
-  "solarized-light",
-  "tokyo-night",
-  "tokyo-night-day",
-  "tokyo-night-moon",
-  "tokyo-night-storm",
-] as const;
+/** Named catalog ids. Same reference as `@profile-bits/themes` `NAMED_THEME_IDS`. */
+export const THEMES = NAMED_THEME_IDS;
 export const ThemeSchema = z.enum(THEMES);
 export type Theme = z.infer<typeof ThemeSchema>;
 
@@ -314,6 +269,25 @@ export const LANGUAGES_INCLUDE_PRIVATE_DEFAULT = false;
 export const LANGUAGES_INCLUDE_FORKS_DEFAULT = false;
 export const LANGUAGES_INCLUDE_ARCHIVED_DEFAULT = false;
 
+export const REPO_FILENAME_DEFAULT = "repo";
+export const REPO_INCLUDE_TOKENS = [
+  "stars",
+  "forks",
+  "watchers",
+  "issues",
+  "license",
+  "language",
+] as const;
+export const REPO_INCLUDE_DEFAULT = [
+  "stars",
+  "forks",
+  "issues",
+  "license",
+] as const satisfies readonly (typeof REPO_INCLUDE_TOKENS)[number][];
+export const REPO_AVATAR_DEFAULT = true;
+export const REPO_ANIMATE_DEFAULT = false;
+export const GITHUB_REPO_FULL_NAME = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+
 export const FEED_FILENAME_DEFAULT = "feed";
 export const FEED_LIMIT_MIN = 1;
 export const FEED_LIMIT_MAX = 8;
@@ -375,7 +349,7 @@ export const ACTION_OUTPUT_ACTION_DEFAULT =
   "commit" as const satisfies OutputAction;
 export const ACTION_ALLOW_SKIPPED_DEFAULT = false;
 export const ACTION_USER_DEFAULT = "github.repository_owner";
-export const ACTION_OMITTED_TOKEN_DEFAULT = "${{ github.token }}";
+export const ACTION_OMITTED_TOKEN_DEFAULT = "$" + "{{ github.token }}";
 
 export const StatsIncludeTokenSchema = z.enum(STATS_INCLUDE_TOKENS);
 export type StatsIncludeToken = z.infer<typeof StatsIncludeTokenSchema>;
@@ -400,6 +374,27 @@ export const StatsOptionsSchema = z.strictObject({
   include_archived: z.boolean().default(STATS_INCLUDE_ARCHIVED_DEFAULT),
 });
 export type StatsOptions = z.infer<typeof StatsOptionsSchema>;
+
+export const RepoIncludeTokenSchema = z.enum(REPO_INCLUDE_TOKENS);
+export type RepoIncludeToken = z.infer<typeof RepoIncludeTokenSchema>;
+
+export const GithubRepoFullNameSchema = z
+  .string()
+  .regex(GITHUB_REPO_FULL_NAME, "repo must be owner/name");
+
+export const RepoOptionsSchema = z.strictObject({
+  filename: z.string().default(REPO_FILENAME_DEFAULT),
+  repo: GithubRepoFullNameSchema,
+  include: z
+    .array(RepoIncludeTokenSchema)
+    .min(1)
+    .transform((items) => dedupePreserveOrder(items))
+    .pipe(z.array(RepoIncludeTokenSchema).min(1))
+    .default(() => [...REPO_INCLUDE_DEFAULT]),
+  avatar: z.boolean().default(REPO_AVATAR_DEFAULT),
+  animate: z.boolean().default(REPO_ANIMATE_DEFAULT),
+});
+export type RepoOptions = z.infer<typeof RepoOptionsSchema>;
 
 export const LanguagesOptionsSchema = z.strictObject({
   filename: z.string().default(LANGUAGES_FILENAME_DEFAULT),
@@ -505,6 +500,7 @@ export const GithubWidgetsConfigSchema = z.strictObject({
   demo: DemoOptionsSchema.optional(),
   stats: StatsOptionsSchema.optional(),
   languages: LanguagesOptionsSchema.optional(),
+  repo: RepoOptionsSchema.optional(),
 });
 export type GithubWidgetsConfig = z.infer<typeof GithubWidgetsConfigSchema>;
 
@@ -638,6 +634,13 @@ export const LANGUAGES_OPTION_DEFAULTS = {
   include_private: LANGUAGES_INCLUDE_PRIVATE_DEFAULT,
   include_forks: LANGUAGES_INCLUDE_FORKS_DEFAULT,
   include_archived: LANGUAGES_INCLUDE_ARCHIVED_DEFAULT,
+} as const;
+
+export const REPO_OPTION_DEFAULTS = {
+  filename: REPO_FILENAME_DEFAULT,
+  include: REPO_INCLUDE_DEFAULT,
+  avatar: REPO_AVATAR_DEFAULT,
+  animate: REPO_ANIMATE_DEFAULT,
 } as const;
 
 export const JSON_OPTION_DEFAULTS = {

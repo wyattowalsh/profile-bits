@@ -40,3 +40,33 @@ export function redactLogMessage(
 ): string {
   return redactSecrets(message, secrets);
 }
+
+// Duplicated from Action workflow-log: core must not import @profile-bits/action.
+function escapeWorkflowCommand(message: string): string {
+  return message
+    .replaceAll("%", "%25")
+    .replaceAll("\r", "%0D")
+    .replaceAll("\n", "%0A");
+}
+
+export function createDefaultRunLogSink(): RunLogSink {
+  return (event) => {
+    const json = formatLogEvent(event);
+    process.stderr.write(`profile-bits ${json}\n`);
+    if (process.env.GITHUB_ACTIONS !== "true") {
+      return;
+    }
+    let command: "error" | "warning" | undefined;
+    if (event.outcome === "fail_run" || event.outcome === "fail_job") {
+      command = "error";
+    } else if (event.outcome === "fail_widget") {
+      command = "warning";
+    }
+    if (command == null) {
+      return;
+    }
+    process.stdout.write(
+      `::${command}::${escapeWorkflowCommand(event.message ?? json)}\n`,
+    );
+  };
+}

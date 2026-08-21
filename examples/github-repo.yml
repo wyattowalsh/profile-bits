@@ -1,0 +1,16 @@
+version: 1
+format: svg
+theme: dark
+output_pair: false
+animated: false
+timezone: UTC
+output_dir: profile-bits
+plugins:
+  github:
+    widgets:
+      repo:
+        filename: repo
+        repo: wyattowalsh/profile-bits
+        include: [stars, forks, issues, license]
+        avatar: true
+        animate: false

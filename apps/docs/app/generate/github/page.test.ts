@@ -33,7 +33,7 @@ describe("GET /generate/github", () => {
   it("locks the pack request to v0 github", () => {
     expect(GENERATE_PLUGIN_ID).toBe("github");
     expect(GITHUB_GENERATE_HREF).toBe("/generate/github");
-    expect(PREVIEW_WIDGET_IDS).toEqual(["demo", "stats", "languages"]);
+    expect(PREVIEW_WIDGET_IDS).toEqual(["demo", "stats", "languages", "repo"]);
     expect(githubPackRequest()).toEqual({
       ...DEFAULT_GENERATE_REQUEST,
       scope: "plugin",

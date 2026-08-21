@@ -54,6 +54,7 @@ describe("widgetFromPathname", () => {
     expect(widgetFromPathname("/playground/github/languages")).toBe(
       "languages",
     );
+    expect(widgetFromPathname("/playground/github/repo")).toBe("repo");
     expect(widgetFromPathname("/playground/github/coding")).toBeUndefined();
   });
 });

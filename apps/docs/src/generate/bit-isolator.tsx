@@ -18,12 +18,11 @@ import { PREVIEW_ENDPOINT, usePreview } from "@/src/preview/use-preview";
 
 export type BitIsolatorProps = {
   bit: PreviewBitName;
-  request?: PreviewRequest;
   files?: PreviewFile[];
   loading?: boolean;
 };
 
-/** Canonical POST /api/preview body for one v0 bit isolator. */
+/** Canonical POST /api/preview body for one v0 bit isolator. Empty query → dark. */
 export function bitIsolatorRequest(bit: PreviewBitName): PreviewRequest {
   return {
     ...DEFAULT_GENERATE_REQUEST,
@@ -32,7 +31,11 @@ export function bitIsolatorRequest(bit: PreviewBitName): PreviewRequest {
   };
 }
 
-function requestFromSearch(
+/**
+ * Overlay GenerateShell/GlobalBar permalink query onto a bit-scoped request.
+ * Path owns `bit`; named `theme=` and custom `c*` tokens come from search.
+ */
+export function requestFromSearch(
   bit: PreviewBitName,
   search: string | URLSearchParams,
 ): PreviewRequest {
@@ -50,16 +53,16 @@ function requestFromSearch(
 /**
  * 480×160 isolator stage. POSTs `scope: "bit"` via `usePreview`; the preview
  * route renders T315s `bitSampleElement` (Theme+Frame card). No bits import.
+ * Theme follows the shared generate permalink, not a hardcoded dark request.
  */
 export function BitIsolator({
   bit,
-  request: requestProp,
   files: filesProp,
   loading: loadingProp,
 }: BitIsolatorProps) {
   const searchParams = useSearchParams();
   const searchKey = searchParams?.toString() ?? "";
-  const preview = usePreview(requestProp ?? bitIsolatorRequest(bit));
+  const preview = usePreview(requestFromSearch(bit, searchKey));
 
   useEffect(() => {
     preview.setRequest(requestFromSearch(bit, searchKey));

@@ -8,6 +8,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ import {
   GENERATE_PATH_PREFIX,
   parse,
   pickOptions,
+  serialize,
 } from "@/src/preview/permalink";
 import {
   isPreviewBitName,
@@ -284,6 +286,57 @@ export function generatePath(request: PreviewRequest): string {
   return `${GENERATE_PATH_PREFIX}/${plugin}`;
 }
 
+export function generateLocationHref(pathname: string, query: string): string {
+  return query.length > 0 ? `${pathname}?${query}` : pathname;
+}
+
+function isGeneratePath(pathname: string): boolean {
+  return (
+    pathname === GENERATE_PATH_PREFIX ||
+    pathname.startsWith(`${GENERATE_PATH_PREFIX}/`)
+  );
+}
+
+/** `/generate/bits/<BitName>` pages own the 480×160 card; PackStage must not. */
+export function isBitIsolatorPath(pathname: string): boolean {
+  const parts = pathname.split("/").filter(Boolean);
+  return (
+    parts[0] === "generate" &&
+    parts[1] === "bits" &&
+    parts[2] !== undefined &&
+    isPreviewBitName(parts[2])
+  );
+}
+
+/**
+ * Query-less `/generate/*` links drop search. Keep the previous permalink
+ * (named `theme` or custom `c*` params) when still on generate.
+ */
+export function resolveGenerateSearch(
+  pathname: string,
+  incomingSearch: string,
+  previousSearch: string,
+): string {
+  if (incomingSearch.length > 0) {
+    return incomingSearch;
+  }
+  if (isGeneratePath(pathname) && previousSearch.length > 0) {
+    return previousSearch;
+  }
+  return incomingSearch;
+}
+
+function locationSearch(): string {
+  if (
+    typeof window !== "object" ||
+    window === null ||
+    typeof window.location?.search !== "string"
+  ) {
+    return "";
+  }
+  return new URLSearchParams(window.location.search).toString();
+}
+
 function permalinkGlobals(
   search: string | URLSearchParams,
 ): Pick<
@@ -330,12 +383,7 @@ export function requestFromPathname(
     };
   }
 
-  if (
-    root === "generate" &&
-    second === "bits" &&
-    third !== undefined &&
-    isPreviewBitName(third)
-  ) {
+  if (isBitIsolatorPath(pathname) && third !== undefined) {
     return {
       ...globals,
       scope: "bit",
@@ -350,9 +398,17 @@ export function requestFromPathname(
   };
 }
 
+/** Docs-dev origin. Portless `http://localhost` is not a runnable permalink host. */
+const DEFAULT_ORIGIN = "http://localhost:3000";
+const PORTLESS_LOCALHOST = "http://localhost";
+
+function originWithPort(origin: string): string {
+  return origin === PORTLESS_LOCALHOST ? DEFAULT_ORIGIN : origin;
+}
+
 export function resolveOrigin(origin?: string): string {
   if (origin !== undefined && origin.length > 0) {
-    return origin;
+    return originWithPort(origin);
   }
   if (
     typeof globalThis.location === "object" &&
@@ -360,9 +416,9 @@ export function resolveOrigin(origin?: string): string {
     typeof globalThis.location.origin === "string" &&
     globalThis.location.origin.length > 0
   ) {
-    return globalThis.location.origin;
+    return originWithPort(globalThis.location.origin);
   }
-  return "http://localhost:3000";
+  return DEFAULT_ORIGIN;
 }
 
 function shareStatusCopy(reason: ShareReason): string | null {
@@ -424,6 +480,7 @@ export function GenerateShell({
   const preview = usePreview(
     requestProp ?? requestFromPathname(pathname, searchKey),
   );
+  const queryRef = useRef(searchKey);
   const [shareReason, setShareReason] = useState<ShareReason | undefined>(
     undefined,
   );
@@ -433,7 +490,9 @@ export function GenerateShell({
       preview.setRequest(requestProp);
       return;
     }
-    preview.setRequest(requestFromPathname(pathname, searchKey));
+    const incoming = searchKey.length > 0 ? searchKey : locationSearch();
+    const search = resolveGenerateSearch(pathname, incoming, queryRef.current);
+    preview.setRequest(requestFromPathname(pathname, search));
   }, [pathname, preview.setRequest, requestProp, searchKey]);
 
   const PackStage =
@@ -446,6 +505,8 @@ export function GenerateShell({
   const loading = loadingProp ?? preview.loading;
   const provenance = provenanceProp ?? preview.provenance;
   const autoPreview = isAutoPreviewScope(request);
+  const showPackHero = request.scope !== "bit" && !isBitIsolatorPath(pathname);
+  const permalinkQuery = serialize(request).toString();
 
   const resolvedOrigin = resolveOrigin(origin);
   const plugin = request.plugin ?? GENERATE_PLUGIN_ID;
@@ -464,8 +525,27 @@ export function GenerateShell({
     [request, resolvedOrigin],
   );
 
+  useEffect(() => {
+    queryRef.current = permalinkQuery;
+    if (
+      typeof window !== "object" ||
+      window === null ||
+      typeof window.history?.replaceState !== "function"
+    ) {
+      return;
+    }
+    const href = generateLocationHref(pathname, permalinkQuery);
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (current !== href) {
+      // `null` (not `history.state`) so Next's patched replaceState can
+      // restore useSearchParams. `__NA` on current state would skip that.
+      window.history.replaceState(null, "", href);
+    }
+  }, [pathname, permalinkQuery]);
+
   const handleRequestChange = useCallback(
     (next: PreviewRequest) => {
+      queryRef.current = serialize(next).toString();
       preview.setRequest(next);
       onRequestChange?.(next);
     },
@@ -555,18 +635,20 @@ export function GenerateShell({
           {GENERATE_BUTTON_LABEL}
         </button>
       )}
-      <div data-slot="generate-hero" style={CARD_SIZE_STYLE}>
-        {PackStage !== null && PackStage !== undefined ? (
-          <PackStage
-            files={files}
-            request={request}
-            loading={loading}
-            origin={resolvedOrigin}
-          />
-        ) : (
-          <HeroFallback file={file} loading={loading} />
-        )}
-      </div>
+      {showPackHero ? (
+        <div data-slot="generate-hero" style={CARD_SIZE_STYLE}>
+          {PackStage !== null && PackStage !== undefined ? (
+            <PackStage
+              files={files}
+              request={request}
+              loading={loading}
+              origin={resolvedOrigin}
+            />
+          ) : (
+            <HeroFallback file={file} loading={loading} />
+          )}
+        </div>
+      ) : null}
       <div data-slot="generate-actions">
         <button
           type="button"

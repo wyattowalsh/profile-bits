@@ -32,33 +32,49 @@ function renderForm(
   );
 }
 
+const GLOBAL_BAR_OWNED_PATHS = new Set([
+  "format",
+  "theme",
+  "output_pair",
+  "user",
+]);
+
 describe("schemaFormFields", () => {
-  it("comes from getPlaygroundFields and omits token paths", () => {
+  it("comes from getPlaygroundFields and omits tokens plus GlobalBar globals", () => {
     const fromCore = getPlaygroundFields();
     const fields = schemaFormFields();
     const paths = fields.map((field) => field.path);
 
     expect(fields).toEqual(
       fromCore.filter(
-        (field) => !/token/i.test(field.path) && !/token/i.test(field.label),
+        (field) =>
+          !/token/i.test(field.path) &&
+          !/token/i.test(field.label) &&
+          !GLOBAL_BAR_OWNED_PATHS.has(field.path),
       ),
     );
     expect(paths.some((path) => /token/i.test(path))).toBe(false);
     expect(paths).not.toContain("github_token");
     expect(paths).not.toContain("committer_token");
+    expect(paths).not.toContain("theme");
+    expect(paths).not.toContain("format");
+    expect(paths).not.toContain("output_pair");
+    expect(paths).not.toContain("user");
+    expect(paths).toContain("animated");
     expect(new Set(fields.map((field) => field.group))).toEqual(
-      new Set(["global", "demo", "stats", "languages"]),
+      new Set(["global", "demo", "stats", "languages", "repo"]),
     );
   });
 });
 
 describe("schemaFormGroups", () => {
-  it("orders global, demo, stats, languages from field groups", () => {
+  it("orders global, demo, stats, languages, repo from field groups", () => {
     expect(schemaFormGroups()).toEqual([
       "global",
       "demo",
       "stats",
       "languages",
+      "repo",
     ]);
   });
 });
@@ -91,7 +107,7 @@ describe("getFieldValue / applySchemaField", () => {
 });
 
 describe("SchemaForm", () => {
-  it("renders every getPlaygroundFields path with Form + Field chrome", () => {
+  it("renders schemaFormFields with Form + Field chrome, not GlobalBar globals", () => {
     const html = renderForm();
     const fields = schemaFormFields();
     const pathAttrs = html.match(/data-path="[^"]+"/g) ?? [];
@@ -111,7 +127,9 @@ describe("SchemaForm", () => {
     expect(html).toContain('data-group="demo"');
     expect(html).toContain('data-group="stats"');
     expect(html).toContain('data-group="languages"');
+    expect(html).toContain('data-group="repo"');
     expect(html).toContain('data-group="global"');
+    expect(html).toContain('name="animated"');
 
     for (const field of fields) {
       expect(html).toContain(`name="${field.path}"`);
@@ -119,6 +137,10 @@ describe("SchemaForm", () => {
       expect(html).toContain(field.label);
     }
 
+    expect(html).not.toContain('name="theme"');
+    expect(html).not.toContain('name="format"');
+    expect(html).not.toContain('name="output_pair"');
+    expect(html).not.toContain('name="user"');
     expect(html).not.toContain("github_token");
     expect(html).not.toContain("committer_token");
     expect(html).not.toContain('name="token"');
@@ -164,14 +186,36 @@ describe("SchemaForm", () => {
       onChange,
     );
 
-    expect(html).toContain('value="octocat"');
     expect(html).toContain('value="hello"');
-    expect(html).toContain('name="theme"');
-    expect(html).toContain('value="light"');
-    expect(html).toContain('name="format"');
-    expect(html).toContain('value="png"');
-    expect(html).toContain('name="output_pair"');
+    expect(html).toContain('name="demo.text"');
+    expect(html).not.toContain('name="theme"');
+    expect(html).not.toContain('value="light"');
+    expect(html).not.toContain('name="format"');
+    expect(html).not.toContain('name="output_pair"');
+    expect(html).not.toContain('name="user"');
+    expect(html).not.toContain('value="octocat"');
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("does not render a free-text theme field for a custom mix", () => {
+    const html = renderForm({
+      theme: {
+        custom: {
+          bg: "#1e1e2e",
+          card: "#181825",
+          text: "#cdd6f4",
+          muted: "#a6adc8",
+          accent: "#cba6f7",
+          border: "#313244",
+        },
+      },
+      options: { demo: { text: "hello" } },
+    });
+
+    expect(html).not.toContain('name="theme"');
+    expect(html).not.toContain('data-path="theme"');
+    expect(html).toContain('name="demo.text"');
+    expect(html).toContain('value="hello"');
   });
 });
 

@@ -34,7 +34,7 @@ describe("/playground/github page (server)", () => {
   it("locks v0 github widgets and Copy as the primary CTA", () => {
     expect(PLAYGROUND_PLUGIN).toBe("github");
     expect(GITHUB_PLAYGROUND_HREF).toBe("/playground/github");
-    expect(GITHUB_WIDGET_IDS).toEqual(["demo", "stats", "languages"]);
+    expect(GITHUB_WIDGET_IDS).toEqual(["demo", "stats", "languages", "repo"]);
     expect(GITHUB_WIDGET_IDS).toEqual(PREVIEW_WIDGET_IDS);
     expect(PRIMARY_CTA).toBe("Copy");
     expect(GITHUB_PLAYGROUND_SHELL).toBe(PlaygroundShell);

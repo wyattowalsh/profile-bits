@@ -27,15 +27,17 @@ Playground/docs wrap **rss XML fixtures** under `packages/integrations/src/rss/f
 ## GitHub crawl
 
 - Never send a request without `Authorization`. Empty token does not mean unauthenticated 60/h.
-- REST: `GET /users/{login}` + paginated `/repos?type=owner&per_page=100`. **Filter** forks/archived **then cap 500** remaining. Stars and language bytes share that ordered id list.
-- **Never** REST `/languages`. **Never** 500 per-repo GraphQL calls.
+- REST crawl (`stats` / `languages`): `GET /users/{login}` + paginated `/repos?type=owner&per_page=100`. **Filter** forks/archived **then cap 500** remaining. Stars and language bytes share that ordered id list.
+- Widget `repo`: authenticated `GET /repos/{owner}/{repo}` (`fetchGithubRepo`). Primary language is the repo object `language` string only. Never GraphQL for this fetch.
+- Crawl remains stats/languages. `demo` and `repo` skip crawl (`demo`: `GET /user` probe only; `repo`: probe + repo GET). Repo has no `include_private`.
+- **Never** REST `/languages` (`GET /repos/{owner}/{repo}/languages`). A repository named `languages` (`GET /repos/{owner}/languages`) is allowed. **Never** 500 per-repo GraphQL calls.
 - Languages: GraphQL `nodes(ids:)` batches of 100. Separate cheap `contributionsCollection` iff `canContributions`.
 - GraphQL HTTP 200 + `errors[]` / remaining 0 = **fail-after-backoff** (not skip-widget). Secondary/abuse 403 = fail-after-backoff. Mid-pagination REST failure fails stats+languages together.
 
 ## Http JSON + chips presets
 
 - `auth: optional`. Unset `http_token_env` sends no Authorization. Named env empty → `fail_widget`. Http module MUST NOT import octokit. Existing `createHttpClient` only — no second client.
-- SSRF: ssrfcheck then ipaddr allow-only-unicast after IPv4-mapped unwrap. Mixed A/AAAA fails closed. `redirect: "manual"`, max 5 hops, 1 MiB body cap. Chips origin allowlist `shieldcn.dev` + `img.shields.io` **in addition to** existing SSRF.
+- SSRF: ssrfcheck then ipaddr allow-only-unicast after IPv4-mapped unwrap. Mixed A/AAAA fails closed. `redirect: "manual"`, max 5 hops, 1 MiB body cap. Drop `Authorization` on cross-origin `Location`; do not restore after a foreign hop (Fetch sticky drop). Chips origin allowlist `shieldcn.dev` + `img.shields.io` **in addition to** existing SSRF.
 - Preset expander under `src/http/presets.ts`; closed presets `shieldcn` | `shields`; types `npm` | `stars` | `forks` | `license` | `release` | `issues` | `prs` | `ci`. `normalizeBadgeJson`. Fixtures under `src/http/fixtures/chips/` (`chipFixture`).
 - `classifyHttp` is separate from GitHub: 401/404 `fail_widget` (no retry); 403/429/5xx retry then `fail_widget`.
 - Playground/docs: fixtures only. Zero live URLs.

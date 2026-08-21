@@ -57,8 +57,9 @@ export function githubWidgetIdsFromSchemas(): string[] {
 /**
  * Stub llms.txt: widget ids from plugin/widget option schemas, yaml SSOT,
  * thin Action, no flattened inputs. Distinguishes Action delivery, local
- * CLI, playground, catalog, gist, and first-party customization. Not a dump
- * of widget option fields.
+ * CLI, playground, catalog, gist, and first-party customization. Names
+ * named catalog theme vs custom yaml object and the generate picker. Not
+ * a dump of widget option fields or catalog flavor ids.
  */
 export function renderLlmsTxt(): string {
   const entries = pluginWidgetEntriesFromSchemas();
@@ -87,11 +88,19 @@ Committed \`${ACTION_CONFIG_PATH_DEFAULT}\` is the config SSOT (\`additionalProp
 
 Root \`action.yml\` is thin: \`user\`, \`github_token\`, \`committer_token\`, \`config\`, \`output_action\`, \`dry_run\`, optional format/theme overrides, optional \`plugin_github\`, optional \`wakatime_token\`, optional \`http_token_env\`. There are no flattened \`plugin_<plugin>_<widget>_<option>\` Action inputs (including \`plugin_github_stats_include\`).
 
+## Theme
+
+Yaml \`theme\` is a named catalog id or a custom object \`theme: { custom: { bg, card, text, muted, accent, border, pair? } }\`. Default is the named id \`dark\`. Flavor hex lives in the host catalog (\`@profile-bits/themes\`); this stub does not list catalog ids. Thin Action \`theme\` is a named-id override only (\`theme: custom\` as an Action input fails). Custom mixes belong in yaml.
+
+\`/generate\` shares a family-grouped picker and customize mixer with playground GlobalBar. Named permalinks use \`theme=<id>\`; custom permalinks use \`theme=custom\` plus color refs. Generate yaml export emits the named id or the \`theme.custom\` object.
+
+Docs \`POST /api/preview\` is a layout/time-axis preview (fixtures when no App token; no live GitHub), not a public embed API. It accepts a named catalog id or the same custom yaml object. Do not cache or document it as an embed.
+
 ## Docs
 
 - [Docs](/docs): github pack usage
 - [Playground](/playground): codegen (layout preview + YAML/markdown)
-- [Generate](/generate): visual catalog, export, and share
+- [Generate](/generate): visual catalog, theme picker, export, and share
 - [Catalog](/generate/catalog): first-party visual gallery, not a plugin marketplace
 `;
 }

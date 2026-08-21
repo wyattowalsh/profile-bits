@@ -1,17 +1,19 @@
 import {
+  isPreviewRepoIncludeToken,
   isPreviewStatsIncludeToken,
   type PreviewDemoOptions,
   type PreviewLanguagesOptions,
   type PreviewOptions,
   type PreviewOutputFormat,
+  type PreviewRepoOptions,
   type PreviewStatsIncludeToken,
   type PreviewStatsOptions,
   type PreviewTheme,
   type PreviewWidgetId,
 } from "../preview/types";
 
-/** Consumer pin placeholder. `@v1` is the orphan release tag, not `main`. */
-export const EXPORT_ACTION_USES = "wyatt/profile-bits@v1";
+/** Consumer pin. `@v1` is the floating tag on orphan `release/v1`, not `main`. */
+export const EXPORT_ACTION_USES = "wyattowalsh/profile-bits@v1";
 
 export const EXPORT_CONFIG_PATH = ".github/profile-bits.yml";
 
@@ -36,6 +38,15 @@ export const EXPORT_THIN_WITH_KEYS = [
   "plugin_github",
 ] as const;
 export type ExportThinWithKey = (typeof EXPORT_THIN_WITH_KEYS)[number];
+
+/** Github widgets the emitter may write. `repo` is opt-in like `demo`. */
+const EXPORT_GITHUB_WIDGET_IDS = [
+  "demo",
+  "stats",
+  "languages",
+  "repo",
+] as const;
+type ExportGithubWidgetId = (typeof EXPORT_GITHUB_WIDGET_IDS)[number];
 
 const PACK_DEFAULT_WIDGETS = [
   "stats",
@@ -91,6 +102,18 @@ const LANGUAGES_OPTION_DEFAULTS: Required<PreviewLanguagesOptions> = {
   include_archived: false,
 };
 
+const REPO_OPTION_DEFAULTS: {
+  filename: string;
+  include: PreviewRepoIncludeToken[];
+  avatar: boolean;
+  animate: boolean;
+} = {
+  filename: "repo",
+  include: ["stars", "forks", "issues", "license"],
+  avatar: true,
+  animate: false,
+};
+
 /** Action-default token expressions only. Never visitor PATs. */
 const GITHUB_TOKEN_EXPR = `\${{ github.token }}`;
 const GITHUB_USER_EXPR = `\${{ github.repository_owner }}`;
@@ -103,6 +126,7 @@ export type ExportWorkflowWidgets = {
   demo?: PreviewDemoOptions;
   stats?: PreviewStatsOptions;
   languages?: PreviewLanguagesOptions;
+  repo?: PreviewRepoOptions;
 };
 
 /**
@@ -120,7 +144,7 @@ export type ExportWorkflowState = {
   timezone?: string;
   output_dir?: string;
   /** Checkbox list. Omitted → keys present on widgets/options, else pack defaults. */
-  enabled?: readonly PreviewWidgetId[];
+  enabled?: readonly ExportGithubWidgetId[];
   widgets?: ExportWorkflowWidgets;
   /** PreviewRequest.options alias when `widgets` is omitted. */
   options?: PreviewOptions;
@@ -216,7 +240,7 @@ function renderThemeYaml(theme: PreviewTheme): string {
 
 function renderConfigYml(state: ExportWorkflowState): string {
   const widgets = resolveWidgets(state);
-  const widgetIds = (["demo", "stats", "languages"] as const).filter(
+  const widgetIds = EXPORT_GITHUB_WIDGET_IDS.filter(
     (id) => widgets[id] !== undefined,
   );
 
@@ -245,6 +269,9 @@ function renderConfigYml(state: ExportWorkflowState): string {
     }
     if (id === "languages" && widgets.languages !== undefined) {
       lines.push(...renderLanguagesBlock(widgets.languages));
+    }
+    if (id === "repo" && widgets.repo !== undefined) {
+      lines.push(...renderRepoBlock(widgets.repo));
     }
   }
 
@@ -280,10 +307,11 @@ function resolveWidgets(state: ExportWorkflowState): ExportWorkflowWidgets {
     ...(state.options?.languages !== undefined
       ? { languages: state.options.languages }
       : {}),
+    ...(state.options?.repo !== undefined ? { repo: state.options.repo } : {}),
     ...state.widgets,
   };
 
-  const present = (["demo", "stats", "languages"] as const).filter(
+  const present = EXPORT_GITHUB_WIDGET_IDS.filter(
     (id) => source[id] !== undefined,
   );
   const enabled =
@@ -297,6 +325,11 @@ function resolveWidgets(state: ExportWorkflowState): ExportWorkflowWidgets {
       out.stats = mergeStats(source.stats);
     } else if (id === "languages") {
       out.languages = mergeLanguages(source.languages);
+    } else if (id === "repo") {
+      const repo = mergeRepo(source.repo);
+      if (repo !== undefined) {
+        out.repo = repo;
+      }
     }
   }
   return out;
@@ -361,6 +394,25 @@ function mergeLanguages(
   };
 }
 
+function mergeRepo(
+  options: PreviewRepoOptions | undefined,
+): PreviewRepoOptions | undefined {
+  const repo = options?.repo?.trim() ?? "";
+  if (repo === "") {
+    return undefined;
+  }
+  const include = options?.include
+    ? options.include.filter(isPreviewRepoIncludeToken)
+    : [...REPO_OPTION_DEFAULTS.include];
+  return {
+    filename: options?.filename ?? REPO_OPTION_DEFAULTS.filename,
+    repo,
+    include,
+    avatar: options?.avatar ?? REPO_OPTION_DEFAULTS.avatar,
+    animate: options?.animate ?? REPO_OPTION_DEFAULTS.animate,
+  };
+}
+
 function renderDemoBlock(options: PreviewDemoOptions): string[] {
   const lines = [
     "      demo:",
@@ -402,6 +454,18 @@ function renderLanguagesBlock(options: PreviewLanguagesOptions): string[] {
     `        include_private: ${options.include_private ?? LANGUAGES_OPTION_DEFAULTS.include_private}`,
     `        include_forks: ${options.include_forks ?? LANGUAGES_OPTION_DEFAULTS.include_forks}`,
     `        include_archived: ${options.include_archived ?? LANGUAGES_OPTION_DEFAULTS.include_archived}`,
+  ];
+}
+
+function renderRepoBlock(options: PreviewRepoOptions): string[] {
+  const include = options.include ?? REPO_OPTION_DEFAULTS.include;
+  return [
+    "      repo:",
+    `        filename: ${yamlScalar(options.filename ?? REPO_OPTION_DEFAULTS.filename)}`,
+    `        repo: ${yamlScalar(options.repo ?? "")}`,
+    `        include: ${yamlFlowSeq(include)}`,
+    `        avatar: ${options.avatar ?? REPO_OPTION_DEFAULTS.avatar}`,
+    `        animate: ${options.animate ?? REPO_OPTION_DEFAULTS.animate}`,
   ];
 }
 

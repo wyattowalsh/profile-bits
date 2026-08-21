@@ -1,3 +1,5 @@
+import { type ThemeConfig, themeMembersFor } from "@profile-bits/core";
+import { TakumiRenderError, TakumiTreeError } from "@profile-bits/renderer";
 import { pickOptions } from "../../../src/preview/permalink";
 import {
   assertPreviewOrigin,
@@ -14,11 +16,23 @@ import {
   isTokenQueryKey,
   type PluginPreviewRequest,
   PREVIEW_RESPONSE_HEADERS,
+  type PreviewPluginId,
   type PreviewRequest,
+  type PreviewTheme,
+  type PreviewWidgetId,
   type WidgetPreviewRequest,
 } from "../../../src/preview/types";
 
 export const runtime = "nodejs";
+
+/** POST is github layout preview; http/chips/json never render here. */
+function isPreviewPostPluginId(value: string): value is PreviewPluginId {
+  return value !== "http" && isPreviewPluginId(value);
+}
+
+function isPreviewPostWidgetId(value: string): value is PreviewWidgetId {
+  return value !== "chips" && value !== "json" && isPreviewWidgetId(value);
+}
 
 function parsePreviewRequest(value: unknown): PreviewRequest | undefined {
   if (value == null || typeof value !== "object" || Array.isArray(value)) {
@@ -49,22 +63,30 @@ function parsePreviewRequest(value: unknown): PreviewRequest | undefined {
     return undefined;
   }
   if (rec.plugin !== undefined) {
-    if (typeof rec.plugin !== "string" || !isPreviewPluginId(rec.plugin)) {
+    if (typeof rec.plugin !== "string" || !isPreviewPostPluginId(rec.plugin)) {
       return undefined;
     }
   }
   if (rec.widget !== undefined) {
-    if (typeof rec.widget !== "string" || !isPreviewWidgetId(rec.widget)) {
+    if (typeof rec.widget !== "string" || !isPreviewPostWidgetId(rec.widget)) {
       return undefined;
     }
   }
 
   const output_pair = rec.output_pair === true;
+  try {
+    themeMembersFor({
+      theme: toThemeConfig(theme),
+      output_pair,
+    });
+  } catch {
+    return undefined;
+  }
   const options = pickOptions(rec.options);
   const globals = { options, format, theme, output_pair, user };
 
   if (scope === "plugin") {
-    if (typeof rec.plugin !== "string" || !isPreviewPluginId(rec.plugin)) {
+    if (typeof rec.plugin !== "string" || !isPreviewPostPluginId(rec.plugin)) {
       return undefined;
     }
     const request: PluginPreviewRequest = {
@@ -72,14 +94,14 @@ function parsePreviewRequest(value: unknown): PreviewRequest | undefined {
       scope,
       plugin: rec.plugin,
     };
-    if (typeof rec.widget === "string" && isPreviewWidgetId(rec.widget)) {
+    if (typeof rec.widget === "string" && isPreviewPostWidgetId(rec.widget)) {
       request.widget = rec.widget;
     }
     return request;
   }
 
   if (scope === "widget") {
-    if (typeof rec.widget !== "string" || !isPreviewWidgetId(rec.widget)) {
+    if (typeof rec.widget !== "string" || !isPreviewPostWidgetId(rec.widget)) {
       return undefined;
     }
     const request: WidgetPreviewRequest = {
@@ -87,7 +109,7 @@ function parsePreviewRequest(value: unknown): PreviewRequest | undefined {
       scope,
       widget: rec.widget,
     };
-    if (typeof rec.plugin === "string" && isPreviewPluginId(rec.plugin)) {
+    if (typeof rec.plugin === "string" && isPreviewPostPluginId(rec.plugin)) {
       request.plugin = rec.plugin;
     }
     return request;
@@ -101,13 +123,17 @@ function parsePreviewRequest(value: unknown): PreviewRequest | undefined {
     scope: "bit",
     bit: rec.bit,
   };
-  if (typeof rec.plugin === "string" && isPreviewPluginId(rec.plugin)) {
+  if (typeof rec.plugin === "string" && isPreviewPostPluginId(rec.plugin)) {
     request.plugin = rec.plugin;
   }
-  if (typeof rec.widget === "string" && isPreviewWidgetId(rec.widget)) {
+  if (typeof rec.widget === "string" && isPreviewPostWidgetId(rec.widget)) {
     request.widget = rec.widget;
   }
   return request;
+}
+
+function toThemeConfig(theme: PreviewTheme): ThemeConfig {
+  return theme as ThemeConfig;
 }
 
 function previewResponse(
@@ -142,8 +168,21 @@ export async function POST(request: Request): Promise<Response> {
     return previewResponse({ error: "Invalid preview body" }, { status: 400 });
   }
 
-  const preview = await renderPreview(body);
-  return previewResponse(preview);
+  try {
+    const preview = await renderPreview(body);
+    return previewResponse(preview);
+  } catch (error) {
+    if (
+      error instanceof TakumiRenderError ||
+      error instanceof TakumiTreeError
+    ) {
+      return previewResponse(
+        { error: "Preview render failed" },
+        { status: 422 },
+      );
+    }
+    throw error;
+  }
 }
 
 export function GET(_request: Request): Response {

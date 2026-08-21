@@ -27,6 +27,7 @@ import {
   JSON_OPTION_DEFAULTS,
   JSON_TIMEOUT_MS_DEFAULT,
   LANGUAGES_OPTION_DEFAULTS,
+  REPO_OPTION_DEFAULTS,
   STATS_OPTION_DEFAULTS,
 } from "./types.js";
 
@@ -109,6 +110,29 @@ not_a_field: true
     ).toThrow(ConfigParseError);
   });
 
+  it("fails on yaml md:", () => {
+    expect(() =>
+      parseConfig({
+        yaml: `version: 1
+plugins: {}
+md: {}
+`,
+      }),
+    ).toThrow(ConfigParseError);
+  });
+
+  it("fails on yaml md.families", () => {
+    expect(() =>
+      parseConfig({
+        yaml: `version: 1
+plugins: {}
+md:
+  families: gfm
+`,
+      }),
+    ).toThrow(ConfigParseError);
+  });
+
   it("fails on an unknown stats include token", () => {
     expect(() =>
       parseConfig({
@@ -184,6 +208,117 @@ plugins:
     expect(config.plugins.github?.widgets?.demo).toBeUndefined();
     expect(config.plugins.github?.widgets?.stats).toBeDefined();
     expect(config.plugins.github?.widgets?.languages).toBeDefined();
+    expect(config.plugins.github?.widgets?.repo).toBeUndefined();
+  });
+
+  it("parses opt-in github repo without applying stats+languages defaults", () => {
+    const config = parseConfig({
+      yaml: `version: 1
+plugins:
+  github:
+    widgets:
+      repo:
+        repo: wyattowalsh/profile-bits
+`,
+    });
+
+    expect(config.plugins.github?.widgets?.stats).toBeUndefined();
+    expect(config.plugins.github?.widgets?.languages).toBeUndefined();
+    expect(config.plugins.github?.widgets?.demo).toBeUndefined();
+    expect(config.plugins.github?.widgets?.repo).toEqual({
+      ...REPO_OPTION_DEFAULTS,
+      repo: "wyattowalsh/profile-bits",
+    });
+  });
+
+  it("fails github repo yaml without owner/name", () => {
+    expect(() =>
+      parseConfig({
+        yaml: `version: 1
+plugins:
+  github:
+    widgets:
+      repo: {}
+`,
+      }),
+    ).toThrow(ConfigParseError);
+  });
+
+  it("fails github repo yaml that is not owner/name", () => {
+    expect(() =>
+      parseConfig({
+        yaml: `version: 1
+plugins:
+  github:
+    widgets:
+      repo:
+        repo: profile-bits
+`,
+      }),
+    ).toThrow(ConfigParseError);
+  });
+
+  it("fails unknown github repo include tokens", () => {
+    expect(() =>
+      parseConfig({
+        yaml: `version: 1
+plugins:
+  github:
+    widgets:
+      repo:
+        repo: wyattowalsh/profile-bits
+        include: [stars, views]
+`,
+      }),
+    ).toThrow(ConfigParseError);
+  });
+
+  it("fails empty github repo include", () => {
+    expect(() =>
+      parseConfig({
+        yaml: `version: 1
+plugins:
+  github:
+    widgets:
+      repo:
+        repo: wyattowalsh/profile-bits
+        include: []
+`,
+      }),
+    ).toThrow(ConfigParseError);
+  });
+
+  it("fails extra github repo keys", () => {
+    expect(() =>
+      parseConfig({
+        yaml: `version: 1
+plugins:
+  github:
+    widgets:
+      repo:
+        repo: wyattowalsh/profile-bits
+        include_private: true
+`,
+      }),
+    ).toThrow(ConfigParseError);
+  });
+
+  it("dedupes github repo include tokens while preserving order", () => {
+    const config = parseConfig({
+      yaml: `version: 1
+plugins:
+  github:
+    widgets:
+      repo:
+        repo: wyattowalsh/profile-bits
+        include: [stars, forks, stars, issues]
+`,
+    });
+    expect(config.plugins.github?.widgets?.repo?.include).toEqual([
+      "stars",
+      "forks",
+      "issues",
+    ]);
   });
 
   it("applies thin Action overrides on top of yaml", () => {
@@ -830,6 +965,8 @@ describe("theme catalog parse", () => {
   it("keeps THEMES in lockstep with the host catalog", async () => {
     const { NAMED_THEME_IDS } = await import("@profile-bits/themes");
     const { THEMES } = await import("./types.js");
+    expect(THEMES).toBe(NAMED_THEME_IDS);
+    expect(THEMES).toHaveLength(47);
     expect([...THEMES]).toEqual([...NAMED_THEME_IDS]);
   });
 
@@ -1037,6 +1174,51 @@ plugins: {}
     });
     expect(config.output_pair).toBe(true);
     expect(config.theme).toMatchObject({ custom: { pair: "light" } });
+  });
+
+  it("fails when a named pair shares polarity with the mix", () => {
+    expect(() =>
+      parseConfig({
+        yaml: `version: 1
+output_pair: true
+theme:
+  custom:
+    bg: catppuccin-mocha.bg
+    card: catppuccin-mocha.card
+    text: catppuccin-mocha.text
+    muted: catppuccin-mocha.muted
+    accent: catppuccin-mocha.accent
+    border: catppuccin-mocha.border
+    pair: nord
+plugins: {}
+`,
+      }),
+    ).toThrow(/opposite polarity/);
+  });
+
+  it("accepts mocha custom with a named latte pair", () => {
+    const config = parseConfig({
+      yaml: `version: 1
+output_pair: true
+theme:
+  custom:
+    bg: catppuccin-mocha.bg
+    card: catppuccin-mocha.card
+    text: catppuccin-mocha.text
+    muted: catppuccin-mocha.muted
+    accent: catppuccin-mocha.accent
+    border: catppuccin-mocha.border
+    pair: catppuccin-latte
+plugins: {}
+`,
+    });
+    expect(config.output_pair).toBe(true);
+    expect(config.theme).toMatchObject({
+      custom: {
+        bg: "catppuccin-mocha.bg",
+        pair: "catppuccin-latte",
+      },
+    });
   });
 
   it("accepts a custom pair map of the opposite polarity", () => {

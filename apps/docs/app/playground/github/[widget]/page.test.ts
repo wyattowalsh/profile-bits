@@ -42,11 +42,12 @@ describe("GET /playground/github/[widget]", () => {
     expect(source).not.toContain("/generate/");
   });
 
-  it("prerenders demo, stats, and languages only", () => {
+  it("prerenders demo, stats, languages, and repo", () => {
     expect(generateStaticParams()).toEqual([
       { widget: "demo" },
       { widget: "stats" },
       { widget: "languages" },
+      { widget: "repo" },
     ]);
     expect(generateStaticParams().map((row) => row.widget)).toEqual([
       ...PREVIEW_WIDGET_IDS,

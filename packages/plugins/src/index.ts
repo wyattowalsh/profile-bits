@@ -4,6 +4,7 @@ export {
   githubPlugin,
   githubWidgetRegistry,
   LANGUAGES_BITS_USED,
+  REPO_BITS_USED,
   STATS_BITS_USED,
 } from "./github/plugin.js";
 export {
@@ -13,6 +14,7 @@ export {
 } from "./github/preview.js";
 export { renderDemoSvg } from "./github/widgets/demo/render.js";
 export { renderLanguagesSvg } from "./github/widgets/languages/render.js";
+export { renderRepoSvg } from "./github/widgets/repo/render.js";
 export { renderStatsSvg } from "./github/widgets/stats/render.js";
 export { HTTP_BITS_USED, httpPlugin } from "./http/plugin.js";
 export {

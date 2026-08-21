@@ -34,10 +34,10 @@ describe("/generate/catalog page (server)", () => {
     expect(source).not.toContain("/playground");
   });
 
-  it("locks v0 catalog to the github pack plus demo/stats/languages", () => {
+  it("locks v0 catalog to the github pack plus demo/stats/languages/repo", () => {
     expect(CATALOG_PLUGIN_ID).toBe("github");
     expect(PREVIEW_PLUGIN_IDS).toEqual(["github", "http"]);
-    expect(CATALOG_WIDGET_IDS).toEqual(["demo", "stats", "languages"]);
+    expect(CATALOG_WIDGET_IDS).toEqual(["demo", "stats", "languages", "repo"]);
     expect(CATALOG_WIDGET_IDS).toEqual(PREVIEW_WIDGET_IDS);
     expect(CATALOG_HREF).toBe("/generate/catalog");
     expect(GITHUB_HREF).toBe("/generate/github");
@@ -79,6 +79,12 @@ describe("/generate/catalog page (server)", () => {
         href: "/generate/github/languages",
         label: "languages",
       },
+      {
+        id: "repo",
+        kind: "widget",
+        href: "/generate/github/repo",
+        label: "repo",
+      },
     ]);
 
     expect(html).toContain('data-slot="generate-catalog"');
@@ -90,6 +96,7 @@ describe("/generate/catalog page (server)", () => {
     expect(html).toContain('href="/generate/github/demo"');
     expect(html).toContain('href="/generate/github/stats"');
     expect(html).toContain('href="/generate/github/languages"');
+    expect(html).toContain('href="/generate/github/repo"');
     expect(html).toContain("<code>github</code>");
     for (const widget of CATALOG_WIDGET_IDS) {
       expect(html).toContain(`<code>${widget}</code>`);

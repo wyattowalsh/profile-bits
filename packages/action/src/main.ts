@@ -1,7 +1,11 @@
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { redactSecrets, THIN_ACTION_INPUT_NAMES } from "@profile-bits/core";
+import {
+  createDefaultRunLogSink,
+  redactSecrets,
+  THIN_ACTION_INPUT_NAMES,
+} from "@profile-bits/core";
 import {
   createHttpClient,
   createRssClient,
@@ -59,13 +63,18 @@ export async function runMain(
   const raw = options.inputs ?? readInputsFromEnv(env);
   const loaded = loadConfig(raw, { cwd: options.cwd, fs: options.fs });
   const token = httpTokenFromEnv(env, loaded.inputs.http_token_env);
+  const logger = createDefaultRunLogSink();
   const client = createHttpClient({
     ...(token !== undefined ? { token } : {}),
     ...(options.httpFetch !== undefined ? { fetch: options.httpFetch } : {}),
     ...(options.httpLookup !== undefined ? { lookup: options.httpLookup } : {}),
+    logger,
   });
-  const rssClient = createRssClient();
-  const clients = createActionClients(loaded, options.clientFactories);
+  const rssClient = createRssClient({ logger });
+  const clients = createActionClients(loaded, {
+    ...(options.clientFactories ?? {}),
+    logger,
+  });
   const github = clients.github;
   const probe =
     github === undefined
@@ -192,12 +201,30 @@ function isDirectRun(): boolean {
   }
 }
 
-function workflowError(error: unknown): void {
+function actionTokenSecrets(
+  env: NodeJS.ProcessEnv,
+): readonly (string | undefined)[] {
+  return [
+    env.INPUT_GITHUB_TOKEN,
+    env.INPUT_COMMITTER_TOKEN,
+    env.INPUT_WAKATIME_TOKEN,
+  ];
+}
+
+/** Unescaped `::error::` payload: `decision message` for EngineError. */
+export function formatWorkflowError(
+  error: unknown,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
   const raw = error instanceof Error ? error.message : String(error);
-  const message = redactSecrets(raw);
-  const line =
-    error instanceof EngineError ? `${error.decision} ${message}` : message;
-  const escaped = line
+  const message = redactSecrets(raw, actionTokenSecrets(env));
+  return error instanceof EngineError
+    ? `${error.decision} ${message}`
+    : message;
+}
+
+function workflowError(error: unknown): void {
+  const escaped = formatWorkflowError(error)
     .replaceAll("%", "%25")
     .replaceAll("\r", "%0D")
     .replaceAll("\n", "%0A");
@@ -208,6 +235,7 @@ if (isDirectRun()) {
   void runMain().catch((error: unknown) => {
     const message = redactSecrets(
       error instanceof Error ? error.message : String(error),
+      actionTokenSecrets(process.env),
     );
     if (process.env.GITHUB_ACTIONS === "true") {
       workflowError(error);

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { parse, pickOptions, serialize } from "./permalink";
 import {
+  isPreviewTheme,
   isTokenQueryKey,
   type PreviewFile,
   type PreviewOptions,
@@ -145,6 +146,9 @@ function withStillOptions(
   if (options.languages !== undefined) {
     next.languages = { ...options.languages, animate: false };
   }
+  if (options.repo !== undefined) {
+    next.repo = { ...options.repo, animate: false };
+  }
   return next;
 }
 
@@ -165,12 +169,19 @@ function stripTokenFields(request: PreviewRequest): PreviewRequest {
 /**
  * Rebuild a PreviewRequest from permalink fields only.
  * Extra enumerable keys (tokens, zip) never enter the POST body.
+ * Undefined until `theme` is a named catalog id or complete custom.
  */
 export function toPreviewBody(
   request: PreviewRequest,
   reducedMotion = false,
-): PreviewRequest {
+): PreviewRequest | undefined {
+  if (!isPreviewTheme(request.theme)) {
+    return undefined;
+  }
   const body = stripTokenFields(parse(serialize(request)));
+  if (!isPreviewTheme(body.theme)) {
+    return undefined;
+  }
   if (!reducedMotion) {
     return body;
   }
@@ -194,10 +205,13 @@ export async function postPreview(
     reducedMotion?: boolean;
     signal?: AbortSignal;
   } = {},
-): Promise<PreviewResponse> {
+): Promise<PreviewResponse | undefined> {
   const fetchFn = init.fetch ?? globalThis.fetch.bind(globalThis);
   const reducedMotion = init.reducedMotion ?? prefersReducedMotion();
   const body = toPreviewBody(request, reducedMotion);
+  if (body === undefined) {
+    return undefined;
+  }
   const response = await fetchFn(PREVIEW_ENDPOINT, {
     method: "POST",
     headers: { ...PREVIEW_FETCH_HEADERS },
@@ -212,8 +226,9 @@ export async function postPreview(
 }
 
 /**
- * Debounce + POST controller. `observe` auto-fetches demo/bit after 200ms;
- * stats/languages require `generate`. Never reads sessionStorage.
+ * Debounce + POST controller. `observe` auto-fetches demo/bit after 200ms
+ * when the theme is preview-ready; stats/languages require `generate`.
+ * Incomplete custom themes skip the network. Never reads sessionStorage.
  */
 export function createPreviewController(
   host: PreviewControllerHost,
@@ -243,6 +258,10 @@ export function createPreviewController(
   async function generate(request: PreviewRequest): Promise<void> {
     cancelTimer();
     cancelInFlight();
+    if (toPreviewBody(request, host.reducedMotion()) === undefined) {
+      listener.onLoading?.(false);
+      return;
+    }
     generation += 1;
     const id = generation;
     const controller = new AbortController();
@@ -255,6 +274,10 @@ export function createPreviewController(
         signal: controller.signal,
       });
       if (id !== generation || controller.signal.aborted) {
+        return;
+      }
+      if (result === undefined) {
+        listener.onLoading?.(false);
         return;
       }
       listener.onResult?.(result);
@@ -278,6 +301,10 @@ export function createPreviewController(
     cancelTimer();
     cancelInFlight();
     if (!isAutoPreviewScope(request)) {
+      return;
+    }
+    if (!isPreviewTheme(request.theme)) {
+      listener.onLoading?.(false);
       return;
     }
     timer = setTimeout(() => {
@@ -347,7 +374,7 @@ export function usePreview(initial: PreviewRequest): UsePreviewResult {
 
   useEffect(() => {
     sessionRef.current?.observe(
-      reducedMotion ? toPreviewBody(request, true) : request,
+      toPreviewBody(request, reducedMotion) ?? request,
     );
   }, [request, reducedMotion]);
 

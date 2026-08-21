@@ -27,7 +27,7 @@ describe("GET /generate/github/[widget]", () => {
     mocks.notFound.mockClear();
   });
 
-  it("is a server page that prerenders demo, stats, and languages", async () => {
+  it("is a server page that prerenders demo, stats, languages, and repo", async () => {
     const source = await readFile(PAGE_URL, "utf8");
 
     expect(source).not.toContain("use client");
@@ -50,8 +50,9 @@ describe("GET /generate/github/[widget]", () => {
       { widget: "demo" },
       { widget: "stats" },
       { widget: "languages" },
+      { widget: "repo" },
     ]);
-    expect(PREVIEW_WIDGET_IDS).toEqual(["demo", "stats", "languages"]);
+    expect(PREVIEW_WIDGET_IDS).toEqual(["demo", "stats", "languages", "repo"]);
   });
 
   it.each(PREVIEW_WIDGET_IDS)(

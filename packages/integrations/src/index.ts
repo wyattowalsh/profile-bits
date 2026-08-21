@@ -15,6 +15,10 @@ export {
   GithubGraphqlError,
 } from "./github/graphql.js";
 export {
+  fetchGithubRepo,
+  type GithubRepository,
+} from "./github/rest.js";
+export {
   type CreateHttpClientInput,
   createHttpClient,
   type HttpClient,

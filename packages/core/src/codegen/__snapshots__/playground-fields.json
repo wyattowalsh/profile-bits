@@ -20,6 +20,55 @@
     "label": "Theme",
     "type": "string",
     "default": "dark",
+    "enum": [
+      "ayu-dark",
+      "ayu-light",
+      "ayu-mirage",
+      "bluloco-dark",
+      "bluloco-light",
+      "catppuccin-frappe",
+      "catppuccin-latte",
+      "catppuccin-macchiato",
+      "catppuccin-mocha",
+      "dark",
+      "dawnfox",
+      "dayfox",
+      "dracula",
+      "dracula-alucard",
+      "everforest-dark",
+      "everforest-light",
+      "flexoki-dark",
+      "flexoki-light",
+      "github-dimmed",
+      "gruvbox-dark",
+      "gruvbox-light",
+      "horizon-dark",
+      "horizon-light",
+      "iceberg-dark",
+      "iceberg-light",
+      "kanagawa-dragon",
+      "kanagawa-lotus",
+      "kanagawa-wave",
+      "light",
+      "light-owl",
+      "night-owl",
+      "nightfox",
+      "nord",
+      "nord-light",
+      "one-dark",
+      "one-light",
+      "papercolor-dark",
+      "papercolor-light",
+      "rose-pine",
+      "rose-pine-dawn",
+      "rose-pine-moon",
+      "solarized-dark",
+      "solarized-light",
+      "tokyo-night",
+      "tokyo-night-day",
+      "tokyo-night-moon",
+      "tokyo-night-storm"
+    ],
     "group": "global"
   },
   {
@@ -189,5 +238,52 @@
     "type": "boolean",
     "default": false,
     "group": "languages"
+  },
+  {
+    "path": "repo.filename",
+    "label": "Filename",
+    "type": "string",
+    "default": "repo",
+    "group": "repo"
+  },
+  {
+    "path": "repo.repo",
+    "label": "Repo",
+    "type": "string",
+    "group": "repo"
+  },
+  {
+    "path": "repo.include",
+    "label": "Include",
+    "type": "array",
+    "default": [
+      "stars",
+      "forks",
+      "issues",
+      "license"
+    ],
+    "enum": [
+      "stars",
+      "forks",
+      "watchers",
+      "issues",
+      "license",
+      "language"
+    ],
+    "group": "repo"
+  },
+  {
+    "path": "repo.avatar",
+    "label": "Avatar",
+    "type": "boolean",
+    "default": true,
+    "group": "repo"
+  },
+  {
+    "path": "repo.animate",
+    "label": "Animate",
+    "type": "boolean",
+    "default": false,
+    "group": "repo"
   }
 ]

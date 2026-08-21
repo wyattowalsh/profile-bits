@@ -33,7 +33,7 @@ export type CatalogEntry = {
   label: string;
 };
 
-/** github pack plus demo/stats/languages. No extra plugins. */
+/** github pack plus demo/stats/languages/repo. No extra plugins. */
 export function catalogEntries(): CatalogEntry[] {
   return [
     {
@@ -56,7 +56,7 @@ export function catalogEntries(): CatalogEntry[] {
 export const metadata: Metadata = {
   title: "Catalog",
   description:
-    "v0 visual catalog: github pack plus widgets demo, stats, and languages.",
+    "v0 visual catalog: github pack plus widgets demo, stats, languages, and repo.",
 };
 
 const CATALOG_CSS = `

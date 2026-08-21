@@ -10,8 +10,8 @@ import type { HttpFetch, HttpLookup } from "@profile-bits/integrations";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActionClientFactories } from "./clients.ts";
 import {
-  EngineError,
   type EngineDependencies,
+  EngineError,
   GistOutputError,
 } from "./engine.ts";
 import {
@@ -39,7 +39,7 @@ vi.mock("./engine.js", async (importOriginal) => {
   };
 });
 
-const { runMain } = await import("./main.ts");
+const { formatWorkflowError, runMain } = await import("./main.ts");
 
 const TOKEN = "ghs_test_token";
 const PAT = "ghp_secret_do_not_log_f2";
@@ -99,23 +99,25 @@ async function probedCapabilities(): Promise<{
   canGist: boolean;
 }> {
   const deps = engineDeps();
-  expect(deps.probeCapabilities).toEqual(expect.any(Function));
   const loaded = runEngine.mock.calls[0]?.[0];
+  const probeCapabilities = deps.probeCapabilities;
   expect(loaded).toBeDefined();
-  return deps.probeCapabilities!({
-    inputs: loaded!.inputs,
-    config: loaded!.config,
+  expect(probeCapabilities).toEqual(expect.any(Function));
+  if (loaded === undefined || probeCapabilities === undefined) {
+    throw new Error("expected probeCapabilities after runEngine");
+  }
+  return probeCapabilities({
+    inputs: loaded.inputs,
+    config: loaded.config,
   });
 }
 
 function unusedGithubFactory(): NonNullable<
   ActionClientFactories["createGithubClient"]
 > {
-  return vi.fn<NonNullable<ActionClientFactories["createGithubClient"]>>(
-    () => {
-      throw new Error("createGithubClient must stay widget-gated");
-    },
-  );
+  return vi.fn<NonNullable<ActionClientFactories["createGithubClient"]>>(() => {
+    throw new Error("createGithubClient must stay widget-gated");
+  });
 }
 
 function unusedWakatimeFactory(): NonNullable<
@@ -611,5 +613,61 @@ describe("runMain", () => {
 
       expect(createWakatimeClient).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("formatWorkflowError", () => {
+  it("redacts waka and ghp tokens from an EngineError fail_run line", () => {
+    const error = new EngineError(
+      `wakatime 401 with ${WAKA} then github ${PAT}`,
+      "fail_run",
+    );
+    const line = formatWorkflowError(error, {
+      INPUT_GITHUB_TOKEN: PAT,
+      INPUT_WAKATIME_TOKEN: WAKA,
+    });
+    expect(line.startsWith("fail_run ")).toBe(true);
+    expect(line).toContain("[redacted]");
+    expect(line).not.toContain(WAKA);
+    expect(line).not.toContain(PAT);
+  });
+
+  it("redacts a populated INPUT_COMMITTER_TOKEN substring", () => {
+    const committer = "ghp_committer_secret_xyz";
+    const error = new Error(`commit failed with ${committer}`);
+    const line = formatWorkflowError(error, {
+      INPUT_COMMITTER_TOKEN: committer,
+    });
+    expect(line).toContain("[redacted]");
+    expect(line).not.toContain(committer);
+  });
+
+  it("pattern-redacts Basic blobs on a plain Error", () => {
+    const blob = "Basic d2FrYTpzZWNyZXQ=";
+    const line = formatWorkflowError(new Error(`upstream 401 ${blob}`));
+    expect(line).toContain("[redacted]");
+    expect(line).not.toContain(blob);
+    expect(line).not.toContain("d2FrYTpzZWNyZXQ=");
+  });
+
+  it("does not throw when env secrets are empty or undefined", () => {
+    expect(() => formatWorkflowError(new Error("plain"))).not.toThrow();
+    expect(() =>
+      formatWorkflowError(new Error("plain"), undefined),
+    ).not.toThrow();
+    expect(() =>
+      formatWorkflowError(new Error("plain"), {
+        INPUT_GITHUB_TOKEN: "",
+        INPUT_COMMITTER_TOKEN: "   ",
+        INPUT_WAKATIME_TOKEN: undefined,
+      }),
+    ).not.toThrow();
+    expect(
+      formatWorkflowError(new Error("plain"), {
+        INPUT_GITHUB_TOKEN: "",
+        INPUT_COMMITTER_TOKEN: "   ",
+        INPUT_WAKATIME_TOKEN: undefined,
+      }),
+    ).toBe("plain");
   });
 });

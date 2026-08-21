@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { BitIsolator, bitIsolatorRequest } from "@/src/generate/bit-isolator";
+import {
+  BitIsolator,
+  bitIsolatorRequest,
+  requestFromSearch,
+} from "@/src/generate/bit-isolator";
 import { BIT_SAMPLE_IDS } from "@/src/generate/bit-samples";
 import { CARD_HEIGHT, CARD_WIDTH } from "@/src/generate/constants";
 import type { PreviewFile } from "@/src/preview/types";
@@ -32,7 +36,10 @@ describe("bit isolator island", () => {
     expect(source).toContain("PREVIEW_ENDPOINT");
     expect(source).toContain('scope: "bit"');
     expect(source).toContain("bitIsolatorRequest");
+    expect(source).toContain("requestFromSearch");
+    expect(source).toContain("usePreview(requestFromSearch(bit, searchKey))");
     expect(source).toContain("pickOptions");
+    expect(source).not.toContain("requestProp ?? bitIsolatorRequest");
     expect(source).toContain('data-slot="bit-stage"');
     expect(source).not.toContain("data-placeholder");
     expect(source).not.toContain("bit-stage-label");
@@ -64,11 +71,73 @@ describe("bit isolator island", () => {
     }
   });
 
+  it("keeps remaining bits dark when generate search is empty", () => {
+    for (const bit of BIT_SAMPLE_IDS) {
+      expect(requestFromSearch(bit, "")).toEqual(bitIsolatorRequest(bit));
+      expect(requestFromSearch(bit, new URLSearchParams()).theme).toBe("dark");
+    }
+  });
+
+  it("hydrates named GlobalBar theme from generate search params", () => {
+    const search = new URLSearchParams({
+      scope: "widget",
+      plugin: "github",
+      widget: "languages",
+      theme: "catppuccin-mocha",
+    });
+
+    const request = requestFromSearch("Bar", search);
+
+    expect(request.scope).toBe("bit");
+    expect(request.bit).toBe("Bar");
+    expect(request.theme).toBe("catppuccin-mocha");
+    expect(request.format).toBe("svg");
+  });
+
+  it("hydrates custom c* mixer tokens from generate search params", () => {
+    const search = new URLSearchParams({
+      theme: "custom",
+      cbg: "111111",
+      ccard: "222222",
+      ctext: "eeeeee",
+      cmuted: "aaaaaa",
+      caccent: "cba6f7",
+      cborder: "333333",
+      cpair: "light",
+    });
+
+    const request = requestFromSearch("Chip", search);
+
+    expect(request.scope).toBe("bit");
+    expect(request.bit).toBe("Chip");
+    expect(request.theme).toEqual({
+      custom: {
+        bg: "111111",
+        card: "222222",
+        text: "eeeeee",
+        muted: "aaaaaa",
+        accent: "cba6f7",
+        border: "333333",
+        pair: "light",
+      },
+    });
+  });
+
+  it("lets the path bit win over a permalink bit query", () => {
+    const search = new URLSearchParams({
+      scope: "bit",
+      bit: "Theme",
+      theme: "nord",
+    });
+
+    expect(requestFromSearch("Avatar", search).bit).toBe("Avatar");
+    expect(requestFromSearch("Avatar", search).theme).toBe("nord");
+  });
+
   it("renders the staged Theme+Frame card from preview files", () => {
     const html = renderToStaticMarkup(
       createElement(BitIsolator, {
         bit: "Theme",
-        request: bitIsolatorRequest("Theme"),
         files: [THEME_FILE],
         loading: false,
       }),

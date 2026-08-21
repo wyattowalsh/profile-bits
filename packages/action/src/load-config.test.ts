@@ -238,6 +238,58 @@ not_a_field: true
     });
   });
 
+  describe("Action theme is named-id override only", () => {
+    const YAML_CUSTOM_THEME = `version: 1
+theme:
+  custom:
+    bg: "#000000"
+    card: "#111111"
+    text: "#eeeeee"
+    muted: "#888888"
+    accent: "#0000ff"
+    border: "#222222"
+    pair: light
+plugins: {}
+`;
+
+    it("fails when Action theme is custom", () => {
+      expect(() =>
+        load(
+          { theme: "custom" },
+          { [DEFAULT_CONFIG_PATH]: EMPTY_PLUGINS_YAML },
+        ),
+      ).toThrow(LoadConfigError);
+    });
+
+    it("fails when Action theme is a custom object", () => {
+      expect(() =>
+        load(
+          {
+            theme: {
+              custom: {
+                bg: "#000000",
+                card: "#111111",
+                text: "#eeeeee",
+                muted: "#888888",
+                accent: "#0000ff",
+                border: "#222222",
+              },
+            },
+          },
+          { [DEFAULT_CONFIG_PATH]: EMPTY_PLUGINS_YAML },
+        ),
+      ).toThrow(LoadConfigError);
+    });
+
+    it("lets Action named id win over yaml custom", () => {
+      const loaded = load(
+        { theme: "nord" },
+        { [DEFAULT_CONFIG_PATH]: YAML_CUSTOM_THEME },
+      );
+      expect(loaded.config.theme).toBe("nord");
+    });
+  });
+
   describe("wakatime_token is pack-gated at the engine", () => {
     it("treats an empty wakatime_token as undefined", () => {
       const loaded = load({ wakatime_token: "" });

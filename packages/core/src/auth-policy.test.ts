@@ -349,6 +349,7 @@ describe("usesGithubIntegration", () => {
     expect(usesGithubIntegration("feed")).toBe(false);
     expect(usesGithubIntegration("stats")).toBe(true);
     expect(usesGithubIntegration("languages")).toBe(true);
+    expect(usesGithubIntegration("repo")).toBe(true);
     expect(usesGithubIntegration("demo")).toBe(false);
     expect(usesGithubIntegration("json")).toBe(false);
   });

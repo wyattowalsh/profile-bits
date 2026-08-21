@@ -46,6 +46,8 @@ plugins:
       demo: {}
       stats: {}
       languages: {}
+      repo:
+        repo: octocat/hello-world
 `;
 
 const WAKATIME_YAML = `version: 1
@@ -61,16 +63,11 @@ const PUBLIC_CAPABILITIES: Capabilities = {
 };
 
 function githubRequest(
-  id: "demo" | "stats" | "languages",
+  id: "demo" | "stats" | "languages" | "repo",
 ): WidgetRenderRequest {
   const config = parseConfig({ yaml: GITHUB_YAML });
   const widgets = config.plugins.github?.widgets;
-  const options =
-    id === "demo"
-      ? widgets?.demo
-      : id === "stats"
-        ? widgets?.stats
-        : widgets?.languages;
+  const options = widgets?.[id];
   if (options === undefined) {
     throw new Error(`expected ${id} widget options`);
   }
@@ -145,7 +142,7 @@ describe("createRenderWidget", () => {
     expect(github).not.toHaveBeenCalled();
   });
 
-  it.each(["demo", "stats", "languages"] as const)(
+  it.each(["demo", "stats", "languages", "repo"] as const)(
     "routes %s to the github adapter only",
     async (id) => {
       const coding = stubWidget();

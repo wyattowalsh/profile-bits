@@ -33,7 +33,8 @@ export function createRenderWidget(adapters: {
       }
       case "demo":
       case "stats":
-      case "languages": {
+      case "languages":
+      case "repo": {
         const github = adapters.github;
         if (github === undefined) {
           throw new EngineError(GITHUB_RENDER_NOT_INJECTED, "fail_run");

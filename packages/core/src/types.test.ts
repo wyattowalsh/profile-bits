@@ -8,6 +8,7 @@ import {
   DiscoverSourceInputSchema,
   DiscoverSourceResultSchema,
   LanguagesOptionsSchema,
+  RepoOptionsSchema,
   SOURCE_KINDS,
   SourceKindSchema,
   StatsOptionsSchema,
@@ -148,7 +149,7 @@ describe("WidgetIdentitySchema source", () => {
 });
 
 describe("yaml option schemas stay additionalProperties-false", () => {
-  it("rejects source on demo/stats/languages options", () => {
+  it("rejects source on demo/stats/languages/repo options", () => {
     expect(DemoOptionsSchema.safeParse({ source: "md" }).success).toBe(false);
     expect(StatsOptionsSchema.safeParse({ source: "react" }).success).toBe(
       false,
@@ -156,6 +157,12 @@ describe("yaml option schemas stay additionalProperties-false", () => {
     expect(LanguagesOptionsSchema.safeParse({ source: "html" }).success).toBe(
       false,
     );
+    expect(
+      RepoOptionsSchema.safeParse({
+        repo: "wyattowalsh/profile-bits",
+        source: "react",
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects source on yaml config", () => {

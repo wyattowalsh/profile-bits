@@ -87,7 +87,8 @@ export function widgetListSpecified(
   return (
     widgets?.demo !== undefined ||
     widgets?.stats !== undefined ||
-    widgets?.languages !== undefined
+    widgets?.languages !== undefined ||
+    widgets?.repo !== undefined
   );
 }
 

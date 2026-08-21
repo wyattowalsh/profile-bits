@@ -38,6 +38,8 @@ describe("thin action.yml codegen", () => {
     expect(yml).not.toContain("plugin_http_json_");
     expect(yml).not.toContain("plugin_http_chips_");
     expect(yml).not.toContain("plugin_http_chips_preset");
+    expect(yml).not.toContain("plugin_github_repo_");
+    expect(yml).not.toContain("plugin_github_repo_include");
     expect(yml).not.toContain("plugin_rss");
     expect(yml).not.toContain("plugin_wakatime:");
     expect(yml).not.toContain("plugin_wakatime_coding_");
@@ -60,6 +62,7 @@ describe("thin action.yml codegen", () => {
     expect(isFlattenedActionInputName("plugin_rss_feed_url")).toBe(true);
     expect(isFlattenedActionInputName("plugin_http_json_url")).toBe(true);
     expect(isFlattenedActionInputName("plugin_http_chips_preset")).toBe(true);
+    expect(isFlattenedActionInputName("plugin_github_repo_include")).toBe(true);
     expect(isFlattenedActionInputName("plugin_http")).toBe(false);
     expect(THIN_ACTION_INPUT_NAMES).not.toContain("plugin_http");
     expect(Object.keys(ActionInputsSchema.shape)).not.toContain("plugin_http");
@@ -129,6 +132,16 @@ describe("assertNoFlattenedActionInputs", () => {
     expect(findFlattenedActionInputs(yaml)).toEqual(["plugin_http_json_url"]);
     expect(() => assertNoFlattenedActionInputs(yaml)).toThrow(
       /plugin_http_json_url/,
+    );
+  });
+
+  it("fails plugin_github_repo_include", () => {
+    const yaml = "inputs:\n  plugin_github_repo_include:\n    description: x\n";
+    expect(findFlattenedActionInputs(yaml)).toEqual([
+      "plugin_github_repo_include",
+    ]);
+    expect(() => assertNoFlattenedActionInputs(yaml)).toThrow(
+      /plugin_github_repo_include/,
     );
   });
 

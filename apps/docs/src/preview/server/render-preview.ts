@@ -11,8 +11,9 @@ import {
   isMissingToken,
   type ThemeConfig,
   themeMembersFor,
+  usesGithubIntegration,
 } from "@profile-bits/core";
-import { githubPreviewNode } from "@profile-bits/plugins";
+import { githubPreviewElement } from "@profile-bits/plugins";
 import type { WidgetTheme } from "@profile-bits/renderer";
 import {
   assertTakumiTree,
@@ -69,6 +70,7 @@ export type PreviewGithubPayloadInput = {
   includePrivate: boolean;
   includeForks: boolean;
   includeArchived: boolean;
+  repo?: string;
 };
 
 export type PreviewGithubClient = {
@@ -347,9 +349,11 @@ async function loadGithubPayload(
   const includeForks = includeForksFor(widget, body.options);
   const includeArchived = includeArchivedFor(widget, body.options);
   const user = body.user;
+  const repo = widget === "repo" ? body.options.repo?.repo : undefined;
   const cacheKey = [
     tokenCacheIdentity(token),
     user.trim().toLowerCase(),
+    widget === "repo" ? `repo:${repo ?? ""}` : "pack",
     includePrivate,
     includeForks,
     includeArchived,
@@ -359,13 +363,17 @@ async function loadGithubPayload(
   if (hit != null && hit.expiresAt > now) {
     return hit.payload;
   }
-  const payload = await client.loadPayload({
+  const loadInput: PreviewGithubPayloadInput = {
     user,
     widget,
     includePrivate,
     includeForks,
     includeArchived,
-  });
+  };
+  if (repo !== undefined) {
+    loadInput.repo = repo;
+  }
+  const payload = await client.loadPayload(loadInput);
   loginCache.set(cacheKey, {
     payload,
     expiresAt: now + GITHUB_PREVIEW_CACHE_TTL_MS,
@@ -407,12 +415,16 @@ async function filesForTarget(
     const id = fileId(target, member.polarity, body.output_pair);
     const filename = fileName(body, target, member.polarity);
     const mime = mimeFor(body.format);
+    const resolvedPayload =
+      target.widget !== undefined
+        ? payloadForWidget(target.widget, payload)
+        : payload;
     const input: PreviewRenderInput = {
       id,
       format: body.format,
       theme: member.theme,
       motion,
-      payload,
+      payload: resolvedPayload,
       options: body.options,
       user: body.user,
     };
@@ -461,18 +473,14 @@ async function renderMotionBytes(
 async function defaultRenderStill(
   input: PreviewRenderInput,
 ): Promise<Uint8Array | null> {
-  try {
-    const node = await previewNode(input);
-    if (input.format === "svg") {
-      return toUint8(await renderSvg(node));
-    }
-    if (isStillFormat(input.format)) {
-      return toUint8(await render(node, input.format));
-    }
-    return null;
-  } catch {
-    return null;
+  const node = await previewNode(input);
+  if (input.format === "svg") {
+    return toUint8(await renderSvg(node));
   }
+  if (isStillFormat(input.format)) {
+    return toUint8(await render(node, input.format));
+  }
+  return null;
 }
 
 async function defaultRenderMotion(
@@ -494,12 +502,14 @@ async function previewNode(input: PreviewRenderInput) {
     assertTakumiTree(node);
     return node;
   }
-  const node = await githubPreviewNode({
-    widget: input.widget,
-    theme: input.theme,
-    payload: input.payload,
-    options: input.options,
-  });
+  const node = await fromJsx(
+    githubPreviewElement({
+      widget: input.widget,
+      theme: input.theme,
+      payload: input.payload,
+      options: input.options,
+    }),
+  );
   assertTakumiTree(node);
   return node;
 }
@@ -523,8 +533,31 @@ function requestedWidgets(body: PreviewRequest): PreviewWidgetId[] {
   return ["demo", "stats", "languages"];
 }
 
-function usesGithubIntegration(widget: PreviewWidgetId): boolean {
-  return widget === "stats" || widget === "languages";
+function payloadForWidget(widget: PreviewWidgetId, payload: unknown): unknown {
+  if (widget !== "repo") {
+    return payload;
+  }
+  return withFixtureRepository(payload);
+}
+
+/** Map static octocat `repos[0]` (Hello-World) when loadPayload omitted `repository`. */
+function withFixtureRepository(payload: unknown): unknown {
+  if (
+    payload == null ||
+    typeof payload !== "object" ||
+    Array.isArray(payload)
+  ) {
+    return payload;
+  }
+  const rec = payload as Record<string, unknown>;
+  if (rec.repository != null) {
+    return payload;
+  }
+  const repos = rec.repos;
+  if (!Array.isArray(repos) || repos.length === 0) {
+    return payload;
+  }
+  return { ...rec, repository: repos[0] };
 }
 
 function includePrivateFor(
@@ -597,6 +630,9 @@ function animateFor(
   if (widget === "languages") {
     return options.languages?.animate === true;
   }
+  if (widget === "repo") {
+    return options.repo?.animate === true;
+  }
   return false;
 }
 
@@ -630,6 +666,9 @@ function filenameStem(
   }
   if (target.widget === "languages") {
     return body.options.languages?.filename ?? "languages";
+  }
+  if (target.widget === "repo") {
+    return body.options.repo?.filename ?? "repo";
   }
   if (target.widget === "demo") {
     return "demo";

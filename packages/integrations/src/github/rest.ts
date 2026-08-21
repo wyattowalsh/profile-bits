@@ -1,12 +1,15 @@
 /**
- * Authenticated REST crawl: GET /users/{login} plus paginated owner repos.
- * Filter forks/archived first, then cap 500. Never unauth. Never REST
- * /languages. Identity probe (GET /user) is T111e — not this module.
+ * Authenticated REST: owner crawl (stats/languages) plus GET
+ * /repos/{owner}/{repo} (widget repo). Filter forks/archived first, then
+ * cap 500. Never unauth. Never REST /repos/{owner}/{repo}/languages.
+ * Identity probe (GET /user) is T111e — not this module.
  */
 
 import {
   decideIncludePrivate,
   isMissingToken,
+  publicUrlParts,
+  type RunLogSink,
   type SkipFailOutcome,
 } from "@profile-bits/core";
 import type { GithubRequestCache } from "./cache.js";
@@ -48,6 +51,21 @@ export type GithubOwnerRepository = {
   forksCount: number;
 };
 
+export type GithubRepository = {
+  fullName: string;
+  name: string;
+  description: string | null;
+  htmlUrl: string;
+  stargazersCount: number;
+  forksCount: number;
+  subscribersCount: number;
+  openIssuesCount: number;
+  language: string | null;
+  license: string | null;
+  ownerLogin: string;
+  ownerAvatarUrl: string;
+};
+
 export type GithubRestCrawlResult = {
   user: GithubRestUser;
   repositories: readonly GithubOwnerRepository[];
@@ -64,6 +82,15 @@ export type GithubRestCrawlInput = {
   includeForks?: boolean;
   includeArchived?: boolean;
   fetchImpl?: GithubRestFetch;
+  logger?: RunLogSink;
+};
+
+export type GithubRepoFetchInput = {
+  repo: string;
+  token: string | undefined | null;
+  cache: GithubRequestCache;
+  fetchImpl?: GithubRestFetch;
+  logger?: RunLogSink;
 };
 
 export class GithubRestError extends Error {
@@ -108,6 +135,7 @@ export async function crawlGithubRest(
   const includeArchived = input.includeArchived === true;
   const token = rawToken.trim();
   const fetchImpl = input.fetchImpl ?? fetch;
+  const logger = input.logger;
 
   if (decideIncludePrivate({ includePrivate, canPrivate }) === "fail_widget") {
     throw new GithubRestError(
@@ -123,6 +151,7 @@ export async function crawlGithubRest(
       params: {},
       token,
       fetchImpl,
+      logger,
     }),
   );
   if (user == null) {
@@ -136,6 +165,7 @@ export async function crawlGithubRest(
     token,
     cache: input.cache,
     fetchImpl,
+    logger,
     includePrivate,
     canPrivate,
     includeForks,
@@ -149,11 +179,50 @@ export async function crawlGithubRest(
   };
 }
 
+/**
+ * Authenticated GET /repos/{owner}/{repo}. Primary language is the repo
+ * object `language` string only — never REST /languages, never GraphQL.
+ */
+export async function fetchGithubRepo(
+  input: GithubRepoFetchInput,
+): Promise<GithubRepository> {
+  const rawToken = input.token ?? "";
+  if (isMissingToken(rawToken)) {
+    throw new GithubRestError(
+      "fail_job",
+      "github_token is missing; refusing unauthenticated GitHub REST",
+    );
+  }
+
+  const { owner, name } = splitRepoFullName(input.repo);
+  const token = rawToken.trim();
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const repository = parseRepository(
+    await cachedGithubGet({
+      cache: input.cache,
+      url: repoUrl(owner, name),
+      params: {},
+      token,
+      fetchImpl,
+      logger: input.logger,
+    }),
+  );
+  if (repository == null) {
+    throw new GithubRestError(
+      "fail_run",
+      "GitHub repository response was invalid",
+      { status: 200 },
+    );
+  }
+  return repository;
+}
+
 async function listOwnerRepositories(input: {
   login: string;
   token: string;
   cache: GithubRequestCache;
   fetchImpl: GithubRestFetch;
+  logger?: RunLogSink;
   includePrivate: boolean;
   canPrivate: boolean;
   includeForks: boolean;
@@ -176,6 +245,7 @@ async function listOwnerRepositories(input: {
       },
       token: input.token,
       fetchImpl: input.fetchImpl,
+      logger: input.logger,
     });
     if (!Array.isArray(body)) {
       throw new GithubRestError(
@@ -229,6 +299,7 @@ async function cachedGithubGet(input: {
   params: Readonly<Record<string, string>>;
   token: string;
   fetchImpl: GithubRestFetch;
+  logger?: RunLogSink;
 }): Promise<unknown> {
   assertNotLanguagesUrl(input.url);
   return input.cache.rest(
@@ -242,47 +313,91 @@ async function githubGetUncached(input: {
   params: Readonly<Record<string, string>>;
   token: string;
   fetchImpl: GithubRestFetch;
+  logger?: RunLogSink;
 }): Promise<unknown> {
   assertNotLanguagesUrl(input.url);
   const url = withSearchParams(input.url, input.params);
-  let response: Response;
+  const startedMs = performance.now();
   try {
-    response = await input.fetchImpl(url, {
-      method: "GET",
-      redirect: "error",
-      cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${input.token}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": GITHUB_API_VERSION,
-        "User-Agent": "profile-bits",
-      },
+    let response: Response;
+    try {
+      response = await input.fetchImpl(url, {
+        method: "GET",
+        redirect: "error",
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${input.token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": GITHUB_API_VERSION,
+          "User-Agent": "profile-bits",
+        },
+      });
+    } catch (error) {
+      if (error instanceof GithubRestError) {
+        throw error;
+      }
+      throw new GithubRestError(
+        "fail_run",
+        "GitHub REST request failed before a response",
+        { cause: error },
+      );
+    }
+
+    const body = await readJson(response);
+    const outcome = classifyGithubRateLimit({
+      status: response.status,
+      body,
+      headers: headersRecord(response.headers),
     });
+    if (outcome !== "render") {
+      throw new GithubRestError(
+        outcome,
+        `GitHub REST ${response.status} for ${url.pathname}`,
+        { status: response.status },
+      );
+    }
+    emitRestGetLog(input.logger, url, startedMs, {
+      outcome: "ok",
+      status: response.status,
+    });
+    return body;
   } catch (error) {
     if (error instanceof GithubRestError) {
-      throw error;
+      emitRestGetLog(input.logger, url, startedMs, {
+        outcome: error.outcome,
+        status: error.status,
+      });
     }
-    throw new GithubRestError(
-      "fail_run",
-      "GitHub REST request failed before a response",
-      { cause: error },
-    );
+    throw error;
   }
+}
 
-  const body = await readJson(response);
-  const outcome = classifyGithubRateLimit({
-    status: response.status,
-    body,
-    headers: headersRecord(response.headers),
-  });
-  if (outcome !== "render") {
-    throw new GithubRestError(
-      outcome,
-      `GitHub REST ${response.status} for ${url.pathname}`,
-      { status: response.status },
-    );
+function emitRestGetLog(
+  logger: RunLogSink | undefined,
+  url: URL,
+  startedMs: number,
+  fields: {
+    outcome: "ok" | SkipFailOutcome;
+    status?: number;
+  },
+): void {
+  if (logger == null) {
+    return;
   }
-  return body;
+  const { host, path } = publicUrlParts(url.href);
+  logger({
+    v: 1,
+    src: "profile-bits",
+    kind: "call",
+    pkg: "integrations",
+    integration: "github",
+    op: "rest.get",
+    outcome: fields.outcome,
+    duration_ms: Math.round(performance.now() - startedMs),
+    host,
+    path,
+    ...(fields.status === undefined ? {} : { status: fields.status }),
+  });
 }
 
 function userUrl(login: string): string {
@@ -294,6 +409,25 @@ function ownerReposUrl(login: string, privateCapable: boolean): string {
     return `${GITHUB_API_ORIGIN}/user/repos`;
   }
   return `${GITHUB_API_ORIGIN}/users/${encodeURIComponent(login)}/repos`;
+}
+
+function repoUrl(owner: string, name: string): string {
+  return `${GITHUB_API_ORIGIN}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(
+    name,
+  )}`;
+}
+
+function splitRepoFullName(repo: string): { owner: string; name: string } {
+  const trimmed = repo.trim();
+  const parts = trimmed.split("/");
+  if (parts.length !== 2) {
+    throw new GithubRestError("fail_widget", "repo must be owner/name");
+  }
+  const [owner, name] = parts;
+  if (owner == null || name == null || owner === "" || name === "") {
+    throw new GithubRestError("fail_widget", "repo must be owner/name");
+  }
+  return { owner, name };
 }
 
 function withSearchParams(
@@ -308,11 +442,26 @@ function withSearchParams(
 }
 
 function assertNotLanguagesUrl(url: string): void {
-  if (url.includes("/languages")) {
+  const segments = githubPathname(url)
+    .split("/")
+    .filter((segment) => segment !== "");
+  if (
+    segments.length >= 4 &&
+    segments[0] === "repos" &&
+    segments[segments.length - 1] === "languages"
+  ) {
     throw new GithubRestError(
       "fail_run",
       "REST /languages is forbidden; use GraphQL nodes(ids:)",
     );
+  }
+}
+
+function githubPathname(url: string): string {
+  try {
+    return new URL(url, GITHUB_API_ORIGIN).pathname;
+  } catch {
+    return url;
   }
 }
 
@@ -336,6 +485,33 @@ function parseUser(value: unknown): GithubRestUser | null {
     following: numberField(record.following),
     publicRepos: numberField(record.public_repos),
     publicGists: numberField(record.public_gists),
+  };
+}
+
+function parseRepository(value: unknown): GithubRepository | null {
+  const record = asRecord(value);
+  if (record == null) {
+    return null;
+  }
+  const name = stringField(record.name);
+  const fullName = stringField(record.full_name);
+  if (name === "" && fullName === "") {
+    return null;
+  }
+  const owner = asRecord(record.owner);
+  return {
+    fullName,
+    name,
+    description: nullableString(record.description),
+    htmlUrl: stringField(record.html_url),
+    stargazersCount: numberField(record.stargazers_count),
+    forksCount: numberField(record.forks_count),
+    subscribersCount: numberField(record.subscribers_count),
+    openIssuesCount: numberField(record.open_issues_count),
+    language: nullableString(record.language),
+    license: licenseField(record.license),
+    ownerLogin: owner == null ? "" : stringField(owner.login),
+    ownerAvatarUrl: owner == null ? "" : stringField(owner.avatar_url),
   };
 }
 
@@ -389,6 +565,24 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
+function licenseField(value: unknown): string | null {
+  const record = asRecord(value);
+  if (record == null) {
+    return null;
+  }
+  if (typeof record.spdx_id === "string" && record.spdx_id !== "") {
+    return record.spdx_id;
+  }
+  if (typeof record.name === "string" && record.name !== "") {
+    return record.name;
+  }
+  return null;
 }
 
 function numberField(value: unknown): number {

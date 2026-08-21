@@ -44,7 +44,7 @@ function sampleInner(bit: PreviewBitName): ReactElement {
     case "Bar":
       return createElement(Bar, { pct: 42, label: "TypeScript" });
     case "Chip":
-      return createElement(Chip, null, "Chip");
+      return createElement(Chip, { label: "npm", message: "1.2.3" });
     case "Avatar":
       return createElement(Avatar, {
         src: "https://avatars.githubusercontent.com/u/583231?v=4",

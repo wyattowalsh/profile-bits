@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BitIsolator } from "@/src/generate/bit-isolator";
+import { permalinkHref } from "@/src/generate/share-result";
 import {
   CARD_HEIGHT,
   CARD_WIDTH,
@@ -11,24 +13,33 @@ import {
   GENERATE_PLUGIN_ID,
   GenerateShell,
   GLOBAL_BAR_MODULE,
+  generateLocationHref,
   generatePath,
   importGlobalBar,
   importPackStage,
+  isBitIsolatorPath,
   PACK_STAGE_MODULE,
   requestFromPathname,
+  resolveGenerateSearch,
   resolveOrigin,
   SHARE_LABEL,
 } from "@/src/generate/shell";
+import { serialize } from "@/src/preview/permalink";
 import {
   PREVIEW_BIT_IDS,
   PREVIEW_TOKEN_QUERY_KEYS,
   PREVIEW_WIDGET_IDS,
+  type PreviewCustomTheme,
   type PreviewFile,
   type PreviewRequest,
 } from "@/src/preview/types";
 
+const navigation = vi.hoisted(() => ({
+  pathname: "/generate/github",
+}));
+
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/generate/github",
+  usePathname: () => navigation.pathname,
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -66,6 +77,24 @@ function renderShell(props: Parameters<typeof GenerateShell>[0] = {}): string {
       ...props,
     }),
   );
+}
+
+function htmlWithoutStyles(html: string): string {
+  return html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, "");
+}
+
+beforeEach(() => {
+  navigation.pathname = "/generate/github";
+});
+
+function withPathname<T>(pathname: string, run: () => T): T {
+  const previous = navigation.pathname;
+  navigation.pathname = pathname;
+  try {
+    return run();
+  } finally {
+    navigation.pathname = previous;
+  }
 }
 
 function withLocationOrigin<T>(origin: string, run: () => T): T {
@@ -107,7 +136,11 @@ describe("generate shell is a client island", () => {
     expect(source).toContain("usePathname");
     expect(source).toContain("useSearchParams");
     expect(source).toContain("requestFromPathname");
+    expect(source).toContain("isBitIsolatorPath");
     expect(source).toContain("pickOptions");
+    expect(source).toContain("serialize");
+    expect(source).toContain("replaceState");
+    expect(source).toContain("resolveGenerateSearch");
     expect(source).toContain("PACK_STAGE_MODULE");
     expect(source).toContain("GLOBAL_BAR_MODULE");
     expect(PACK_STAGE_MODULE).toBe("./pack-stage");
@@ -161,6 +194,70 @@ describe("480×160 hero", () => {
   });
 });
 
+describe("bit isolator vs pack hero", () => {
+  it.each(PREVIEW_BIT_IDS)("is a bit isolator path for %s", (bit) => {
+    expect(isBitIsolatorPath(`/generate/bits/${bit}`)).toBe(true);
+  });
+
+  it("is not a bit isolator path for pack, index, or unknown bits", () => {
+    expect(isBitIsolatorPath("/generate/github")).toBe(false);
+    expect(isBitIsolatorPath("/generate/github/stats")).toBe(false);
+    expect(isBitIsolatorPath("/generate/bits")).toBe(false);
+    expect(isBitIsolatorPath("/generate/bits/NotABit")).toBe(false);
+    expect(isBitIsolatorPath("/generate/catalog")).toBe(false);
+  });
+
+  it("renders one 480×160 isolator figure and no generate-hero on bit routes", () => {
+    const html = withPathname("/generate/bits/Bar", () =>
+      renderShell({
+        PackStage: () =>
+          createElement("div", { "data-slot": "pack-stage" }, "pack-stage"),
+        children: createElement(BitIsolator, {
+          bit: "Bar",
+          files: [PNG_FILE],
+          loading: false,
+        }),
+      }),
+    );
+
+    const markup = htmlWithoutStyles(html);
+
+    expect(markup).toContain('data-slot="bit-stage"');
+    expect(markup).toContain('data-bit="Bar"');
+    expect(markup).toContain(`data-card-width="${CARD_WIDTH}"`);
+    expect(markup).toContain(`data-card-height="${CARD_HEIGHT}"`);
+    expect(markup).toContain(
+      `aria-label="Bar bit stage ${CARD_WIDTH} by ${CARD_HEIGHT}"`,
+    );
+    expect(markup.match(/<figure\b/g)).toEqual(["<figure"]);
+    expect(markup).not.toContain('data-slot="generate-hero"');
+    expect(markup).not.toContain('data-slot="generate-hero-fallback"');
+    expect(markup).not.toContain('data-slot="pack-stage"');
+    expect(markup).toContain('data-canonical-path="/generate/bits/Bar"');
+  });
+
+  it.each([
+    "/generate/github",
+    "/generate/github/demo",
+    "/generate/github/stats",
+    "/generate/github/languages",
+    "/generate/bits",
+    "/generate/catalog",
+    "/generate/widgets",
+  ])("keeps PackStage hero on pack route %s", (pathname) => {
+    const html = withPathname(pathname, () =>
+      renderShell({
+        PackStage: () =>
+          createElement("div", { "data-slot": "pack-stage" }, "pack-stage"),
+      }),
+    );
+
+    expect(html).toContain('data-slot="generate-hero"');
+    expect(html).toContain('data-slot="pack-stage"');
+    expect(html).not.toContain('data-slot="bit-stage"');
+  });
+});
+
 describe("primary Download Share and copy generator link", () => {
   it("renders Download as the primary CTA plus Share and copy generator link", () => {
     const html = renderShell({ files: [PNG_FILE] });
@@ -201,7 +298,6 @@ describe("primary Download Share and copy generator link", () => {
     expect(source).toContain('[data-slot="generate-share"]:focus-visible');
     expect(source).toContain(ring);
     expect(source).toContain(offset);
-    expect(resolveOrigin()).toBe("http://localhost:3000");
   });
 });
 
@@ -243,6 +339,23 @@ describe("resolveOrigin", () => {
     expect(resolveOrigin("")).toBe("http://localhost:3000");
   });
 
+  it("does not leak http://localhost without a port from origin or location", () => {
+    expect(resolveOrigin("http://localhost")).toBe("http://localhost:3000");
+    withLocationOrigin("http://localhost", () => {
+      expect(resolveOrigin()).toBe("http://localhost:3000");
+      expect(resolveOrigin("")).toBe("http://localhost:3000");
+    });
+  });
+
+  it("keeps localhost origins that already include a port", () => {
+    expect(resolveOrigin("http://localhost:4321")).toBe(
+      "http://localhost:4321",
+    );
+    withLocationOrigin("http://localhost:4321", () => {
+      expect(resolveOrigin()).toBe("http://localhost:4321");
+    });
+  });
+
   it("lets an explicit origin win", () => {
     expect(resolveOrigin("https://docs.example.com")).toBe(
       "https://docs.example.com",
@@ -258,6 +371,17 @@ describe("resolveOrigin", () => {
     withLocationOrigin("http://127.0.0.1:3000", () => {
       expect(resolveOrigin()).toBe("http://127.0.0.1:3000");
     });
+  });
+
+  it("hydrates permalinks with a ported localhost origin, not http://localhost", () => {
+    const origin = withLocationOrigin("http://localhost", () =>
+      resolveOrigin(),
+    );
+    const href = permalinkHref(DEFAULT_GENERATE_REQUEST, origin);
+
+    expect(origin).toBe("http://localhost:3000");
+    expect(href.startsWith("http://localhost:3000/")).toBe(true);
+    expect(href).not.toMatch(/http:\/\/localhost(?!:)/);
   });
 });
 
@@ -373,5 +497,86 @@ describe("requestFromPathname", () => {
 
     expect(html).toContain("/generate/bits/Divider");
     expect(html).not.toContain("/generate/github/demo");
+  });
+});
+
+describe("generateLocationHref", () => {
+  it("joins pathname and query the same way playground replaceState does", () => {
+    expect(generateLocationHref("/generate/github/languages", "")).toBe(
+      "/generate/github/languages",
+    );
+    expect(
+      generateLocationHref("/generate/bits/Bar", "theme=catppuccin-mocha"),
+    ).toBe("/generate/bits/Bar?theme=catppuccin-mocha");
+  });
+});
+
+describe("resolveGenerateSearch", () => {
+  const mochaSearch = serialize({
+    ...DEFAULT_GENERATE_REQUEST,
+    scope: "widget",
+    plugin: "github",
+    widget: "languages",
+    theme: "catppuccin-mocha",
+  }).toString();
+
+  const customTheme: PreviewCustomTheme = {
+    custom: {
+      bg: "111111",
+      card: "222222",
+      text: "eeeeee",
+      muted: "aaaaaa",
+      accent: "cba6f7",
+      border: "333333",
+      pair: "light",
+    },
+  };
+  const customSearch = serialize({
+    ...DEFAULT_GENERATE_REQUEST,
+    theme: customTheme,
+  }).toString();
+
+  it("keeps incoming search when Next still has query", () => {
+    expect(
+      resolveGenerateSearch("/generate/bits/Bar", mochaSearch, "theme=dark"),
+    ).toBe(mochaSearch);
+  });
+
+  it("preserves mocha when a query-less generate link drops search", () => {
+    const preserved = resolveGenerateSearch(
+      "/generate/bits/Bar",
+      "",
+      mochaSearch,
+    );
+    const request = requestFromPathname("/generate/bits/Bar", preserved);
+
+    expect(preserved).toBe(mochaSearch);
+    expect(request.scope).toBe("bit");
+    expect(request.bit).toBe("Bar");
+    expect(request.theme).toBe("catppuccin-mocha");
+  });
+
+  it("preserves custom c* params when a query-less generate link drops search", () => {
+    const preserved = resolveGenerateSearch(
+      "/generate/github/languages",
+      "",
+      customSearch,
+    );
+    const request = requestFromPathname(
+      "/generate/github/languages",
+      preserved,
+    );
+
+    expect(request.scope).toBe("widget");
+    expect(request.widget).toBe("languages");
+    expect(request.theme).toEqual(customTheme);
+    expect(preserved).toContain("theme=custom");
+    expect(preserved).toContain("cbg=111111");
+    expect(preserved).toContain("caccent=cba6f7");
+    expect(preserved).toContain("cpair=light");
+  });
+
+  it("does not invent search when generate had none", () => {
+    expect(resolveGenerateSearch("/generate/bits/Bar", "", "")).toBe("");
   });
 });

@@ -55,6 +55,9 @@ describe("GET /generate/bits/[bit]", () => {
     expect(source).toContain("bit-samples");
     expect(source).toContain("BitIsolator");
     expect(source).toContain("bitIsolatorRequest");
+    expect(source).toContain("<BitIsolator bit={bit} />");
+    expect(source).not.toContain("request={request}");
+    expect(source).not.toContain("request={bitIsolatorRequest");
     expect(source).toContain("isPreviewBitName");
     expect(source).toContain('data-slot="bit-stage"');
     expect(source).not.toContain("data-placeholder");

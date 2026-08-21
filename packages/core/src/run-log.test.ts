@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  createDefaultRunLogSink,
   formatLogEvent,
   publicUrlParts,
   type RunLogEvent,
@@ -104,5 +105,109 @@ describe("formatLogEvent", () => {
       src: "profile-bits",
       message: "Authorization: [redacted] request failed",
     });
+  });
+});
+
+function captureStdio(): { stdout: () => string; stderr: () => string } {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    stdout.push(String(chunk));
+    return true;
+  });
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    stderr.push(String(chunk));
+    return true;
+  });
+  return {
+    stdout: () => stdout.join(""),
+    stderr: () => stderr.join(""),
+  };
+}
+
+function parseStderrEvent(stderr: string): RunLogEvent {
+  expect(stderr).toContain("profile-bits {");
+  const trimmed = stderr.replace(/\n$/, "");
+  expect(trimmed.startsWith("profile-bits ")).toBe(true);
+  return JSON.parse(trimmed.slice("profile-bits ".length)) as RunLogEvent;
+}
+
+describe("createDefaultRunLogSink", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("writes a profile-bits JSON line to stderr with src profile-bits", () => {
+    vi.stubEnv("GITHUB_ACTIONS", "");
+    delete process.env.GITHUB_ACTIONS;
+    const stdio = captureStdio();
+    const event: RunLogEvent = {
+      ...BASE_EVENT,
+      pkg: "integrations",
+      integration: "http",
+      outcome: "ok",
+    };
+    createDefaultRunLogSink()(event);
+    const parsed = parseStderrEvent(stdio.stderr());
+    expect(parsed).toEqual(JSON.parse(formatLogEvent(event)));
+    expect(parsed.src).toBe("profile-bits");
+  });
+
+  it("does not emit ::warning:: or ::error:: on stdout when GITHUB_ACTIONS is unset", () => {
+    vi.stubEnv("GITHUB_ACTIONS", "");
+    delete process.env.GITHUB_ACTIONS;
+    const stdio = captureStdio();
+    createDefaultRunLogSink()({
+      ...BASE_EVENT,
+      outcome: "fail_widget",
+      message: "widget failed",
+    });
+    expect(stdio.stdout()).not.toContain("::warning::");
+    expect(stdio.stdout()).not.toContain("::error::");
+    expect(stdio.stderr()).toContain("profile-bits {");
+  });
+
+  it("emits ::warning:: not ::error:: for fail_widget when GITHUB_ACTIONS is true", () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    const stdio = captureStdio();
+    createDefaultRunLogSink()({
+      ...BASE_EVENT,
+      outcome: "fail_widget",
+      message: "http 401",
+    });
+    expect(stdio.stdout()).toContain("::warning::http 401\n");
+    expect(stdio.stdout()).not.toContain("::error::");
+    expect(stdio.stderr()).toContain("profile-bits {");
+  });
+
+  it("emits ::error:: for fail_run when GITHUB_ACTIONS is true", () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    const stdio = captureStdio();
+    createDefaultRunLogSink()({
+      ...BASE_EVENT,
+      outcome: "fail_run",
+      message: "wakatime 401",
+    });
+    expect(stdio.stdout()).toContain("::error::wakatime 401\n");
+    expect(stdio.stdout()).not.toContain("::warning::");
+    expect(stdio.stderr()).toContain("profile-bits {");
+  });
+
+  it("does not log Bearer or token when the message is redacted", () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    const stdio = captureStdio();
+    createDefaultRunLogSink()({
+      ...BASE_EVENT,
+      outcome: "fail_run",
+      message: redactLogMessage(
+        "Authorization: Bearer ghp_leaked_token request failed",
+      ),
+    });
+    const haystack = `${stdio.stdout()}${stdio.stderr()}`;
+    expect(haystack).not.toContain("Bearer");
+    expect(haystack).not.toContain("token");
+    expect(haystack).not.toContain("ghp_leaked_token");
+    expect(parseStderrEvent(stdio.stderr()).src).toBe("profile-bits");
   });
 });

@@ -16,7 +16,12 @@ export type PreviewScope = (typeof PREVIEW_SCOPES)[number];
 export const PREVIEW_PLUGIN_IDS = ["github", "http"] as const;
 export type PreviewPluginId = (typeof PREVIEW_PLUGIN_IDS)[number];
 
-export const PREVIEW_WIDGET_IDS = ["demo", "stats", "languages"] as const;
+export const PREVIEW_WIDGET_IDS = [
+  "demo",
+  "stats",
+  "languages",
+  "repo",
+] as const;
 export type PreviewWidgetId = (typeof PREVIEW_WIDGET_IDS)[number];
 
 /** Bits export names. Do not import packages/bits. Unknown names stay string. */
@@ -74,6 +79,17 @@ export const PREVIEW_STATS_INCLUDE_TOKENS = [
 export type PreviewStatsIncludeToken =
   (typeof PREVIEW_STATS_INCLUDE_TOKENS)[number];
 
+export const PREVIEW_REPO_INCLUDE_TOKENS = [
+  "stars",
+  "forks",
+  "watchers",
+  "issues",
+  "license",
+  "language",
+] as const;
+export type PreviewRepoIncludeToken =
+  (typeof PREVIEW_REPO_INCLUDE_TOKENS)[number];
+
 export const PREVIEW_PROVENANCES = ["fixture", "live", "rate_limited"] as const;
 export type PreviewProvenance = (typeof PREVIEW_PROVENANCES)[number];
 
@@ -130,6 +146,14 @@ export type PreviewLanguagesOptions = {
   include_archived?: boolean;
 };
 
+export type PreviewRepoOptions = {
+  filename?: string;
+  include?: readonly PreviewRepoIncludeToken[];
+  avatar?: boolean;
+  animate?: boolean;
+  repo?: string;
+};
+
 /**
  * Yaml-shaped widget options from the core Zod shapes, plus optional globals.
  * No token fields.
@@ -138,6 +162,7 @@ export type PreviewOptions = {
   demo?: PreviewDemoOptions;
   stats?: PreviewStatsOptions;
   languages?: PreviewLanguagesOptions;
+  repo?: PreviewRepoOptions;
   format?: PreviewOutputFormat;
   theme?: PreviewTheme;
   output_pair?: boolean;
@@ -270,6 +295,12 @@ export function isPreviewStatsIncludeToken(
   value: string,
 ): value is PreviewStatsIncludeToken {
   return (PREVIEW_STATS_INCLUDE_TOKENS as readonly string[]).includes(value);
+}
+
+export function isPreviewRepoIncludeToken(
+  value: string,
+): value is PreviewRepoIncludeToken {
+  return (PREVIEW_REPO_INCLUDE_TOKENS as readonly string[]).includes(value);
 }
 
 export function isTokenQueryKey(key: string): boolean {

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   isPreviewCustomTheme,
   isPreviewPluginId,
+  isPreviewRepoIncludeToken,
   isPreviewWidgetId,
   isTokenQueryKey,
   PREVIEW_PLUGIN_ID,
   PREVIEW_PLUGIN_IDS,
+  PREVIEW_REPO_INCLUDE_TOKENS,
   PREVIEW_STATS_INCLUDE_TOKENS,
   PREVIEW_TOKEN_QUERY_KEYS,
   PREVIEW_WIDGET_IDS,
@@ -31,7 +33,8 @@ describe("preview plugin and widget ids", () => {
     expect(isPreviewPluginId("github")).toBe(true);
     expect(isPreviewPluginId("http")).toBe(true);
     expect(isPreviewPluginId("wakatime")).toBe(false);
-    expect(PREVIEW_WIDGET_IDS).toEqual(["demo", "stats", "languages"]);
+    expect(PREVIEW_WIDGET_IDS).toEqual(["demo", "stats", "languages", "repo"]);
+    expect(isPreviewWidgetId("repo")).toBe(true);
     expect(isPreviewWidgetId("chips")).toBe(false);
     expect(isPreviewWidgetId("json")).toBe(false);
   });
@@ -69,6 +72,14 @@ describe("isTokenQueryKey", () => {
   it.each(PREVIEW_STATS_INCLUDE_TOKENS)(
     "does not treat stats include value %s as a secret query key",
     (token) => {
+      expect(isTokenQueryKey(token)).toBe(false);
+    },
+  );
+
+  it.each(PREVIEW_REPO_INCLUDE_TOKENS)(
+    "does not treat repo include value %s as a secret query key",
+    (token) => {
+      expect(isPreviewRepoIncludeToken(token)).toBe(true);
       expect(isTokenQueryKey(token)).toBe(false);
     },
   );

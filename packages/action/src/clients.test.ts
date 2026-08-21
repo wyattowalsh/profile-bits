@@ -4,6 +4,8 @@ import {
   CODING_API_DOMAIN_DEFAULT,
   DEFAULT_YAML,
   parseConfig,
+  type RunLogEvent,
+  type RunLogSink,
 } from "@profile-bits/core";
 import type { GithubClient, WakatimeClient } from "@profile-bits/integrations";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -140,7 +142,62 @@ function assertTokenNotLogged(token: string): void {
   }
 }
 
+const DEMO_ONLY_YAML = `version: 1
+format: svg
+plugins:
+  github:
+    widgets:
+      demo: {}
+`;
+
+const REPO_ONLY_YAML = `version: 1
+format: svg
+plugins:
+  github:
+    widgets:
+      repo:
+        repo: octocat/hello-world
+`;
+
+const STATS_ONLY_YAML = `version: 1
+format: svg
+plugins:
+  github:
+    widgets:
+      stats: {}
+`;
+
+const LANGUAGES_ONLY_YAML = `version: 1
+format: svg
+plugins:
+  github:
+    widgets:
+      languages: {}
+`;
+
 describe("createActionClients", () => {
+  it.each([
+    ["demo-only", DEMO_ONLY_YAML],
+    ["repo-only", REPO_ONLY_YAML],
+    ["stats", STATS_ONLY_YAML],
+    ["languages", LANGUAGES_ONLY_YAML],
+  ] as const)(
+    "constructs github once for %s yaml and does not construct wakatime",
+    (_label, yaml) => {
+      const { clients, github, createGithubClient, createWakatimeClient } =
+        invoke(yaml);
+
+      expect(clients.github).toBe(github);
+      expect(clients.wakatime).toBeUndefined();
+      expect(createGithubClient).toHaveBeenCalledOnce();
+      expect(createGithubClient).toHaveBeenCalledWith({
+        token: GITHUB_TOKEN,
+        configuredUser: "",
+      });
+      expect(createWakatimeClient).not.toHaveBeenCalled();
+    },
+  );
+
   it("constructs github once for default yaml and does not construct wakatime when the pack is off", () => {
     const { clients, github, createGithubClient, createWakatimeClient } =
       invoke(DEFAULT_YAML);
@@ -241,6 +298,109 @@ describe("createActionClients", () => {
       token: WAKATIME_TOKEN,
       apiDomain: "wakapi.dev",
     });
+    assertTokenNotLogged(WAKATIME_TOKEN);
+  });
+
+  it("forwards RunLogSink to wakatime and adapts it to github RateLimitLogger", () => {
+    const events: RunLogEvent[] = [];
+    const logger: RunLogSink = (event) => {
+      events.push(event);
+    };
+    const github = fakeGithubClient();
+    const wakatime = fakeWakatimeClient();
+    const createGithubClient = vi.fn<
+      NonNullable<ActionClientFactories["createGithubClient"]>
+    >(() => github);
+    const createWakatimeClient = vi.fn<
+      NonNullable<ActionClientFactories["createWakatimeClient"]>
+    >(() => wakatime);
+
+    const clients = createActionClients(
+      loadedConfig(GITHUB_AND_WAKATIME_YAML, {
+        wakatime_token: WAKATIME_TOKEN,
+      }),
+      { createGithubClient, createWakatimeClient, logger },
+    );
+
+    expect(clients.github).toBe(github);
+    expect(clients.wakatime).toBe(wakatime);
+
+    const wakatimeInput = createWakatimeClient.mock.calls[0]?.[0];
+    expect(wakatimeInput).toEqual({
+      token: WAKATIME_TOKEN,
+      apiDomain: CODING_API_DOMAIN_DEFAULT,
+      logger,
+    });
+    expect(wakatimeInput?.logger).toBe(logger);
+
+    const githubInput = createGithubClient.mock.calls[0]?.[0];
+    expect(typeof githubInput).toBe("object");
+    if (typeof githubInput !== "object" || githubInput === null) {
+      throw new Error("expected CreateGithubClientInput");
+    }
+    const capturedGithub = githubInput as typeof githubInput & {
+      runLog?: RunLogSink;
+    };
+    expect(capturedGithub).toEqual(
+      expect.objectContaining({
+        token: GITHUB_TOKEN,
+        configuredUser: "",
+        runLog: logger,
+      }),
+    );
+    expect(capturedGithub).not.toHaveProperty("Authorization");
+    expect(capturedGithub.logger).toEqual({ info: expect.any(Function) });
+    expect(capturedGithub.logger).not.toBe(logger);
+    expect(capturedGithub.runLog).toBe(logger);
+
+    capturedGithub.logger?.info("github.graphql.rateLimit.cost", {
+      cost: 1,
+      operation: "RepositoryLanguages",
+    });
+    capturedGithub.logger?.info("github.graphql.rateLimit.cost", { cost: 2 });
+    capturedGithub.logger?.info("github.probe");
+
+    expect(events).toEqual([
+      {
+        v: 1,
+        src: "profile-bits",
+        kind: "call",
+        pkg: "integrations",
+        integration: "github",
+        op: "RepositoryLanguages",
+        outcome: "ok",
+        cost: 1,
+        message: "github.graphql.rateLimit.cost",
+      },
+      {
+        v: 1,
+        src: "profile-bits",
+        kind: "call",
+        pkg: "integrations",
+        integration: "github",
+        op: "github.graphql.rateLimit.cost",
+        outcome: "ok",
+        cost: 2,
+        message: "github.graphql.rateLimit.cost",
+      },
+      {
+        v: 1,
+        src: "profile-bits",
+        kind: "call",
+        pkg: "integrations",
+        integration: "github",
+        op: "github.probe",
+        outcome: "ok",
+        message: "github.probe",
+      },
+    ]);
+
+    const serialized = JSON.stringify(events);
+    expect(serialized).not.toContain(GITHUB_TOKEN);
+    expect(serialized).not.toContain(WAKATIME_TOKEN);
+    expect(serialized).not.toMatch(/authorization/i);
+    expect(serialized).not.toContain("variables");
+    assertTokenNotLogged(GITHUB_TOKEN);
     assertTokenNotLogged(WAKATIME_TOKEN);
   });
 });

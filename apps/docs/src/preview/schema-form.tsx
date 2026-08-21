@@ -25,11 +25,20 @@ import type {
 
 const TOKEN_PATH = /token/i;
 
+/** Globals rendered by GlobalBar (picker + mixer). SchemaForm keeps widget tuners. */
+const GLOBAL_BAR_OWNED_PATHS = new Set([
+  "format",
+  "theme",
+  "output_pair",
+  "user",
+]);
+
 const GROUP_ORDER: readonly PlaygroundFieldGroup[] = [
   "global",
   "demo",
   "stats",
   "languages",
+  "repo",
 ];
 
 export const SCHEMA_FORM_LABEL = "Playground options";
@@ -125,13 +134,19 @@ function isTokenField(field: PlaygroundField): boolean {
   return TOKEN_PATH.test(field.path) || TOKEN_PATH.test(field.label);
 }
 
+function isGlobalBarOwnedPath(path: string): boolean {
+  return GLOBAL_BAR_OWNED_PATHS.has(path);
+}
+
 function isGlobalPath(path: string): boolean {
   return !path.includes(".");
 }
 
-/** Playground tuners from `getPlaygroundFields()`, with token paths dropped. */
+/** Playground tuners from `getPlaygroundFields()`, minus tokens and GlobalBar globals. */
 export function schemaFormFields(): PlaygroundField[] {
-  return getPlaygroundFields().filter((field) => !isTokenField(field));
+  return getPlaygroundFields().filter(
+    (field) => !isTokenField(field) && !isGlobalBarOwnedPath(field.path),
+  );
 }
 
 export function schemaFormGroups(
@@ -355,7 +370,7 @@ function FieldControl({
 
 /**
  * Playground tuners rendered from `getPlaygroundFields()` only.
- * Groups follow field.group. No token inputs.
+ * Groups follow field.group. No token inputs or GlobalBar-owned globals.
  */
 export function SchemaForm({
   value,

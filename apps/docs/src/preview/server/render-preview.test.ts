@@ -54,6 +54,22 @@ const PRIVATE_STATS_REQUEST: PreviewRequest = {
   options: { stats: { include_private: true } },
 };
 
+const REPO_REQUEST: PreviewRequest = {
+  scope: "widget",
+  plugin: "github",
+  widget: "repo",
+  options: { repo: { repo: "octocat/Hello-World" } },
+  format: "svg",
+  theme: "dark",
+  output_pair: false,
+  user: "octocat",
+};
+
+const HELLO_WORLD_REPO = {
+  name: "Hello-World",
+  fullName: "octocat/Hello-World",
+};
+
 function assertNoUnauthGithub(fetchMock: ReturnType<typeof vi.fn>): void {
   expect(fetchMock).not.toHaveBeenCalled();
   for (const call of fetchMock.mock.calls) {
@@ -653,5 +669,191 @@ describe("renderPreview", () => {
     expect(source).toContain("decideIncludePrivate");
     expect(source).toContain("isMissingToken");
     expect(source).toContain("classifyGithubHttp");
+    expect(source).toContain("usesGithubIntegration");
+    expect(source).toContain("githubPreviewElement");
+  });
+
+  it("plugin scope without a widget id does not auto-render repo", async () => {
+    vi.stubEnv("GITHUB_APP", "ghs_preview_test");
+    const seen: string[] = [];
+    const loadPayload = vi.fn(async () => ({ login: "octocat" }));
+    const request: PreviewRequest = {
+      scope: "plugin",
+      plugin: "github",
+      options: {},
+      format: "svg",
+      theme: "dark",
+      output_pair: false,
+      user: "octocat",
+    };
+
+    const result = await renderPreview(request, {
+      now: () => FIXED_NOW,
+      createGithubClient: async () => publicClient({ loadPayload }),
+      renderStill: async (input) => {
+        if (input.widget !== undefined) {
+          seen.push(input.widget);
+        }
+        return STILL_BYTES;
+      },
+    });
+
+    expect(seen).toEqual(["demo", "stats", "languages"]);
+    expect(result.files.map((file) => file.id)).toEqual([
+      "demo",
+      "stats",
+      "languages",
+    ]);
+    expect(loadPayload).not.toHaveBeenCalledWith(
+      expect.objectContaining({ widget: "repo" }),
+    );
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("explicit widget=repo loads github payload with include flags false", async () => {
+    vi.stubEnv("GITHUB_APP", "ghs_preview_test");
+    const loadPayload = vi.fn(async () => ({
+      repository: HELLO_WORLD_REPO,
+    }));
+
+    const result = await renderPreview(REPO_REQUEST, {
+      now: () => FIXED_NOW,
+      createGithubClient: async () => publicClient({ loadPayload }),
+      renderStill: async () => STILL_BYTES,
+    });
+
+    expect(result.provenance).toBe("live");
+    expect(result.files.map((file) => file.id)).toEqual(["repo"]);
+    expect(result.files[0]?.filename).toBe("repo.svg");
+    expect(loadPayload).toHaveBeenCalledOnce();
+    expect(loadPayload).toHaveBeenCalledWith({
+      user: "octocat",
+      widget: "repo",
+      includePrivate: false,
+      includeForks: false,
+      includeArchived: false,
+      repo: "octocat/Hello-World",
+    });
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("maps fixture repos[0] Hello-World onto payload.repository", async () => {
+    fixtures.loadPreviewFixtures.mockResolvedValue({
+      repos: [HELLO_WORLD_REPO, { name: "Spoon-Knife" }],
+    });
+    const seen: unknown[] = [];
+
+    const result = await renderPreview(REPO_REQUEST, {
+      now: () => FIXED_NOW,
+      renderStill: async (input) => {
+        seen.push(input.payload);
+        return STILL_BYTES;
+      },
+    });
+
+    expect(result.provenance).toBe("fixture");
+    expect(seen).toEqual([
+      {
+        repos: [HELLO_WORLD_REPO, { name: "Spoon-Knife" }],
+        repository: HELLO_WORLD_REPO,
+      },
+    ]);
+    expect(fixtures.loadPreviewFixtures).toHaveBeenCalledOnce();
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("keeps loadPayload.repository when fixtures already include it", async () => {
+    const existing = { name: "already-present" };
+    fixtures.loadPreviewFixtures.mockResolvedValue({
+      repository: existing,
+      repos: [HELLO_WORLD_REPO],
+    });
+    const seen: unknown[] = [];
+
+    await renderPreview(REPO_REQUEST, {
+      now: () => FIXED_NOW,
+      renderStill: async (input) => {
+        seen.push(input.payload);
+        return STILL_BYTES;
+      },
+    });
+
+    expect(seen).toEqual([
+      {
+        repository: existing,
+        repos: [HELLO_WORLD_REPO],
+      },
+    ]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("animated webp for repo uses renderAnimation when repo.animate is true", async () => {
+    vi.stubEnv("GITHUB_APP", "ghs_preview_test");
+    const renderStill = vi.fn(async () => STILL_BYTES);
+    const renderMotion = vi.fn(async () => MOTION_BYTES);
+
+    const result = await renderPreview(
+      {
+        ...REPO_REQUEST,
+        format: "webp",
+        options: { repo: { animate: true, repo: "octocat/Hello-World" } },
+      },
+      {
+        now: () => FIXED_NOW,
+        createGithubClient: async () => publicClient(),
+        renderStill,
+        renderMotion,
+      },
+    );
+
+    expect(renderMotion).toHaveBeenCalledOnce();
+    expect(renderStill).not.toHaveBeenCalled();
+    expect(result.files[0]?.mime).toBe("image/webp");
+    expect(result.files[0]?.filename).toBe("repo.webp");
+  });
+
+  it("maps loadPayload repos[0] onto repository when omitted", async () => {
+    vi.stubEnv("GITHUB_APP", "ghs_preview_test");
+    const loadPayload = vi.fn(async () => ({
+      repos: [HELLO_WORLD_REPO],
+    }));
+    const seen: unknown[] = [];
+
+    await renderPreview(REPO_REQUEST, {
+      now: () => FIXED_NOW,
+      createGithubClient: async () => publicClient({ loadPayload }),
+      renderStill: async (input) => {
+        seen.push(input.payload);
+        return STILL_BYTES;
+      },
+    });
+
+    expect(seen).toEqual([
+      {
+        repos: [HELLO_WORLD_REPO],
+        repository: HELLO_WORLD_REPO,
+      },
+    ]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("uses options.repo.filename for the preview file stem", async () => {
+    vi.stubEnv("GITHUB_APP", "ghs_preview_test");
+
+    const result = await renderPreview(
+      {
+        ...REPO_REQUEST,
+        options: {
+          repo: { filename: "hello-world", repo: "octocat/Hello-World" },
+        },
+      },
+      {
+        now: () => FIXED_NOW,
+        createGithubClient: async () => publicClient(),
+        renderStill: async () => STILL_BYTES,
+      },
+    );
+
+    expect(result.files[0]?.filename).toBe("hello-world.svg");
   });
 });

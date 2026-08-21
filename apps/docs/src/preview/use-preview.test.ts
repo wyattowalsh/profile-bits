@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { serialize } from "./permalink";
 import {
   PREVIEW_TOKEN_QUERY_KEYS,
+  type PreviewCustomTheme,
   type PreviewRequest,
   type PreviewResponse,
 } from "./types";
@@ -74,6 +75,51 @@ const BIT: PreviewRequest = {
   output_pair: false,
   user: "octocat",
 };
+
+const COMPLETE_CUSTOM: PreviewCustomTheme = {
+  custom: {
+    bg: "catppuccin-mocha.bg",
+    card: "catppuccin-mocha.card",
+    text: "catppuccin-mocha.text",
+    muted: "catppuccin-mocha.muted",
+    accent: "catppuccin-mocha.accent",
+    border: "catppuccin-mocha.border",
+  },
+};
+
+const INCOMPLETE_CUSTOM: PreviewCustomTheme = {
+  custom: {
+    bg: "",
+    card: "dark.card",
+    text: "dark.text",
+    muted: "dark.muted",
+    accent: "dark.accent",
+    border: "dark.border",
+  },
+};
+
+const PARTIAL_CUSTOM: PreviewCustomTheme = {
+  custom: {
+    bg: "dark.bg",
+    card: "dark.card",
+    text: "dark.text",
+    muted: "",
+    accent: "dark.accent",
+    border: "dark.border",
+  },
+};
+
+const INCOMPLETE_DEMO: PreviewRequest = { ...DEMO, theme: INCOMPLETE_CUSTOM };
+const PARTIAL_DEMO: PreviewRequest = { ...DEMO, theme: PARTIAL_CUSTOM };
+const COMPLETE_CUSTOM_DEMO: PreviewRequest = {
+  ...DEMO,
+  theme: COMPLETE_CUSTOM,
+};
+const COMPLETE_CUSTOM_STATS: PreviewRequest = {
+  ...STATS,
+  theme: COMPLETE_CUSTOM,
+};
+const INCOMPLETE_STATS: PreviewRequest = { ...STATS, theme: INCOMPLETE_CUSTOM };
 
 function tokenBag(
   state: PreviewRequest,
@@ -176,9 +222,21 @@ describe("toPreviewBody / permalink tokens", () => {
       options: { demo: { text: "hello", animate: true } },
     };
     const still = toPreviewBody(motion, true);
-    expect(still.format).toBe("png");
-    expect(still.options.demo?.animate).toBe(false);
-    expect(toPreviewBody(motion, false).format).toBe("gif");
+    expect(still).toMatchObject({
+      format: "png",
+      options: { demo: { animate: false } },
+    });
+    expect(toPreviewBody(motion, false)).toMatchObject({ format: "gif" });
+  });
+
+  it("returns undefined until custom theme has all six roles", () => {
+    expect(toPreviewBody(INCOMPLETE_DEMO)).toBeUndefined();
+    expect(toPreviewBody(PARTIAL_DEMO)).toBeUndefined();
+    expect(toPreviewBody({ ...BIT, theme: INCOMPLETE_CUSTOM })).toBeUndefined();
+    expect(toPreviewBody(COMPLETE_CUSTOM_DEMO)).toMatchObject({
+      theme: COMPLETE_CUSTOM,
+    });
+    expect(toPreviewBody(DEMO)).toMatchObject({ theme: "dark" });
   });
 });
 
@@ -271,6 +329,70 @@ describe("createPreviewController debounce", () => {
     await controller.generate(STATS);
     expect(fetchFn).toHaveBeenCalledOnce();
     expect(postedCall(fetchFn).body.widget).toBe("stats");
+    controller.dispose();
+  });
+
+  it("does not auto POST incomplete custom demo", async () => {
+    const controller = createPreviewController({
+      fetch: fetchFn,
+      reducedMotion: () => false,
+    });
+
+    controller.observe(INCOMPLETE_DEMO);
+    controller.observe(PARTIAL_DEMO);
+    await vi.advanceTimersByTimeAsync(PREVIEW_DEBOUNCE_MS * 5);
+    expect(fetchFn).not.toHaveBeenCalled();
+    controller.dispose();
+  });
+
+  it("auto POSTs demo once custom theme is complete", async () => {
+    const controller = createPreviewController({
+      fetch: fetchFn,
+      reducedMotion: () => false,
+    });
+
+    controller.observe(INCOMPLETE_DEMO);
+    await vi.advanceTimersByTimeAsync(PREVIEW_DEBOUNCE_MS);
+    expect(fetchFn).not.toHaveBeenCalled();
+
+    controller.observe(COMPLETE_CUSTOM_DEMO);
+    await vi.advanceTimersByTimeAsync(PREVIEW_DEBOUNCE_MS);
+    expect(fetchFn).toHaveBeenCalledOnce();
+    expect(postedCall(fetchFn).body.theme).toEqual(COMPLETE_CUSTOM);
+    controller.dispose();
+  });
+
+  it("does not auto POST stats or languages for a complete custom theme", async () => {
+    const controller = createPreviewController({
+      fetch: fetchFn,
+      reducedMotion: () => false,
+    });
+
+    controller.observe(COMPLETE_CUSTOM_STATS);
+    controller.observe({ ...LANGUAGES, theme: COMPLETE_CUSTOM });
+    await vi.advanceTimersByTimeAsync(PREVIEW_DEBOUNCE_MS * 5);
+    expect(fetchFn).not.toHaveBeenCalled();
+    controller.dispose();
+  });
+
+  it("does not POST generate until custom theme is complete", async () => {
+    const onError = vi.fn();
+    const controller = createPreviewController(
+      {
+        fetch: fetchFn,
+        reducedMotion: () => false,
+      },
+      { onError },
+    );
+
+    await controller.generate(INCOMPLETE_DEMO);
+    await controller.generate(INCOMPLETE_STATS);
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+
+    await controller.generate(COMPLETE_CUSTOM_DEMO);
+    expect(fetchFn).toHaveBeenCalledOnce();
+    expect(postedCall(fetchFn).body.theme).toEqual(COMPLETE_CUSTOM);
     controller.dispose();
   });
 
@@ -371,6 +493,14 @@ describe("postPreview", () => {
     expect(body).toEqual(toPreviewBody(DEMO, false));
   });
 
+  it("does not fetch when custom theme is incomplete", async () => {
+    const fetchFn = mockFetch();
+    await expect(
+      postPreview(INCOMPLETE_DEMO, { fetch: fetchFn, reducedMotion: false }),
+    ).resolves.toBeUndefined();
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
   it("never uses GET", async () => {
     const fetchFn = mockFetch();
     await postPreview(DEMO, { fetch: fetchFn, reducedMotion: false });
@@ -407,6 +537,7 @@ describe("usePreview source contract", () => {
     expect(source).toContain("createPreviewController");
     expect(source).toContain("PREVIEW_DEBOUNCE_MS");
     expect(source).toContain("isAutoPreviewScope");
+    expect(source).toContain("isPreviewTheme");
     expect(source).toContain("toPreviewBody");
     expect(source).toContain("serialize");
     expect(source).toContain('Accept: "application/json"');

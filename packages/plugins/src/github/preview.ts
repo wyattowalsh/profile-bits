@@ -5,11 +5,13 @@ import { demoTextFromPayload } from "./widgets/demo/render.js";
 import { DemoWidget } from "./widgets/demo/widget.js";
 import { languagesViewModel } from "./widgets/languages/view-model.js";
 import { LanguagesWidget } from "./widgets/languages/widget.js";
+import { repoViewModel } from "./widgets/repo/view-model.js";
+import { RepoWidget } from "./widgets/repo/widget.js";
 import { statsViewModel } from "./widgets/stats/view-model.js";
 import { StatsWidget } from "./widgets/stats/widget.js";
 
 export type GithubPreviewTarget = {
-  widget?: "demo" | "stats" | "languages";
+  widget?: "demo" | "stats" | "languages" | "repo";
   theme?: WidgetTheme;
   payload?: unknown;
   options?: {
@@ -31,6 +33,18 @@ export type GithubPreviewTarget = {
       min_pct?: number;
       exclude?: readonly string[];
     };
+    repo?: {
+      include?: readonly (
+        | "stars"
+        | "forks"
+        | "watchers"
+        | "issues"
+        | "license"
+        | "language"
+      )[];
+      avatar?: boolean;
+      repo?: string;
+    };
   };
   canContributions?: boolean;
 };
@@ -51,6 +65,10 @@ export function githubPreviewElement(input: GithubPreviewTarget): ReactElement {
       input.options?.languages ?? {},
     );
     return createElement(LanguagesWidget, { ...model, theme });
+  }
+  if (input.widget === "repo") {
+    const model = repoViewModel(input.payload, input.options?.repo ?? {});
+    return createElement(RepoWidget, { ...model, theme });
   }
   const demo = demoTextFromPayload(input.payload, input.options?.demo ?? {});
   return createElement(DemoWidget, { ...demo, theme });

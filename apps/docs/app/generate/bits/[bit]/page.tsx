@@ -96,8 +96,6 @@ export default async function GenerateBitPage({ params }: BitPageProps) {
     notFound();
   }
 
-  const request = bitIsolatorRequest(bit);
-
   return (
     <section
       data-slot="bit-isolator"
@@ -113,7 +111,7 @@ export default async function GenerateBitPage({ params }: BitPageProps) {
         Staged primitive for <code>{bit}</code>. Card size is {CARD_WIDTH}×
         {CARD_HEIGHT}. <a href={`${GENERATE_PATH_PREFIX}/bits`}>All bits</a>.
       </p>
-      <BitIsolator bit={bit} request={request} />
+      <BitIsolator bit={bit} />
     </section>
   );
 }

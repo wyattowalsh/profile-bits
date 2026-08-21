@@ -1,16 +1,17 @@
 import type {
   DemoOptions,
   LanguagesOptions,
+  RepoOptions,
   StatsOptions,
 } from "@profile-bits/core";
-import {
-  type GithubClient,
-  GithubClientError,
-  type GithubPayloadInput,
+import type {
+  GithubClient,
+  GithubPayloadInput,
 } from "@profile-bits/integrations";
 import {
   renderDemoSvg,
   renderLanguagesSvg,
+  renderRepoSvg,
   renderStatsSvg,
 } from "@profile-bits/plugins";
 import type {
@@ -18,6 +19,8 @@ import type {
   WidgetRenderRequest,
   WidgetRenderResult,
 } from "./engine.ts";
+import { mapRenderError } from "./map-render-error.ts";
+import { logWorkflowWarning } from "./workflow-log.ts";
 
 export class UnhandledGithubWidgetError extends Error {
   override readonly name = "UnhandledGithubWidgetError";
@@ -44,8 +47,10 @@ async function renderGithubWidget(
     case "stats":
       return renderStats(client, request);
     case "languages":
-      // languages payload is REST-crawl-shaped until github-api-fetch-policy T112 (`graphql.ts` `nodes(ids:)` batches of 100).
+      // Never REST /languages; GraphQL `nodes(ids:)` batches of 100.
       return renderLanguages(client, request);
+    case "repo":
+      return renderRepo(client, request);
     default:
       throw new UnhandledGithubWidgetError(request.id);
   }
@@ -121,6 +126,30 @@ async function renderLanguages(
   );
 }
 
+async function renderRepo(
+  client: GithubClient,
+  request: WidgetRenderRequest,
+): Promise<WidgetRenderResult> {
+  const options = repoOptions(request);
+  return loadAndRender(
+    client,
+    request,
+    payloadInput(request, { repo: options.repo }),
+    async (payload) => {
+      const svg = await renderRepoSvg({
+        payload,
+        options,
+        theme: request.theme,
+      });
+      return rendered(
+        request,
+        `${options.filename}.${request.config.format}`,
+        svg,
+      );
+    },
+  );
+}
+
 async function loadAndRender(
   client: GithubClient,
   request: WidgetRenderRequest,
@@ -131,10 +160,12 @@ async function loadAndRender(
     const payload = await client.loadPayload(input);
     return await render(payload);
   } catch (error: unknown) {
-    if (error instanceof GithubClientError && error.outcome === "fail_widget") {
-      return { id: request.id, outcome: "fail_widget" };
-    }
-    throw error;
+    const mapped = mapRenderError(error);
+    logWorkflowWarning({
+      message: `github ${request.id} fail_widget`,
+      group: `github ${request.id}`,
+    });
+    return { id: request.id, ...mapped };
   }
 }
 
@@ -144,6 +175,7 @@ function payloadInput(
     include_private?: boolean;
     include_forks?: boolean;
     include_archived?: boolean;
+    repo?: string;
   } = {},
 ): GithubPayloadInput {
   return {
@@ -152,6 +184,7 @@ function payloadInput(
     includePrivate: options.include_private ?? false,
     includeForks: options.include_forks ?? false,
     includeArchived: options.include_archived ?? false,
+    ...(options.repo === undefined ? {} : { repo: options.repo }),
   };
 }
 
@@ -203,6 +236,14 @@ function languagesOptions(request: WidgetRenderRequest): LanguagesOptions {
     throw new UnhandledGithubWidgetError(request.id);
   }
   return options;
+}
+
+function repoOptions(request: WidgetRenderRequest): RepoOptions {
+  const options = request.options;
+  if (!("repo" in options) || "hide_rank" in options) {
+    throw new UnhandledGithubWidgetError(request.id);
+  }
+  return options as RepoOptions;
 }
 
 function rendered(

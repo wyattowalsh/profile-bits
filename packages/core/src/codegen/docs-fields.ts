@@ -2,13 +2,21 @@ import * as z from "zod";
 import {
   ACTION_USER_DEFAULT,
   ActionInputsSchema,
+  CONFIG_THEME_DEFAULT,
   ConfigSchema,
   DemoOptionsSchema,
   LanguagesOptionsSchema,
+  RepoOptionsSchema,
   StatsOptionsSchema,
+  ThemeSchema,
 } from "../types.ts";
 
-export type PlaygroundFieldGroup = "global" | "demo" | "stats" | "languages";
+export type PlaygroundFieldGroup =
+  | "global"
+  | "demo"
+  | "stats"
+  | "languages"
+  | "repo";
 
 export type PlaygroundField = {
   path: string;
@@ -107,7 +115,7 @@ function fieldsFromObject(
 
 /**
  * Playground form fields derived from the yaml Zod shapes at runtime.
- * v0 playground chrome is github only (`demo`, `stats`, `languages`).
+ * Playground chrome is github (`demo`, `stats`, `languages`, `repo`).
  * WakaTime coding tuners are fixtures/skip-live, not token fields here.
  */
 export function getPlaygroundFields(): PlaygroundField[] {
@@ -116,6 +124,13 @@ export function getPlaygroundFields(): PlaygroundField[] {
 
   for (const key of Object.keys(configShape)) {
     if (!GLOBAL_CONFIG_KEYS.has(key) || isTokenField(key)) {
+      continue;
+    }
+    if (key === "theme") {
+      // ThemeConfigSchema is named | custom object; playground named control is ThemeSchema.
+      fields.push(
+        fieldFromZod(key, "global", ThemeSchema, CONFIG_THEME_DEFAULT),
+      );
       continue;
     }
     const fieldSchema = configShape[key as keyof typeof configShape];
@@ -132,6 +147,7 @@ export function getPlaygroundFields(): PlaygroundField[] {
   fields.push(...fieldsFromObject(DemoOptionsSchema, "demo"));
   fields.push(...fieldsFromObject(StatsOptionsSchema, "stats"));
   fields.push(...fieldsFromObject(LanguagesOptionsSchema, "languages"));
+  fields.push(...fieldsFromObject(RepoOptionsSchema, "repo"));
 
   return fields;
 }
