@@ -2,19 +2,14 @@
 
 {{WIDGET_DESCRIPTION}}
 
-Do not put `import` / `export` or PascalCase tags in this file — those
-markers promote `.md` to `mdx`. Keep CommonMark/GFM only.
+Canonical filename: `widget.md`. Omit `source`.
 
-Canonical filename: `widget.md`. Omit `source`. Pipeline: remark/rehype →
-`fromHtml` via `@profile-bits/renderer`.
+Action GFM only: `remark-parse` → `remark-gfm` → `remark-rehype` →
+sanitize → stringify → `fromHtml`. Keep CommonMark/GFM; no PascalCase
+tags (`import` / `export` / JSX promote `.md` to `mdx`).
+
+Do not put mermaid fences in this file (fail parse). Do not add
+`md.families` to profile yaml (`profile-bits.yml`).
 
 - Stat: count
 - Chip: label
-
-```text
-md.presets: default
-md.families.code: pretty-code   # exclusive; do not also enable starry-night
-md.families.math: katex
-md.families.mermaid: rehype-mermaid
-md.allow_network: false         # Kroki / plantuml.com stay off
-```

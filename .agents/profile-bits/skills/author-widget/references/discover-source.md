@@ -82,11 +82,13 @@ Do not ship two canonical `widget.*` files in the same widget dir.
 | --- | --- | --- |
 | `stats` / `languages` | `widget.tsx` | omit |
 | new React card | `widget.tsx` | omit |
-| new MD card | `widget.md` | omit (no import/export/JSX) |
+| new MD card | `widget.md` | omit (no import/export/JSX); Action pipeline is GFM-only |
 | new MDX card | `widget.mdx` | omit |
 | new HTML card | `widget.html` | omit |
 | drop-in MDX | `widget.mdx` | omit |
 
-`demo` may keep extra **fixtures** (`demo.md` / `demo.mdx`) for discovery
-and exclusive-family isolation. Those are not second canonical `widget.*`
-entries.
+`demo` may keep extra **fixtures** (`demo.md` / `demo.mdx`) for discovery.
+Those are not second canonical `widget.*` entries. Action `widget.md` is
+GFM only; mermaid fences fail parse. MDX / shiki / katex are later
+`packages/renderer` md extras, not Action ncc. `md.families` is not a
+profile yaml field.

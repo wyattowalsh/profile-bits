@@ -97,13 +97,14 @@
     {
       "id": "complete-pack-bits-used",
       "prompt": "Complete a live pack already in FIRST_PARTY_PLUGIN_IDS whose pack-level bitsUsed is missing while widget-entry bitsUsed already exists. Copy the six-name starter over plugin.ts and add an author-bit skill if needed. (Fixture: githubPlugin / githubWidgetRegistry.)",
-      "expected_output": "Reads live types.ts. Completing an existing FIRST_PARTY_PLUGIN_IDS id is openspec=no. If that live pack has widget-entry bitsUsed and no pack-level bitsUsed, attaches pack-level {{PLUGIN_ID_UPPER}}_BITS_USED as the unique union of that pack's widget-entry arrays. Keeps any existing widget registry export (githubWidgetRegistry is one instance). Does not copy the six-name Theme, Frame, Stack, Row, Text, Muted starter over the existing pack. No fifth skill / no author-bit. MUST NOT rewrite plugin-contract, widget-contract, or integration-contract. Does not emit index.ts.template or a per-pack index.ts.",
+      "expected_output": "Reads live types.ts. Completing an existing FIRST_PARTY_PLUGIN_IDS id is openspec=no. If that live pack has widget-entry bitsUsed and no pack-level bitsUsed, attaches pack-level {{PLUGIN_ID_UPPER}}_BITS_USED as the unique union of that pack's widget-entry arrays. Keeps any existing widget registry export (githubWidgetRegistry is one instance). Does not copy the six-name Theme, Frame, Stack, Row, Text, Muted starter over the existing pack. When attaching bitsUsed, updates plugin.test.ts to keep toEqual({{PLUGIN_ID_UPPER}}_BITS_USED); does not leave a hardcoded Theme, Frame, Stack, Row, Text, Muted six-name array. Keeps the live six-skill set (author, author-bit, author-palette, author-integration, author-widget, author-plugin); does not invent a 7th skill. MUST NOT rewrite plugin-contract, widget-contract, or integration-contract. Does not emit index.ts.template or a per-pack index.ts.",
       "assertions": [
         "Attaches pack-level bitsUsed as the unique union of that pack's widget-entry bitsUsed arrays when pack-level is missing",
         "Keeps any existing widget registry export (githubWidgetRegistry is one instance, not the only one)",
         "Does not copy the six-name Theme, Frame, Stack, Row, Text, Muted starter over an existing pack",
         "Treats completing an existing FIRST_PARTY_PLUGIN_IDS id as openspec=no",
-        "Does not create a fifth skill or author-bit",
+        "When attaching pack-level bitsUsed, updates plugin.test.ts; does not leave a hardcoded Theme, Frame, Stack, Row, Text, Muted six-name array",
+        "Keeps the live six-skill set (author, author-bit, author-palette, author-integration, author-widget, author-plugin); does not invent a 7th skill",
         "MUST NOT rewrite plugin-contract, widget-contract, or integration-contract",
         "Does not copy index.ts.template or write a per-pack index.ts"
       ]

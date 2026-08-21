@@ -43,6 +43,14 @@ named flavor/palette data, and seven-token maps route to `author-palette`.
 Shields.io README images stay in sibling README tooling. Do not create
 `author-theme` or `author-badge`.
 
+Yaml `theme` is a live named id **or**
+`{ custom: { bg, card, text, muted, accent, border, pair? } }`. Named ids
+are live `NAMED_THEME_IDS` from `packages/themes/src/registry.ts`; do not
+copy the catalog here. Unknown flavor, swatch, role, or hex fails closed
+(hints OK); never fall back to `dark`. Custom + `output_pair` requires
+`pair`. Thin Action `theme` is a named id only (`theme: custom` as an
+Action input fails). Custom lives in yaml.
+
 ## Types
 
 Live catalogs and schemas: `packages/core/src/types.ts`
@@ -57,7 +65,8 @@ new pack is OpenSpec-first, then types, then skills. Today’s `github` /
 WakaTime-class **architecture** (client, auth, scopes, inputs, mocked HTTP)
 still applies to **new** data sources. Thin Action names: read
 `ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
-never invent `plugin_*_*_*`.
+never invent `plugin_*_*_*`. Action widget markdown is GFM only;
+`md.families` is not yaml.
 
 Integration dest: `packages/integrations/src/<id>/`. Pack dest:
 `packages/plugins/src/<pack>/`. Pack export: `<id>Plugin` with pack-level

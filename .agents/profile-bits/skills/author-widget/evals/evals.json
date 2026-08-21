@@ -52,7 +52,7 @@
     {
       "id": "widget-mdx-no-source",
       "prompt": "Drop in a widget.mdx file with no source field for the existing rss feed widget.",
-      "expected_output": "Dest is the existing rss pack feed widget. Writes canonical widget.mdx and omits the source field so discoverSource maps .mdx → mdx. Does not also write widget.md or widget.tsx. Does not rewrite inventoried rss docsPath. Maps MDX components to the bits index (all 11 names available). Does not require JSX to render Avatar. Unions only composed names into pack-level BITS_USED (no Avatar when the MDX scaffold omits it). Does not put tw on bits. MDX scaffold uses numeric bit props (Bar pct={0}, Stat value={0}) and omits Avatar when there is no src. `<Theme>` with no `theme` prop. Pipeline is @mdx-js/mdx → fromJsx. Sets md.presets / md.families for md/mdx. Ambiguous dual canonical files without source would fail.",
+      "expected_output": "Dest is the existing rss pack feed widget. Writes canonical widget.mdx as authoring and omits the source field so discoverSource maps .mdx → mdx. Does not also write widget.md or widget.tsx. Does not rewrite inventoried rss docsPath. Maps MDX components to the bits index (all 11 names available). Does not require JSX to render Avatar. Unions only composed names into pack-level BITS_USED (no Avatar when the MDX scaffold omits it). Does not put tw on bits. MDX scaffold uses numeric bit props (Bar pct={0}, Stat value={0}) and omits Avatar when there is no src. `<Theme>` with no `theme` prop. Does not require md.presets / md.families in .github/profile-bits.yml (not yaml fields). Does not claim Action ncc includes @mdx-js/mdx, mermaid, or shiki — MDX is later packages/renderer md; Action does not ship @mdx-js/mdx. Ambiguous dual canonical files without source would fail.",
       "assertions": [
         "Targets the existing rss pack feed widget (does not invent dest or default to github)",
         "Copies assets/templates/widget.mdx.template as widget.mdx",
@@ -62,8 +62,8 @@
         "Maps MDX components to the bits index (all 11 names available). Does not require JSX to render Avatar. Unions only composed names into pack-level BITS_USED (no Avatar when the MDX scaffold omits it). Does not put tw on bits.",
         "MDX scaffold uses numeric bit props (Bar pct={0}, Stat value={0}) and omits Avatar when there is no src",
         "`<Theme>` with no `theme` prop",
-        "Uses remark/rehype via @mdx-js/mdx then fromJsx (not remark-mdx + remark-html)",
-        "Declares md.presets and md.families for the md/mdx widget",
+        "Does not claim Action ncc includes @mdx-js/mdx, mermaid, or shiki (MDX is later renderer/md; Action does not ship @mdx-js/mdx)",
+        "Does not require md.presets or md.families in .github/profile-bits.yml",
         "Would fail closed on ambiguous widget.md + widget.tsx without source"
       ]
     },
@@ -89,17 +89,16 @@
     {
       "id": "md-families-code-starry-night",
       "prompt": "Swap md.families.code to starry-night on the existing rss feed widget.",
-      "expected_output": "Dest is the existing rss pack feed widget. Exclusive family swap: md.families.code becomes starry-night (rehype-starry-night) and rehype-pretty-code+shiki is not also used. Does not stack highlighters. rehype-twoslash only with starry-night. Does not rewrite inventoried rss docsPath. No flattened Action input. Kroki/plantuml.com stay off unless md.allow_network. No Playwright.",
+      "expected_output": "Dest is the existing rss pack feed widget. Parse fail / refuse yaml md.families on Action: md.families is not a .github/profile-bits.yml field (strictObject / additionalProperties false). starry-night / pretty-code / shiki / mermaid / katex are later packages/renderer md, not Action ncc. Does not stack highlighters in the Action ncc graph. No Playwright. No flattened Action input. Does not rewrite inventoried rss docsPath.",
       "assertions": [
         "Targets the existing rss pack feed widget (does not invent dest or default to github)",
-        "Sets md.families.code to starry-night as a replacement, not an additional plugin",
-        "Does not stack rehype-pretty-code + shiki with rehype-starry-night",
-        "Does not .use() two members of the code family on one processor",
-        "Allows rehype-twoslash only together with starry-night",
-        "Does not invent a plugin_github_* Action input for the family (yaml md.families only)",
-        "Leaves mermaid on rehype-mermaid inline-svg via isomorphic-mermaid (no Playwright in the Action)",
-        "Keeps Kroki / plantuml.com disabled unless md.allow_network is explicitly true",
-        "Keeps remark-html xor remark-rehype (does not combine serializers)"
+        "Parse fail / refuse yaml md.families on Action (md.families is not a profile-bits.yml field)",
+        "Does not add md.families.code or md.presets to .github/profile-bits.yml",
+        "Does not claim Action ncc includes starry-night, pretty-code, shiki, or mermaid (later renderer/md)",
+        "Does not stack highlighters in the Action ncc graph",
+        "Does not invent a plugin_github_* Action input for the family",
+        "Does not add Playwright to the Action",
+        "Does not rewrite inventoried rss docsPath"
       ]
     },
     {
@@ -234,6 +233,30 @@
         "Does not default dest to packages/plugins/src/github/",
         "Does not invent a new card on the one-widget wakatime pack",
         "Does not create a new pack or integration just to add animation"
+      ]
+    },
+    {
+      "id": "stop-theme-chip",
+      "prompt": "Complete the Theme bit and the in-card Chip primitive.",
+      "expected_output": "Stops and routes to author-bit. Theme the bit and in-card Chip are shared bits, not a widget, yaml theme, or README badge. Does not copy widget templates. Does not write packages/plugins. Does not create author-theme or author-badge. Does not treat Chip as the http chips widget.",
+      "assertions": [
+        "Stops and routes to author-bit",
+        "Treats Theme and in-card Chip as shared bits, not a new card or the http chips widget",
+        "Does not copy author-widget templates or write packages/plugins",
+        "Does not route Theme/Chip to author-palette",
+        "Does not create author-theme or author-badge"
+      ]
+    },
+    {
+      "id": "stop-yaml-theme",
+      "prompt": "Add a named yaml theme palette with flavor tokens.",
+      "expected_output": "Stops and routes to author-palette. Root yaml theme, named flavors, and token maps are not a widget yaml option and not the Theme bit. Does not copy widget templates. Does not write packages/plugins. Does not create author-theme.",
+      "assertions": [
+        "Stops and routes to author-palette",
+        "Does not treat yaml theme as option mode or a widget yaml field",
+        "Does not copy author-widget templates or write packages/plugins",
+        "Does not route yaml theme to author-bit",
+        "Does not create author-theme"
       ]
     }
   ]

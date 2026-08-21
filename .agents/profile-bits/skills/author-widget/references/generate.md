@@ -192,8 +192,9 @@ apng. `format: apng` uses a `.png` extension. `gif` / `apng` / animated
 - Options live in `.github/profile-bits.yml` under
   `plugins.{{PACK_ID}}.widgets.{{WIDGET_ID}}`.
 - Include at least one example object (playground / docs tables).
-- md/mdx widgets also declare `md.presets` (default `default`) and optional
-  `md.families`.
+- Action `widget.md` is GFM only (remark-gfm). Do not add `md.presets` /
+  `md.families` to `.github/profile-bits.yml` (parse fail). mermaid/shiki/katex
+  and MDX are later `packages/renderer` md extras, not Action ncc.
 - Theme tokens on bits `Theme`: `bg`, `card`, `text`, `muted`, `accent`,
   `border`, `font`.
 - Do not add `include_private` to the generic widget schema. github-class
@@ -242,9 +243,8 @@ create a second pack.
 - `tw` / `className` / `style` on bits.
 - Import of `takumi-js` / `@takumi-rs/*` / `react-dom` / `@radix-ui/*`.
 - `useEffect`, portals, `"use client"`.
-- Stacking exclusive md family members (pretty-code + starry-night).
-- Kroki/plantuml.com without `md.allow_network`.
-- Playwright in the Action mermaid path.
+- Putting `md.families` / mermaid fences / shiki / katex into Action yaml or
+  the Action ncc graph (GFM only; extras are later renderer/md).
 - New first-party pack id, or a second pack for an existing id, from this skill.
 - `bitsUsed` on a widget entry instead of the pack-level union.
 - Overwriting a complete existing widget dir with templates.

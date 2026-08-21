@@ -12,9 +12,8 @@ import {
 } from "@profile-bits/bits";
 
 {/* Canonical widget.mdx. Prefer omit `source`. MDX components = bits index.
-    Pipeline: @mdx-js/mdx → fromJsx via @profile-bits/renderer.
-    Exclusive md.families — do not stack pretty-code + starry-night.
-    Mermaid: rehype-mermaid strategy inline-svg via isomorphic-mermaid (no Playwright). */}
+    MDX / mermaid / shiki / katex are later renderer/md — not Action ncc.
+    Action markdown is GFM-only. Do not put md.families in profile-bits.yml. */}
 
 <Theme>
   <Frame>

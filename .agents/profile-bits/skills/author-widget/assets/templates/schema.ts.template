@@ -12,18 +12,8 @@ export const {{WIDGET_PASCAL}}OptionsSchema = z.strictObject({
   // github-class widgets add include_private via OpenSpec and fail closed
   // on canPrivate. Do not add it to the generic widget schema:
   // include_private: z.boolean().default(false),
-  // md/mdx only — omit on react/html widgets:
-  // md: z.strictObject({
-  //   presets: z.enum(["default"]).default("default"),
-  //   families: z.strictObject({
-  //     code:    z.enum(["pretty-code", "starry-night"]).default("pretty-code"),
-  //     math:    z.enum(["katex"]).default("katex"),
-  //     mermaid: z.enum(["rehype-mermaid"]).default("rehype-mermaid"),
-  //     slug:    z.enum(["rehype-slug"]).default("rehype-slug"),
-  //     section: z.enum(["rehype-sectionize"]).default("rehype-sectionize"),
-  //   }).optional(),
-  //   allow_network: z.boolean().default(false),
-  // }).optional(),
+  // md/mdx families are later renderer/md, not Action yaml.
+  // Profile yaml `md.` fails strictObject. Do not uncomment onto Config.
 });
 
 export type {{WIDGET_PASCAL}}Options = z.infer<typeof {{WIDGET_PASCAL}}OptionsSchema>;

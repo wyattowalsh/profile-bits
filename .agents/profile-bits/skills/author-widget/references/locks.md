@@ -56,7 +56,9 @@ read live `packages/core/src/types.ts`; never invent names.
 
 - Config SSOT: committed `.github/profile-bits.yml`
   (`additionalProperties: false`). Unknown yaml keys and unknown `include`
-  tokens fail parse.
+  tokens fail parse. Action widget markdown is **GFM only**. `md.families` /
+  `md.presets` are not yaml fields; mermaid/shiki/katex land later in
+  `packages/renderer` md, not the Action ncc graph.
 - Yaml present beats `plugin_github`. `plugin_github: true` applies github pack
   defaults only when the config file is absent.
 - Root `action.yml` is **thin**. Never invent names. Never generate

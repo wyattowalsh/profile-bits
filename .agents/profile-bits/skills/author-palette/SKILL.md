@@ -3,8 +3,8 @@ name: author-palette
 description: >-
   Completes or authors profile-bits named palettes, yaml theme values, flavor
   families, swatches, and seven-token theme maps under packages/themes. Use
-  for palette and yaml theme work. NOT for the shared Theme bit, cards, packs,
-  MCP, or plugin-owned hex.
+  for palette and yaml theme work. NOT for the shared Theme bit, in-card Chip,
+  cards, packs, MCP, or plugin-owned hex.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec author-plugin and theme-catalog specs; packages/themes and packages/core/src/types.ts.
 metadata:
@@ -15,8 +15,8 @@ metadata:
 # Author palette
 
 Author host-owned theme data under
-`packages/themes/src/families/<family>.ts`. This skill owns named palettes and
-yaml theme semantics, not the `Theme` UI primitive.
+`packages/themes/src/families/<family>.ts`. This skill owns yaml `theme`,
+flavors, tokens, and named palettes, not the `Theme` bit or in-card `Chip`.
 
 Load [destinations](references/destinations.md) only after empty arguments have
 been ruled out.
@@ -29,13 +29,12 @@ been ruled out.
 | Complete an existing named theme id or family | Inventory its family file and registry; extend missing data without clobbering complete flavors |
 | Add a new named palette id or family | Require an OpenSpec delta first, then use `templates/Palette.template` |
 | yaml `theme`, custom role map, flavor, swatch, pair, or token | This skill |
-| `Theme` bit / `packages/bits/src/Theme.tsx` | Stop → `author-bit` |
+| `Theme` bit / in-card `Chip` / `packages/bits/src/Theme.tsx` | Stop → `author-bit` |
 | card, plugin pack, data source | Stop → the matching specialized skill |
 | `packages/palettes`, MCP, flattened Action input, parent-traversal dest | Refuse |
 
 Bare `theme` without a destination is ambiguous and routes back to the
-`author` gallery. A request that explicitly says `Theme bit` routes to
-`author-bit`.
+`author` gallery. `Theme` bit and in-card `Chip` route to `author-bit`.
 
 ## Empty args
 
@@ -44,14 +43,14 @@ Empty arguments and help sit above all reads. Show these modes and **stop**:
 1. Complete a named theme flavor already in the live catalog.
 2. Propose a new flavor or family through OpenSpec.
 3. Work with yaml `theme` custom roles and pairing.
-4. Route the `Theme` bit to `author-bit`.
+4. Route the `Theme` bit and in-card `Chip` to `author-bit`.
 
 Do not read `types.ts`, packages, or OpenSpec. Do not copy templates, select a
 default family, invent an id, or mutate files.
 
 ## Palette model
 
-Hex is host-owned by `@profile-bits/themes`. Each flavor records:
+Hex SSOT is `packages/themes` (`@profile-bits/themes`). Each flavor records:
 
 - `id`, `family`, `label`, `polarity`, `pair`, `license`, and `sourceUrl`
 - named `swatches`
@@ -61,15 +60,29 @@ Hex is host-owned by `@profile-bits/themes`. Each flavor records:
 `font` is always Geist. Plugins, widgets, and bits do not own flavor hex.
 Linguist language colors are outside the seven tokens.
 
-Root yaml `theme` accepts a live named id or the strict custom object defined by
-the core schema. Never flatten theme values into Action inputs.
+Named ids are live `NAMED_THEME_IDS` from
+`packages/themes/src/registry.ts`. Do not copy a 47-id table into this skill.
+
+Root yaml `theme` is a live named id **or**
+`{ custom: { bg, card, text, muted, accent, border, pair? } }`. Color refs are
+`{flavorId}.{swatchId}` | `{flavorId}.{role}` | hex (`#RGB` / `#RRGGBB` /
+`#RRGGBBAA`). Unknown flavor, swatch, role, or hex fails closed (hints OK);
+never fall back to `dark`. Custom + `output_pair` requires `pair`.
+
+`output_pair: true` writes `{filename}` (light) and `{filename}-dark` (dark).
+`output_pair: false` writes `{filename}` only in the selected flavor.
+
+Never flatten theme values into Action inputs. Thin Action `theme` is a named
+id only (`theme: custom` as an Action input fails). Custom lives in yaml.
 
 ## Complete-existing workflow
 
-1. Read `packages/themes/AGENTS.md`, `packages/core/src/types.ts`, the target
-   family file, `packages/themes/src/registry.ts`, and matching tests.
+1. Read `packages/themes/AGENTS.md`, the target family file,
+   `packages/themes/src/registry.ts` (`NAMED_THEME_IDS`), and matching tests.
+   For yaml `theme` shape, read `ThemeConfigSchema` in
+   `packages/core/src/types.ts` — it follows `NAMED_THEME_IDS`.
 2. Resolve the named id from the live registry, not from a frozen table in this
-   skill.
+   skill or a handwritten core `THEMES` array.
 3. If the flavor and registry entry are complete, report complete-existing and
    stop.
 4. Otherwise extend only missing flavor data or tests. Preserve unrelated
@@ -80,7 +93,7 @@ the core schema. Never flatten theme values into Action inputs.
 A new named id, family, yaml shape, or role changes public theme vocabulary and
 requires OpenSpec first.
 
-1. Confirm this is palette data rather than the `Theme` bit.
+1. Confirm this is palette data rather than the `Theme` bit or `Chip`.
 2. Require an OpenSpec delta for the id, family, polarity, pair, license/source,
    swatches, and role mapping.
 3. Reject ids containing `/`, `..`, uppercase, or characters outside
@@ -90,10 +103,11 @@ requires OpenSpec first.
    existing family, extend its live array instead of overwriting it.
 5. Preserve the import style from an existing family source. Substitute the
    approved placeholders, then register the exported family array in
-   `packages/themes/src/registry.ts`.
+   `packages/themes/src/registry.ts`. `NAMED_THEME_IDS` is derived from that
+   registry.
 6. Add focused registry, pairing, role, and contrast tests.
-7. Update the core named-theme enum only when the approved contract requires
-   it; do not invent Action inputs.
+7. Core yaml schema follows live `NAMED_THEME_IDS`. Do not dual-write a
+   handwritten core `THEMES` array. Do not invent Action inputs.
 
 Never create `packages/palettes/`.
 
@@ -109,8 +123,20 @@ Do not create `author-theme` or `author-badge`.
 ## Locks
 
 - Templates are skill-local and contain no parent traversal.
-- Live catalog and schema come from `packages/core/src/types.ts`; never encode
-  a frozen first-party pack-id table.
+- Named catalog is live `packages/themes/src/registry.ts` / `NAMED_THEME_IDS`.
+  Do not freeze a 47-id table here. Core `ThemeConfigSchema` follows that
+  export; do not dual-write a handwritten `THEMES` array.
+- A new named id, family, or yaml theme shape still requires OpenSpec first.
+- Unknown flavor, swatch, role, or hex fails closed; never fall back to `dark`
+  (suggestions/hints OK).
+- Color refs: `{flavorId}.{swatchId}` | `{flavorId}.{role}` | hex.
+- Yaml `theme` is a live named id **or**
+  `{ custom: { bg, card, text, muted, accent, border, pair? } }`.
+- Custom + `output_pair` requires `pair`.
+- Polarity files: `{filename}` is light, `{filename}-dark` is dark;
+  `output_pair: false` writes the selected flavor only.
+- `readableInk` is a `@profile-bits/themes` export used by `Chip`. Families
+  do not invent local ink helpers. `Chip` itself is `author-bit`.
 - Palette data stays in `packages/themes`; no plugin-local hex maps.
 - Never add MCP, flatten theme/widget options, call GitHub unauthenticated, or
   use REST `/languages`.

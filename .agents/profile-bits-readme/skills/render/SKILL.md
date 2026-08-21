@@ -102,7 +102,7 @@ loader:
 
 | Pack | Widgets | Notes |
 | --- | --- | --- |
-| `github` | `demo`, `stats`, `languages` | Default committed yaml. |
+| `github` | `demo`, `stats`, `languages`, `repo` | Default consumer yaml is `stats` + `languages`. `demo` and `repo` are opt-in; `repo` needs `owner/name`. |
 | `wakatime` | `coding` | Needs `WAKATIME_TOKEN`. Empty `plugins.wakatime: {}` enables `coding`. |
 | `rss` | `feed` | Required `widgets.feed.url`. |
 | `http` | `json`, `chips` | `{}` is widget-less. `json` needs https `url`. `chips` needs `preset` + `types`. Optional `http_token_env` is an **env var name**, not a token. |
@@ -134,7 +134,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: wyatt/profile-bits@v1
+      - uses: wyattowalsh/profile-bits@v1
         with:
           user: ${{ github.repository_owner }}
           github_token: ${{ github.token }}
@@ -175,7 +175,8 @@ Empty / `""` / whitespace github token fails. Never unauthenticated GitHub.
 ## Catalog is not a marketplace
 
 `/generate/catalog` is a first-party visual gallery (currently github widgets
-`demo`, `stats`, and `languages`). It is not a plugin marketplace or a store.
+`demo`, `stats`, and `languages`). `repo` is an opt-in yaml widget, not a
+catalog row. It is not a plugin marketplace or a store.
 Product yaml packs remain `github` / `wakatime` / `rss` / `http`.
 Customization is yaml plus first-party `http` / `rss` / `chips`, not a user
 plugin loader. Do not add the word `yaml` to the catalog page.

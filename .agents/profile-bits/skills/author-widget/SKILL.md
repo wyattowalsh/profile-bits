@@ -4,14 +4,16 @@ description: >-
   Generates a profile-bits widget on an existing pack: option schema, fetch
   that consumes a cached integration payload (no HTTP), optional source (prefer
   omit; name widget.tsx|.md|.mdx|.html), bits-based Takumi-safe template,
-  formats allow-list, md.presets/md.families for md/mdx, examples, and pack-level
+  formats allow-list, GFM-only Action widget.md, examples, and pack-level
   bitsUsed unioned into the pack Plugin. Use when adding a card, languages yaml
-  option, CSS animation gif/apng, widget.mdx without source, Tailwind
-  tw/className stylesheets, or swapping md.families.code. NOT for authoring a
-  shared bit (author-bit), yaml themes or named palettes (author-palette), new
-  data sources (author-integration), new packs (author-plugin), Action runtime,
-  renderer internals, MCP, Marketplace, flattened plugin_*_*_* inputs, or a
-  second pack for an id already in types.ts.
+  option, CSS animation gif/apng, widget.mdx without source (later/authoring,
+  not Action ncc), Tailwind tw/className stylesheets, or swapping
+  md.families.code (refuse-or-defer for Action — not a profile-bits.yml field).
+  NOT for shared bits (author-bit), yaml themes or named palettes
+  (author-palette), new data sources (author-integration), new packs
+  (author-plugin), Action runtime, renderer internals, MCP, Marketplace,
+  flattened plugin_*_*_* inputs, mermaid/shiki/katex/pretty-code in the Action
+  bundle, or a second pack for an id already in types.ts.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.
 metadata:
@@ -49,11 +51,11 @@ deep procedure. Do not load all at once.
 | `add [id] [pack]` | New card on a **named** existing pack. Missing pack or id → **stop** |
 | `option [pack] [widget] [field]` | Add a yaml option (OpenSpec first). Missing pack or widget → **stop** |
 | `animation [gif\|apng] [pack] [widget]` | CSS `@keyframes` for `renderAnimation` (named existing pack, not github-only). Missing pack → **stop**. Named one-widget pack → use the sole live widget id; do not invent a new card |
-| `mdx [pack] [widget]` | Canonical `widget.mdx`; omit `source`. Missing pack or id → **stop** |
+| `mdx [pack] [widget]` | Canonical `widget.mdx`; omit `source`. Later/authoring path, **not** Action ncc. Missing pack or id → **stop** |
 | `stylesheet` / `tailwind` `[pack] [widget]` | Takumi-safe `tw` / `className` only on native `div` / `span` / `img`; typed bit props. Missing pack or id → **stop** |
-| `families [family] [member] [pack] [widget]` | Exclusive `md.families` swap. Missing pack or id → **stop** |
+| `families [family] [member] [pack] [widget]` | **Refuse or defer** for Action. Swapping `md.families.code` to starry-night is **not** an Action yaml change (`md.families` / `md.presets` are not profile-bits.yml fields; yaml `md.` fails `strictObject` parse). mermaid/shiki/katex = later renderer/md, not now. Missing pack or id → **stop** |
 | `discover [path]` | `discoverSource` rules (read-only; no dest) |
-| Author a shared `Theme` / `Chip` / other bit | Stop → `author-bit` |
+| Shared `Theme` / `Chip` / other bit | Stop → `author-bit` |
 | yaml `theme` / named palette / flavor / tokens | Stop → `author-palette` |
 | New card + new API | Refuse → `author-integration` (do not copy widget templates first) |
 | New data source / WakaTime-class | Refuse → `author-integration` |
@@ -69,17 +71,19 @@ Write modes (`add`, `option`, `animation`, `mdx`, `stylesheet`, `families`)
 need a named pack id **and** widget id. Missing dest → **stop**. Do not
 invent dest. Do not default to github.
 
-1. "option" / languages field / yaml schema on an existing widget → **option** (named pack + widget; missing dest → **stop**)
-2. `@keyframes` / gif / apng / animation → **animation** (named existing pack; not github-only). Missing pack → **stop**. Named one-widget pack → use the sole live widget id; do not invent a new card
-3. `widget.mdx` / "no source" / drop MDX → **mdx** (named pack + widget; missing dest → **stop**)
-4. Tailwind / `tw` / `className` / stylesheets → **stylesheet** (named pack + widget; missing dest → **stop**)
-5. `md.families` / starry-night / pretty-code / katex / mermaid → **families** (named pack + widget; missing dest → **stop**)
-6. "discover" / ambiguous `widget.md` + `widget.tsx` / MIME sniff → **discover** (read-only)
-7. New card that also needs a **new API** / WakaTime-class data source → refuse (`author-integration`). Do not copy widget templates first.
-8. New card / widget / template on a **named** existing pack (pack id + widget id) → **add**. Missing pack or id → **stop**.
-9. New pack / second pack for an existing `FIRST_PARTY_PLUGIN_IDS` id → refuse (`author-plugin`)
-10. MCP / `mcp.json` → refuse
-11. dest `../` / `/generate/widgets` → refuse
+1. Shared bit, `Theme` component, or in-card `Chip` primitive → refuse (`author-bit`). Not the http `chips` widget.
+2. Yaml `theme`, named flavor, or palette tokens → refuse (`author-palette`). Not a widget yaml option.
+3. "option" / languages field / yaml schema on an existing widget → **option** (named pack + widget; missing dest → **stop**)
+4. `@keyframes` / gif / apng / animation → **animation** (named existing pack; not github-only). Missing pack → **stop**. Named one-widget pack → use the sole live widget id; do not invent a new card
+5. `widget.mdx` / "no source" / drop MDX → **mdx** (named pack + widget; later/authoring, not Action ncc; missing dest → **stop**)
+6. Tailwind / `tw` / `className` / stylesheets → **stylesheet** (named pack + widget; missing dest → **stop**)
+7. `md.families` / starry-night / pretty-code / katex / mermaid → **families**: **refuse or defer** for Action (not a yaml change; later renderer/md). Missing pack or id → **stop**
+8. "discover" / ambiguous `widget.md` + `widget.tsx` / MIME sniff → **discover** (read-only)
+9. New card that also needs a **new API** / WakaTime-class data source → refuse (`author-integration`). Do not copy widget templates first.
+10. New card / widget / template on a **named** existing pack (pack id + widget id) → **add**. Missing pack or id → **stop**.
+11. New pack / second pack for an existing `FIRST_PARTY_PLUGIN_IDS` id → refuse (`author-plugin`)
+12. MCP / `mcp.json` → refuse
+13. dest `../` / `/generate/widgets` → refuse
 
 ### Empty args
 
@@ -95,9 +99,9 @@ ideate). Do not load [locks](references/locks.md) or
 1. **add** — new card on a **named** existing pack (missing pack or id → stop; do not assume github-only).
 2. **option** — yaml option on an existing widget; OpenSpec delta first.
 3. **animation** — `@keyframes` for gif/apng on a named existing pack (not github-only); APNG named `.png`.
-4. **mdx** — canonical `widget.mdx`; prefer omit `source`.
+4. **mdx** — canonical `widget.mdx`; prefer omit `source`. Later/authoring, not Action ncc.
 5. **stylesheet** — Takumi-safe `tw` / `className` only on `div` / `span` / `img`; typed bit props; bits composition.
-6. **families** — exclusive `md.families` swap; do not stack.
+6. **families** — refuse or defer for Action; `md.families` is not profile-bits.yml; starry-night swap is not an Action yaml change.
 7. **discover** — extension → MIME → sniff; mismatch / ambiguous fail.
 
 Gallery items are names only. Mutating modes load locks, generate, and the
@@ -114,7 +118,7 @@ catalog after empty args is ruled out.
 7. Prefer omit `source`. Canonical `widget.tsx` \| `widget.md` \| `widget.mdx` \| `widget.html`. Ambiguous dual canonical files fail.
 8. Templates MUST NOT contain `../`. Dest is repo-root `packages/plugins/src/<pack>/widgets/<id>/`. Refuse dest `../` and `/generate/widgets`.
 9. Write modes (`add`, `option`, `animation`, `mdx`, `stylesheet`, `families`) without a pack id **and** a widget id → **stop**. Do not invent dest. Animation on a named one-widget pack uses the sole live widget id; do not invent a new card.
-10. New card + new API → `author-integration` first. Refuse MCP / `mcp.json`.
+10. New card + new API → `author-integration` first. Shared `Theme` / `Chip` → `author-bit`. yaml `theme` / named palette → `author-palette`. Refuse MCP / `mcp.json`.
 
 ## Before generating
 
@@ -127,20 +131,24 @@ Empty args / `help` never enter this section.
    - `packages/core/src/types.ts`
    - `openspec/specs/author-plugin/spec.md` when present
 2. Load [locks](references/locks.md).
-3. If the request is a **new data source**, or a **new card that also needs
+3. Shared `Theme` / `Chip` / other bit → stop and name `author-bit`. Do not
+   copy widget templates.
+4. yaml `theme` / named palette / flavor / tokens → stop and name
+   `author-palette`. Do not enter **option**.
+5. If the request is a **new data source**, or a **new card that also needs
    a new API**, stop and name `author-integration`
    (dest `packages/integrations/src/<id>/`). Do not copy widget templates first.
-4. If they **asked for a new pack**, stop and name `author-plugin`.
-5. Write modes without a pack id **and** a widget id → **stop**. Animation on
+6. If they **asked for a new pack**, stop and name `author-plugin`.
+7. Write modes without a pack id **and** a widget id → **stop**. Animation on
    a named one-widget pack: use the sole live widget id; do not invent a new
    card. MCP / dest `../` / `/generate/widgets` → refuse.
-6. Otherwise pick the **named** existing pack from live `FIRST_PARTY_PLUGIN_IDS`
+8. Otherwise pick the **named** existing pack from live `FIRST_PARTY_PLUGIN_IDS`
    / `WIDGET_INTEGRATIONS`. Skills follow that catalog — not a frozen four-id
    table. Do not invent pack or widget names without OpenSpec + types.
    Completing a typed widget id on an existing pack is allowed. Today’s
    `github` / `wakatime` / `rss` / `http` is a snapshot. Animation is not
    github-only.
-7. Public API (new widget id, yaml option, `FIRST_PARTY_WIDGET_IDS`, Action
+9. Public API (new widget id, yaml option, `FIRST_PARTY_WIDGET_IDS`, Action
    inputs) → OpenSpec delta **first**. Then copy full widget templates only
    if the widget dir is empty or new. A missing optional `animation.css` /
    `styles.css` may still be copied into a non-empty dir (no-clobber when
@@ -180,7 +188,7 @@ Replace `{{WIDGET_ID}}`, `{{WIDGET_PASCAL}}`, `{{PACK_ID}}`,
 | Source file | Prefer **omit** `source`. Name `widget.tsx` \| `widget.md` \| `widget.mdx` \| `widget.html`. |
 | Template | Bits-based, Takumi-safe. Typed bit props; `tw` only on native `div` / `span` / `img`. Root `width: 100%` `height: 100%`. Card **480×160**. |
 | Formats | Allow-list: `svg`, `png`, `jpeg`, `webp`, `ico`, `gif`, `apng`. Default `svg`. |
-| `md.presets` / `md.families` | Required for md/mdx. Exclusive families — do not stack. |
+| Action `widget.md` | **GFM only**. Do not emit `md.presets` / `md.families` (not yaml fields; `md.` fails parse). mermaid/shiki/katex/pretty-code are later renderer/md, not the Action bundle. MDX is later/authoring, not Action ncc. |
 | Examples | At least one yaml-shaped example. |
 | `bitsUsed` | Union into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on `{{PACK_ID}}Plugin`. Not yaml. Not a widget entry. |
 
@@ -292,13 +300,25 @@ canvas/WebGL.
 
 ## MD / MDX
 
-Pipeline: remark/rehype → `fromHtml` (md) or `fromJsx` (mdx). Load
-[md-families](references/md-families.md) before setting `md.presets` /
-`md.families`.
+Action `widget.md` is **GFM only**. Do **not** put mermaid, shiki, katex, or
+pretty-code in the Action bundle.
 
-Exclusive families (do **not** stack members):
+`md.families` and `md.presets` are **not** `.github/profile-bits.yml` fields
+(`ConfigSchema` is `z.strictObject`). Yaml `md.` fails parse. Swapping
+`md.families.code` to starry-night is **not** an Action yaml change —
+**refuse or defer**. mermaid / shiki / katex land later in
+`packages/renderer` md, not now, not Action ncc.
 
-| Family | Default |
+MDX (`widget.mdx`, `@mdx-js/mdx`) is a later/authoring path, not Action ncc.
+Prefer omit `source` when the canonical filename is `widget.mdx`.
+
+Load [md-families](references/md-families.md) for the later exclusive-family
+catalog. Do not treat those members as Action defaults or yaml keys.
+
+Exclusive families (later renderer/md — do **not** stack; do **not** write
+them into profile-bits.yml):
+
+| Family | Later member (not Action) |
 | --- | --- |
 | code | `rehype-pretty-code` + peer `shiki` |
 | math | `remark-math` + `rehype-katex` |
@@ -307,11 +327,10 @@ Exclusive families (do **not** stack members):
 | section | `rehype-sectionize` |
 
 Serializer: `remark-html` **xor** `remark-rehype` (never both). No Playwright
-in the Action. Kroki / plantuml.com stay **off** unless `md.allow_network`
-and an explicit base URL.
+in the Action. Kroki / plantuml.com stay **off**.
 
-Swap example: `md.families.code: starry-night` replaces pretty-code+shiki.
-Do not `.use()` both.
+Swap example: `md.families.code: starry-night` would replace pretty-code+shiki
+in later renderer/md. It is **not** an Action yaml field. Do not `.use()` both.
 
 ## OpenSpec gate
 
@@ -329,10 +348,10 @@ present beats `plugin_github`. Read `ActionInputsSchema` — do not invent names
 
 ## Refuse (NOT-for)
 
+- Shared `Theme` / `Chip` / other bit → `author-bit`
+- yaml `theme` / named palette / flavor / tokens → `author-palette`
 - New data source / WakaTime-class / **new card + new API** → `author-integration`
 - New pack / second pack for an existing plugin id → `author-plugin`
-- Shared bit source, including `Theme` or `Chip` → `author-bit`
-- Yaml theme, named palette/flavor, or seven-token map → `author-palette`
 - Write modes (`add`, `option`, `animation`, `mdx`, `stylesheet`, `families`) without pack id and widget id (do not invent dest). Animation on a named one-widget pack uses the sole live widget id; do not invent a new card
 - Action runtime, thin `action.yml`, Marketplace flattened inputs
 - Takumi renderer internals (`packages/renderer`) except calling it
@@ -361,7 +380,7 @@ Do not load all at once.
 | [locks](references/locks.md) | Mutating modes only (after empty args). Catalog, yaml SSOT, Action, bits, fetch, OpenSpec |
 | [generate](references/generate.md) | Mutating write modes only. Destinations, pack-level `bitsUsed` union, copy map |
 | [discover-source](references/discover-source.md) | `discoverSource` matrix |
-| [md-families](references/md-families.md) | Exclusive `md.families` / presets (mutating `families` / md/mdx write) |
+| [md-families](references/md-families.md) | Later renderer/md family catalog; Action is GFM only. Load on `families` refuse-or-defer / md/mdx authoring — do not write yaml `md.` |
 
 ## Proof
 

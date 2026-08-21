@@ -3,8 +3,9 @@
  *
  * tw prop: built-in Tailwind subset on div / span / img only, not bits (no Preflight).
  * Full Tailwind or any CSS: compile (e.g. Vite ?inline) into stylesheets[] and
- * match via className / id. Extra plugin CSS (KaTeX, pretty-code, starry-night)
- * also lands in stylesheets — not in renderSvg() <style>.
+ * match via className / id. Extra plugin CSS (later renderer/md: KaTeX,
+ * pretty-code) also lands in stylesheets — not in renderSvg() <style>.
+ * Action markdown is GFM-only; do not pull mermaid/shiki/katex into ncc.
  *
  * Not allowed: react-dom, Radix/shadcn DOM, "use client", canvas/WebGL.
  * Card 480×160. Root width/height 100%.
