@@ -3,10 +3,15 @@ import { fileURLToPath } from "node:url";
 import { container } from "@takumi-rs/helpers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  COMPILED_CSS_FIXTURE,
+  collectStylesheets,
   compiledStylesheets,
   FRAME_CLASS,
   STYLESHEET_IDS,
   STYLESHEETS,
+  type StylesheetInput,
+  type StylesheetsInput,
+  stylesheetInput,
   THEME_CLASS,
   THEME_DARK_CLASS,
   THEME_LIGHT_CLASS,
@@ -139,6 +144,27 @@ describe("stylesheets array", () => {
     expect(css.startsWith(".pb-theme {")).toBe(true);
     expect(css).toContain(`--pb-bg: ${DARK_THEME.bg}`);
     expect(css).toContain("background-color: var(--pb-bg)");
+  });
+});
+
+describe("public aliases", () => {
+  it("COMPILED_CSS_FIXTURE is THEME_STYLESHEET", () => {
+    expect(COMPILED_CSS_FIXTURE).toBe(THEME_STYLESHEET);
+  });
+
+  it("collectStylesheets is compiledStylesheets", () => {
+    expect(collectStylesheets).toBe(compiledStylesheets);
+  });
+
+  it("stylesheetInput is withStylesheets", () => {
+    expect(stylesheetInput).toBe(withStylesheets);
+  });
+
+  it("StylesheetInput is StylesheetsInput at the type level", () => {
+    const input: StylesheetInput = { stylesheets: [THEME_STYLESHEET] };
+    const sheets: StylesheetsInput = input;
+
+    expect(sheets.stylesheets).toEqual([THEME_STYLESHEET]);
   });
 });
 

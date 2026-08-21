@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CARD_HEIGHT, CARD_WIDTH, getRenderer } from "./fonts.js";
 import { render, STILL_FORMATS, type StillFormat } from "./render.js";
 import { renderSvg } from "./render-svg.js";
+import { TakumiRenderError } from "./takumi-wrap.js";
 
 const SMOKE_NODE = container({
   style: {
@@ -128,5 +129,13 @@ describe.skipIf(nativeProbe.skip)("still format smoke", () => {
       /<(animate|animateTransform|animateMotion|animateColor|set)\b/i,
     );
     expect(first).toBe(second);
+  });
+});
+
+describe("still empty-tree", () => {
+  it("fails an empty tree as TakumiRenderError", async () => {
+    await expect(
+      render({ type: "container", children: [] }, "png"),
+    ).rejects.toBeInstanceOf(TakumiRenderError);
   });
 });

@@ -1,5 +1,7 @@
 import type { Node } from "@takumi-rs/helpers";
+import { assertTakumiTree } from "./assert-tree.js";
 import { CARD_HEIGHT, CARD_WIDTH, getRenderer } from "./fonts.js";
+import { withTakumi } from "./takumi-wrap.js";
 
 export { CARD_HEIGHT, CARD_WIDTH };
 
@@ -23,14 +25,17 @@ export async function render(
     );
   }
 
-  const renderer = await getRenderer();
-  const bytes = await renderer.render(node, {
-    // ICO directory entries are u8; Takumi rejects width/height outside 1..=256.
-    // 240×80 is half of 480×160 and keeps the card's 3:1 aspect.
-    width: format === "ico" ? 240 : CARD_WIDTH,
-    height: format === "ico" ? 80 : CARD_HEIGHT,
-    format,
-  });
+  return withTakumi(async () => {
+    assertTakumiTree(node);
+    const renderer = await getRenderer();
+    const bytes = await renderer.render(node, {
+      // ICO directory entries are u8; Takumi rejects width/height outside 1..=256.
+      // 240×80 is half of 480×160 and keeps the card's 3:1 aspect.
+      width: format === "ico" ? 240 : CARD_WIDTH,
+      height: format === "ico" ? 80 : CARD_HEIGHT,
+      format,
+    });
 
-  return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  });
 }

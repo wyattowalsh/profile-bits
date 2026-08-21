@@ -2,6 +2,7 @@ import { container, text } from "@takumi-rs/helpers";
 import { describe, expect, it } from "vitest";
 import { CARD_HEIGHT, CARD_WIDTH } from "./fonts.js";
 import { renderSvg } from "./render-svg.js";
+import { TakumiRenderError } from "./takumi-wrap.js";
 
 function fixtureCard(copy: string) {
   return container({
@@ -39,5 +40,11 @@ describe("renderSvg", () => {
     const second = await renderSvg(fixtureCard("Hello"));
     expect(first).toMatch(/<svg\b/i);
     expect(second).toMatch(/<svg\b/i);
+  });
+
+  it("fails an empty tree before native render", async () => {
+    await expect(
+      renderSvg({ type: "container", children: [] }),
+    ).rejects.toBeInstanceOf(TakumiRenderError);
   });
 });

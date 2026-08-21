@@ -33,6 +33,12 @@ catalog:
   tsx: "4.23.12"
   tsdown: "0.22.14"
   "@types/node": "24.13.3"
+  unified: "11.0.5"
+  remark-parse: "11.0.0"
+  remark-gfm: "4.0.1"
+  remark-rehype: "11.1.2"
+  rehype-stringify: "10.0.1"
+  rehype-sanitize: "6.0.0"
 allowBuilds:
   "@fission-ai/openspec": true
   esbuild: true

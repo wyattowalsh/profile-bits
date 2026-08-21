@@ -1,6 +1,7 @@
 import { createElement, useState } from "react";
 import { describe, expect, it } from "vitest";
 import { fromJsx, fromJsxResult } from "./from-jsx.ts";
+import { TakumiRenderError } from "./takumi-wrap.js";
 
 describe("fromJsx", () => {
   it("converts JSX elements to a Takumi node", async () => {
@@ -51,5 +52,14 @@ describe("fromJsxResult", () => {
       tagName: "p",
     });
     expect(result.stylesheets).toEqual([]);
+  });
+
+  it("fails empty or whitespace-only trees as TakumiRenderError", async () => {
+    await expect(fromJsxResult(createElement("div"))).rejects.toBeInstanceOf(
+      TakumiRenderError,
+    );
+    await expect(
+      fromJsx(createElement("p", null, "   ")),
+    ).rejects.toBeInstanceOf(TakumiRenderError);
   });
 });

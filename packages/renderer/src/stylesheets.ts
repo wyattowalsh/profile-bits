@@ -103,3 +103,15 @@ export function withStylesheets<T extends object>(
 ): T & StylesheetsInput {
   return { ...target, stylesheets: nonemptySheets(stylesheets) };
 }
+
+/** Public alias for {@link THEME_STYLESHEET}. */
+export const COMPILED_CSS_FIXTURE = THEME_STYLESHEET;
+
+/** Public alias for {@link compiledStylesheets}. */
+export const collectStylesheets = compiledStylesheets;
+
+/** Public alias for {@link StylesheetsInput}. */
+export type StylesheetInput = StylesheetsInput;
+
+/** Public alias for {@link withStylesheets}. */
+export const stylesheetInput = withStylesheets;

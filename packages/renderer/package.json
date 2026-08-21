@@ -6,13 +6,22 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "render": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/cli.ts"
+  },
   "dependencies": {
     "@profile-bits/themes": "workspace:*",
     "@takumi-rs/core": "catalog:",
     "@takumi-rs/helpers": "catalog:",
     "@takumi-rs/wasm": "catalog:",
     "react": "19.2.8",
-    "takumi-js": "catalog:"
+    "rehype-sanitize": "catalog:",
+    "rehype-stringify": "catalog:",
+    "remark-gfm": "catalog:",
+    "remark-parse": "catalog:",
+    "remark-rehype": "catalog:",
+    "takumi-js": "catalog:",
+    "unified": "catalog:"
   },
   "devDependencies": {
     "@types/react": "19.2.18",

@@ -3,6 +3,8 @@ import {
   type FromJsxResult,
   fromJsx as takumiFromJsx,
 } from "@takumi-rs/helpers/jsx";
+import { assertTakumiTree } from "./assert-tree.js";
+import { withTakumi } from "./takumi-wrap.js";
 
 export type { FromJsxResult };
 
@@ -10,7 +12,11 @@ export type { FromJsxResult };
 export async function fromJsxResult(
   element: ReactElementLike,
 ): Promise<FromJsxResult> {
-  return takumiFromJsx(element);
+  return withTakumi(async () => {
+    const result = await takumiFromJsx(element);
+    assertTakumiTree(result.node);
+    return result;
+  });
 }
 
 /** Convert a React element / JSX tree to a Takumi node. Server-hook semantics; no DOM. */

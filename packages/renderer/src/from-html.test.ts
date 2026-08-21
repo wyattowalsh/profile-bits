@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fromHtml } from "./from-html.ts";
+import { TakumiRenderError } from "./takumi-wrap.js";
 
 function collectText(node: unknown): string[] {
   if (!node || typeof node !== "object") {
@@ -52,5 +53,15 @@ describe("fromHtml", () => {
       text: "ok",
       tagName: "span",
     });
+  });
+
+  it("accepts <p>hi</p> and fails empty <script> trees", () => {
+    expect(fromHtml("<p>hi</p>")).toMatchObject({
+      type: "text",
+      text: "hi",
+      tagName: "p",
+    });
+    expect(() => fromHtml("<script></script>")).toThrow(TakumiRenderError);
+    expect(() => fromHtml("<script></script>")).toThrow(/empty Takumi tree/);
   });
 });

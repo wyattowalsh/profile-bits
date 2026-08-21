@@ -28,6 +28,7 @@ export {
   type StylesheetInput,
   stylesheetInput,
 } from "./stylesheets.js";
+export { TakumiRenderError } from "./takumi-wrap.js";
 export {
   DARK_THEME,
   isThemePalette,

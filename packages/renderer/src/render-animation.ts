@@ -2,6 +2,7 @@ import type { Keyframes } from "@takumi-rs/core";
 import type { Node } from "@takumi-rs/helpers";
 import { renderAnimation as encodeAnimation } from "takumi-js";
 import { CARD_HEIGHT, CARD_WIDTH, getRenderer } from "./fonts.js";
+import { withTakumi } from "./takumi-wrap.js";
 
 export const ANIMATION_FORMATS = ["gif", "apng", "webp"] as const;
 export type AnimationFormat = (typeof ANIMATION_FORMATS)[number];
@@ -57,18 +58,21 @@ export async function renderAnimation(
 
   const fps = options.fps ?? ANIMATION_FPS_DEFAULT;
   const durationMs = options.durationMs ?? ANIMATION_DURATION_MS_DEFAULT;
-  const renderer = await getRenderer();
-  const bytes = await encodeAnimation({
-    renderer,
-    emoji: "from-font",
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    fps,
-    format,
-    scenes: [{ node, durationMs }],
-    stylesheets: options.stylesheets,
-    keyframes: options.keyframes,
-  });
 
-  return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  return withTakumi(async () => {
+    const renderer = await getRenderer();
+    const bytes = await encodeAnimation({
+      renderer,
+      emoji: "from-font",
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+      fps,
+      format,
+      scenes: [{ node, durationMs }],
+      stylesheets: options.stylesheets,
+      keyframes: options.keyframes,
+    });
+
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  });
 }

@@ -50,8 +50,10 @@ export {
   DiscoverSourceError,
   discoverSource,
 } from "./discover-source.js";
+export * from "./md-action-policy.js";
 export * from "./parse-config.js";
 export * from "./redact.js";
+export * from "./run-log.js";
 export {
   type ThemeMember,
   themeMembersFor,
