@@ -6,6 +6,7 @@ import {
   type HttpFetchResponse,
   type HttpLookup,
 } from "./client.js";
+import { HttpSsrfError } from "./ssrf.js";
 
 const PUBLIC_V4 = "93.184.216.34";
 const FIXTURE_TOKEN = "fixture-token-s3cret";
@@ -133,6 +134,10 @@ describe("createHttpClient timeout", () => {
       expectFailWidget(error);
       expect(error.code).toBe("timeout");
       expect(error.host).toBe("example.com");
+      expect(error.message).toContain("example.com");
+      expect(error.message).toContain(`${TIMEOUT_MS}ms`);
+      expect(error.cause).toBeInstanceOf(HttpSsrfError);
+      expect((error.cause as Error).message).toBe("timeout");
       expect(error.message).not.toContain("?");
       expect(error.message).not.toContain("#");
       expect(error.message).not.toContain(FIXTURE_TOKEN);
@@ -227,6 +232,10 @@ describe("createHttpClient timeout", () => {
       expectFailWidget(error);
       expect(error.code).toBe("timeout");
       expect(error.host).toBe("example.com");
+      expect(error.message).toContain("example.com");
+      expect(error.message).toContain(`${TIMEOUT_MS}ms`);
+      expect(error.cause).toBeInstanceOf(HttpSsrfError);
+      expect((error.cause as Error).message).toBe("timeout");
       expect(error.message).not.toContain("?");
       expect(error.message).not.toContain("#");
       expectNoSecrets(error, JSON_URL, FIXTURE_TOKEN);

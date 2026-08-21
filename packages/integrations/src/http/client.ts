@@ -12,6 +12,9 @@ import { Readable } from "node:stream";
 import {
   classifyHttp,
   HTTP_RESPONSE_MAX_BYTES,
+  publicUrlParts,
+  type RunLogEvent,
+  type RunLogSink,
   redactSecrets,
   type SkipFailOutcome,
 } from "@profile-bits/core";
@@ -99,6 +102,7 @@ export type CreateHttpClientInput = {
   lookup?: HttpLookup;
   token?: string | null;
   sleep?: (ms: number) => Promise<void>;
+  logger?: RunLogSink;
 };
 
 export type HttpJsonRequest = {
@@ -119,6 +123,7 @@ export function createHttpClient(
   const lookup = input.lookup ?? defaultHttpLookup;
   const sleep = input.sleep ?? defaultSleep;
   const token = input.token;
+  const logger = input.logger;
   const cache = new RequestCache();
   const authorization = authorizationFromToken(token);
   const auth: RestCacheAuth =
@@ -159,6 +164,7 @@ export function createHttpClient(
               authorization: requestAuthorization,
               timeoutMs,
               extraHeaders: request.headers,
+              logger,
             }),
         );
       } catch (error: unknown) {
@@ -185,11 +191,13 @@ async function loadJson(
     authorization: string | undefined;
     timeoutMs: number;
     extraHeaders?: Readonly<Record<string, string>>;
+    logger?: RunLogSink;
   },
 ): Promise<unknown> {
   const host = hostnameOnly(url);
   let lastStatus: number | undefined;
   for (let attempt = 1; attempt <= HTTP_MAX_ATTEMPTS; attempt += 1) {
+    const started = Date.now();
     let result: {
       status: number;
       headers: HttpFetchResponse["headers"];
@@ -198,6 +206,7 @@ async function loadJson(
     try {
       result = await httpGet(url, deps);
     } catch (error: unknown) {
+      emitHttpCall(deps.logger, url, started, { outcome: "fail_widget" });
       throw wrapFailWidget(error, deps.authorization, {
         host,
         attempt,
@@ -208,8 +217,17 @@ async function loadJson(
     const classified = classifyHttp({ status: result.status });
     if (classified === "render") {
       try {
-        return parseJsonBody(result.body);
+        const parsed = parseJsonBody(result.body);
+        emitHttpCall(deps.logger, url, started, {
+          outcome: "ok",
+          status: result.status,
+        });
+        return parsed;
       } catch (error: unknown) {
+        emitHttpCall(deps.logger, url, started, {
+          outcome: "fail_widget",
+          status: result.status,
+        });
         throw wrapFailWidget(error, deps.authorization, {
           host,
           attempt,
@@ -219,6 +237,10 @@ async function loadJson(
     }
 
     lastStatus = result.status;
+    emitHttpCall(deps.logger, url, started, {
+      outcome: "fail_widget",
+      status: result.status,
+    });
     if (classified === "fail_after_backoff" && attempt < HTTP_MAX_ATTEMPTS) {
       await deps.sleep(
         httpRetryDelayMs(attempt - 1, result.headers.get("retry-after")),
@@ -258,6 +280,7 @@ async function httpGet(
 }> {
   let current = assertSafeHttpUrl(urlString);
   let redirects = 0;
+  let includeAuthorization = true;
   const headers = buildHttpRequestHeaders(
     deps.authorization,
     deps.extraHeaders,
@@ -267,6 +290,7 @@ async function httpGet(
 
   try {
     for (;;) {
+      const hopHeaders = headersForHop(headers, includeAuthorization);
       const addresses = await raceAbort(
         signal,
         resolveValidatedAddresses(current, deps.lookup),
@@ -275,7 +299,7 @@ async function httpGet(
         fetch: deps.fetch,
         addresses,
         signal,
-        headers,
+        headers: hopHeaders,
       });
 
       if (REDIRECT_STATUSES.has(response.status)) {
@@ -284,7 +308,11 @@ async function httpGet(
         if (redirects > HTTP_MAX_REDIRECTS) {
           throw new HttpSsrfError("too many redirects");
         }
-        current = nextRedirectUrl(current, response.headers.get("location"));
+        const next = nextRedirectUrl(current, response.headers.get("location"));
+        if (next.origin !== current.origin) {
+          includeAuthorization = false;
+        }
+        current = next;
         continue;
       }
 
@@ -297,6 +325,22 @@ async function httpGet(
   } catch (error: unknown) {
     throw hopLayerError(error);
   }
+}
+
+function headersForHop(
+  headers: Record<string, string>,
+  includeAuthorization: boolean,
+): Record<string, string> {
+  if (includeAuthorization) {
+    return { ...headers };
+  }
+  const hopHeaders: Record<string, string> = {};
+  for (const [name, value] of Object.entries(headers)) {
+    if (!/^authorization$/i.test(name)) {
+      hopHeaders[name] = value;
+    }
+  }
+  return hopHeaders;
 }
 
 async function raceAbort<T>(signal: AbortSignal, work: Promise<T>): Promise<T> {
@@ -315,14 +359,37 @@ async function raceAbort<T>(signal: AbortSignal, work: Promise<T>): Promise<T> {
     }
     signal.addEventListener("abort", onAbort, { once: true });
   });
+  let workCause: unknown;
+  const tracked = work.then(
+    (value) => value,
+    (cause) => {
+      workCause = cause;
+      throw cause;
+    },
+  );
   try {
-    return await Promise.race([work, aborted]);
+    return await Promise.race([tracked, aborted]);
+  } catch (error: unknown) {
+    if (
+      isAbortTimeout(error) ||
+      (error instanceof HttpSsrfError && error.message === "timeout")
+    ) {
+      await Promise.resolve();
+      if (
+        workCause instanceof HttpSsrfError &&
+        workCause.message !== "timeout"
+      ) {
+        throw workCause;
+      }
+    }
+    throw error;
   } finally {
     if (onAbort != null) {
       signal.removeEventListener("abort", onAbort);
     }
     void work.then(undefined, () => undefined);
     void aborted.then(undefined, () => undefined);
+    void tracked.then(undefined, () => undefined);
   }
 }
 
@@ -499,6 +566,30 @@ function parseRetryAfterMs(value?: string | null): number | undefined {
     return undefined;
   }
   return timestamp - Date.now();
+}
+
+function emitHttpCall(
+  logger: RunLogSink | undefined,
+  url: string,
+  started: number,
+  fields: Pick<RunLogEvent, "outcome" | "status">,
+): void {
+  if (logger === undefined) {
+    return;
+  }
+  const { host, path } = publicUrlParts(url);
+  logger({
+    v: 1,
+    src: "profile-bits",
+    kind: "call",
+    pkg: "integrations",
+    integration: "http",
+    op: "rest.get",
+    host,
+    path,
+    duration_ms: Date.now() - started,
+    ...fields,
+  });
 }
 
 function wrapFailWidget(

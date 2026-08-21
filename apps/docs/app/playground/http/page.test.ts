@@ -1,4 +1,6 @@
 import { readFile } from "node:fs/promises";
+import * as plugins from "@profile-bits/plugins";
+import { TakumiRenderError } from "@profile-bits/renderer";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import HttpPlaygroundPage, {
@@ -9,6 +11,7 @@ import HttpPlaygroundPage, {
   PRIMARY_CTA,
 } from "@/app/playground/http/page";
 import {
+  chipsThemeForPlayground,
   emitChipsConfigYaml,
   emitChipsReadmeMarkdown,
   HTTP_PLAYGROUND_DEFAULTS,
@@ -17,13 +20,67 @@ import {
 } from "@/app/playground/http/state";
 import { PREVIEW_PLUGIN_IDS, PREVIEW_WIDGET_IDS } from "@/src/preview/types";
 
+const pluginActuals = vi.hoisted(() => ({
+  renderChipsFromPayloads: undefined as
+    | typeof import("@profile-bits/plugins").renderChipsFromPayloads
+    | undefined,
+  renderChipsSvg: undefined as
+    | typeof import("@profile-bits/plugins").renderChipsSvg
+    | undefined,
+}));
+
+vi.mock("@profile-bits/plugins", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@profile-bits/plugins")>();
+  pluginActuals.renderChipsFromPayloads = actual.renderChipsFromPayloads;
+  pluginActuals.renderChipsSvg = actual.renderChipsSvg;
+  return {
+    ...actual,
+    renderChipsFromPayloads: vi.fn(actual.renderChipsFromPayloads),
+    renderChipsSvg: vi.fn(actual.renderChipsSvg),
+  };
+});
+
 const PAGE_URL = new URL("./page.tsx", import.meta.url);
 const STATE_URL = new URL("./state.ts", import.meta.url);
 
 const VENDOR_FETCH_HOSTS = ["shieldcn.dev", "img.shields.io"] as const;
+const MOCHA_CARD = "#181825";
+const MOCHA_ACCENT = "#cba6f7";
+const PRIMER_DARK_BG = "#0d1117";
+const SVG_DATA_URL_RE = /data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)/g;
+
+function decodeSvgDataUrls(html: string): string[] {
+  const svgs: string[] = [];
+  for (const match of html.matchAll(SVG_DATA_URL_RE)) {
+    const encoded = match[1];
+    if (encoded === undefined) {
+      continue;
+    }
+    svgs.push(Buffer.from(encoded, "base64").toString("utf8"));
+  }
+  return svgs;
+}
+
+function pluginRenderOriginal(
+  key: "renderChipsFromPayloads" | "renderChipsSvg",
+): typeof import("@profile-bits/plugins")[typeof key] {
+  const impl = pluginActuals[key];
+  if (impl === undefined) {
+    throw new Error(`missing plugin mock original ${key}`);
+  }
+  return impl;
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.mocked(plugins.renderChipsFromPayloads).mockReset();
+  vi.mocked(plugins.renderChipsSvg).mockReset();
+  vi.mocked(plugins.renderChipsFromPayloads).mockImplementation(
+    pluginRenderOriginal("renderChipsFromPayloads"),
+  );
+  vi.mocked(plugins.renderChipsSvg).mockImplementation(
+    pluginRenderOriginal("renderChipsSvg"),
+  );
 });
 
 describe("/playground/http page (server)", () => {
@@ -79,6 +136,16 @@ describe("/playground/http page (server)", () => {
     expect(parseHttpPlaygroundSearch({}).preset).toBe(
       HTTP_PLAYGROUND_DEFAULTS.preset,
     );
+    expect(parseHttpPlaygroundSearch({}).theme).toBe("dark");
+    expect(parseHttpPlaygroundSearch({ theme: "catppuccin-mocha" }).theme).toBe(
+      "catppuccin-mocha",
+    );
+    expect(parseHttpPlaygroundSearch({ theme: "light" }).theme).toBe("light");
+    expect(parseHttpPlaygroundSearch({ theme: "mocha" }).theme).toBe("mocha");
+    expect(parseHttpPlaygroundSearch({ theme: "radical" }).theme).toBe(
+      "radical",
+    );
+    expect(source).not.toContain("HTTP_PLAYGROUND_THEMES");
     expect(source).not.toMatch(/\bfetch\s*\(/);
     expect(source).not.toContain("expandChipsRequest");
     for (const host of VENDOR_FETCH_HOSTS) {
@@ -143,6 +210,126 @@ describe("/playground/http page (server)", () => {
     expect(html).toContain("types: [npm]");
     expect(html).toContain("package: react");
     expect(html).toContain("repo: vercel/next.js");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("shows preview-error pane when chips render throws TakumiRenderError", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    vi.mocked(plugins.renderChipsFromPayloads).mockRejectedValueOnce(
+      new TakumiRenderError("takumi failed"),
+    );
+    vi.mocked(plugins.renderChipsSvg).mockRejectedValueOnce(
+      new TakumiRenderError("takumi failed"),
+    );
+
+    const html = renderToStaticMarkup(
+      await HttpPlaygroundPage({
+        searchParams: { preset: "shieldcn", types: ["npm"] },
+      }),
+    );
+
+    expect(html).toContain('data-slot="playground-http-preview-error"');
+    expect(html).toContain("Preview unavailable");
+    expect(html).toContain('data-rail="config"');
+    expect(html).toContain('data-rail="readme"');
+    expect(html).toContain("plugins:");
+    expect(html).toContain("http:");
+    expect(html).toContain("widgets:");
+    expect(html).toContain("chips:");
+    expect(html).toContain("preset: shieldcn");
+    expect(html).toContain("types: [npm]");
+    expect(html).toContain("![](./profile-bits/chips.svg)");
+    expect(html).not.toContain("shieldcn.dev");
+    expect(html).not.toContain("img.shields.io");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("bakes mocha catalog theme into chips SVG instead of Primer dark", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const html = renderToStaticMarkup(
+      await HttpPlaygroundPage({
+        searchParams: {
+          preset: "shieldcn",
+          types: ["npm"],
+          theme: "catppuccin-mocha",
+        },
+      }),
+    );
+    const svgs = decodeSvgDataUrls(html);
+
+    expect(chipsThemeForPlayground("catppuccin-mocha")).toBe(
+      "catppuccin-mocha",
+    );
+    expect(html).toContain('name="theme"');
+    expect(html).toContain('value="catppuccin-mocha"');
+    expect(html).not.toContain("Preview unavailable");
+    expect(svgs.length).toBeGreaterThan(0);
+    for (const svg of svgs) {
+      expect(svg).toContain(MOCHA_CARD);
+      expect(svg).toContain(MOCHA_ACCENT);
+      expect(svg).not.toContain(PRIMER_DARK_BG);
+    }
+    expect(plugins.renderChipsFromPayloads).toHaveBeenCalledWith(
+      expect.objectContaining({ theme: "catppuccin-mocha" }),
+    );
+    expect(plugins.renderChipsSvg).toHaveBeenCalledWith(
+      expect.objectContaining({ theme: "catppuccin-mocha" }),
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not coerce dump theme ids or custom permalinks to Primer dark", async () => {
+    const dump = parseHttpPlaygroundSearch({ theme: "mocha" });
+    const custom = parseHttpPlaygroundSearch({
+      theme: "custom",
+      cbg: "catppuccin-mocha.bg",
+      ccard: "catppuccin-mocha.card",
+      ctext: "catppuccin-mocha.text",
+      cmuted: "catppuccin-mocha.muted",
+      caccent: "catppuccin-mocha.mauve",
+      cborder: "catppuccin-mocha.border",
+    });
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const html = renderToStaticMarkup(
+      await HttpPlaygroundPage({
+        searchParams: {
+          preset: "shieldcn",
+          types: ["npm"],
+          theme: "custom",
+          cbg: "catppuccin-mocha.bg",
+          ccard: "catppuccin-mocha.card",
+          ctext: "catppuccin-mocha.text",
+          cmuted: "catppuccin-mocha.muted",
+          caccent: "catppuccin-mocha.mauve",
+          cborder: "catppuccin-mocha.border",
+        },
+      }),
+    );
+    const svgs = decodeSvgDataUrls(html);
+
+    expect(dump.theme).toBe("mocha");
+    expect(dump.theme).not.toBe("dark");
+    expect(chipsThemeForPlayground(dump.theme)).toBeNull();
+    expect(custom.theme).toEqual({
+      custom: {
+        bg: "catppuccin-mocha.bg",
+        card: "catppuccin-mocha.card",
+        text: "catppuccin-mocha.text",
+        muted: "catppuccin-mocha.muted",
+        accent: "catppuccin-mocha.mauve",
+        border: "catppuccin-mocha.border",
+      },
+    });
+    expect(chipsThemeForPlayground(custom.theme)).toMatchObject({
+      card: MOCHA_CARD,
+      accent: MOCHA_ACCENT,
+    });
+    expect(svgs.length).toBeGreaterThan(0);
+    for (const svg of svgs) {
+      expect(svg).toContain(MOCHA_CARD);
+      expect(svg).toContain(MOCHA_ACCENT);
+      expect(svg).not.toContain(PRIMER_DARK_BG);
+    }
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

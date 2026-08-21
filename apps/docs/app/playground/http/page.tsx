@@ -1,7 +1,9 @@
 import { chipFixture, normalizeBadgeJson } from "@profile-bits/integrations";
 import { renderChipsFromPayloads, renderChipsSvg } from "@profile-bits/plugins";
+import { TakumiRenderError, TakumiTreeError } from "@profile-bits/renderer";
 import type { Metadata } from "next";
 import {
+  chipsThemeForPlayground,
   emitChipsConfigYaml,
   emitChipsReadmeMarkdown,
   HTTP_CHIP_PRESET_IDS,
@@ -13,6 +15,8 @@ import {
   HTTP_PLAYGROUND_WIDGET,
   HTTP_PLAYGROUND_WIDGET_IDS,
   type HttpPlaygroundSearchParams,
+  type HttpPlaygroundState,
+  httpPlaygroundThemeQueryFields,
   PRIMARY_CTA,
   parseHttpPlaygroundSearch,
   svgToDataUrl,
@@ -179,6 +183,36 @@ export type HttpPlaygroundPageProps = {
     | HttpPlaygroundSearchParams;
 };
 
+async function fixtureChipSvgs(state: HttpPlaygroundState): Promise<{
+  layoutSvg: string | null;
+  readmeSvg: string | null;
+}> {
+  const theme = chipsThemeForPlayground(state.theme);
+  if (theme == null) {
+    return { layoutSvg: null, readmeSvg: null };
+  }
+  try {
+    const payloads = state.types.map((type) => chipFixture(state.preset, type));
+    const layoutSvg = await renderChipsFromPayloads({
+      payloads,
+      theme,
+    });
+    const readmeSvg = await renderChipsSvg({
+      badges: payloads.map((payload) => normalizeBadgeJson(payload)),
+      theme,
+    });
+    return { layoutSvg, readmeSvg };
+  } catch (error) {
+    if (
+      error instanceof TakumiRenderError ||
+      error instanceof TakumiTreeError
+    ) {
+      return { layoutSvg: null, readmeSvg: null };
+    }
+    throw error;
+  }
+}
+
 /**
  * Fixtures-only `/playground/http` chips explorer.
  * Preview is baked SVG from chipFixture. No live vendor requests.
@@ -189,19 +223,11 @@ export default async function HttpPlaygroundPage({
   const state = parseHttpPlaygroundSearch(
     await Promise.resolve(searchParams ?? {}),
   );
-  const payloads = state.types.map((type) => chipFixture(state.preset, type));
-  const layoutSvg = await renderChipsFromPayloads({
-    payloads,
-    theme: state.theme,
-  });
-  const readmeSvg = await renderChipsSvg({
-    badges: payloads.map((payload) => normalizeBadgeJson(payload)),
-    theme: state.theme,
-  });
+  const { layoutSvg, readmeSvg } = await fixtureChipSvgs(state);
   const configYml = emitChipsConfigYaml(state);
   const readmeMarkdown = emitChipsReadmeMarkdown();
-  const layoutDataUrl = svgToDataUrl(layoutSvg);
-  const readmeDataUrl = svgToDataUrl(readmeSvg);
+  const layoutDataUrl = layoutSvg === null ? null : svgToDataUrl(layoutSvg);
+  const readmeDataUrl = readmeSvg === null ? null : svgToDataUrl(readmeSvg);
 
   return (
     <section
@@ -294,6 +320,14 @@ export default async function HttpPlaygroundPage({
             />
           </Field>
         </FieldGroup>
+        {httpPlaygroundThemeQueryFields(state.theme).map((field) => (
+          <input
+            key={field.name}
+            type="hidden"
+            name={field.name}
+            value={field.value}
+          />
+        ))}
         <button data-slot="playground-http-submit" type="submit">
           Preview
         </button>
@@ -303,23 +337,35 @@ export default async function HttpPlaygroundPage({
         <div data-slot="playground-http-panes">
           <figure data-slot="playground-http-pane" data-pane="layout">
             <div data-slot="playground-http-frame">
-              <img
-                src={layoutDataUrl}
-                alt="chips layout fixture"
-                width={HTTP_PLAYGROUND_CARD_WIDTH}
-                height={HTTP_PLAYGROUND_CARD_HEIGHT}
-              />
+              {layoutDataUrl === null ? (
+                <p data-slot="playground-http-preview-error">
+                  Preview unavailable
+                </p>
+              ) : (
+                <img
+                  src={layoutDataUrl}
+                  alt="chips layout fixture"
+                  width={HTTP_PLAYGROUND_CARD_WIDTH}
+                  height={HTTP_PLAYGROUND_CARD_HEIGHT}
+                />
+              )}
             </div>
             <figcaption>Layout · baked SVG</figcaption>
           </figure>
           <figure data-slot="playground-http-pane" data-pane="readme">
             <div data-slot="playground-http-frame">
-              <img
-                src={readmeDataUrl}
-                alt="chips README fixture"
-                width={HTTP_PLAYGROUND_CARD_WIDTH}
-                height={HTTP_PLAYGROUND_CARD_HEIGHT}
-              />
+              {readmeDataUrl === null ? (
+                <p data-slot="playground-http-preview-error">
+                  Preview unavailable
+                </p>
+              ) : (
+                <img
+                  src={readmeDataUrl}
+                  alt="chips README fixture"
+                  width={HTTP_PLAYGROUND_CARD_WIDTH}
+                  height={HTTP_PLAYGROUND_CARD_HEIGHT}
+                />
+              )}
             </div>
             <figcaption>README mode · baked SVG</figcaption>
           </figure>

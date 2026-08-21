@@ -1,5 +1,6 @@
 import type { ChipsOptions } from "@profile-bits/core";
 import {
+  ChipsExpandError,
   expandChipsRequest,
   type HttpClient,
   type NormalizedBadge,
@@ -9,9 +10,13 @@ import {
 export class ChipsWidgetError extends Error {
   override readonly name = "ChipsWidgetError";
   readonly outcome = "fail_widget" as const;
+  readonly code?: string;
 
-  constructor(message: string, options?: { cause?: unknown }) {
+  constructor(message: string, options?: { cause?: unknown; code?: string }) {
     super(message, options);
+    if (options?.code !== undefined) {
+      this.code = options.code;
+    }
   }
 }
 
@@ -21,6 +26,9 @@ export function toChipsWidgetError(error: unknown): ChipsWidgetError {
   }
   const message =
     error instanceof Error ? error.message : "chips widget failed";
+  if (error instanceof ChipsExpandError) {
+    return new ChipsWidgetError(message, { cause: error, code: error.code });
+  }
   return new ChipsWidgetError(message, { cause: error });
 }
 

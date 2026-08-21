@@ -1,3 +1,4 @@
+import { resolveTheme, THEME_REGISTRY } from "@profile-bits/themes";
 import { describe, expect, it, vi } from "vitest";
 import {
   isEmptyJsonResult,
@@ -29,6 +30,21 @@ describe("json widget", () => {
       url: "https://example.com/api.json",
     });
     assertBakedStillSvg(svg);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it("bakes mocha card hex instead of Primer dark", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const svg = await renderJsonFromPayload({
+      payload: { name: "octocat", count: 3 },
+      jmespath: "@",
+      theme: resolveTheme("catppuccin-mocha", THEME_REGISTRY),
+    });
+    assertBakedStillSvg(svg);
+    expect(svg).toContain("#181825");
+    expect(svg).not.toContain("#0d1117");
+    expect(svg).not.toMatch(/<style\b|@keyframes|<animate\b|foreignObject/i);
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

@@ -7,7 +7,8 @@ import {
   type HttpLookup,
   normalizeBadgeJson,
 } from "@profile-bits/integrations";
-import { fromJsx } from "@profile-bits/renderer";
+import { DARK_THEME, fromJsx } from "@profile-bits/renderer";
+import { readableInk } from "@profile-bits/themes";
 import { createElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -32,8 +33,25 @@ const CHIPS_OPTIONS: ChipsOptions = {
 type TakumiNode = {
   type: string;
   text?: string;
+  style?: Record<string, unknown>;
   children?: TakumiNode[];
 };
+
+function findNode(
+  node: TakumiNode,
+  predicate: (candidate: TakumiNode) => boolean,
+): TakumiNode | undefined {
+  if (predicate(node)) {
+    return node;
+  }
+  for (const child of node.children ?? []) {
+    const found = findNode(child, predicate);
+    if (found !== undefined) {
+      return found;
+    }
+  }
+  return undefined;
+}
 
 function assertBakedStillSvg(svg: string): void {
   expect(svg).toMatch(/<svg\b[^>]*\bwidth="480"/);
@@ -87,6 +105,37 @@ describe("chips widget", () => {
     });
     assertBakedStillSvg(fromPayloads);
     assertBakedStillSvg(fromSvg);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it("uses readableInk on Chip message halves", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const lightFill = "#ffff00";
+    const node = (await fromJsx(
+      createElement(ChipsWidget, {
+        theme: "dark",
+        badges: [
+          { label: "npm", message: "ok" },
+          { label: "ci", message: "passing", color: lightFill },
+        ],
+      }),
+    )) as TakumiNode;
+    const accentHalf = findNode(node, (candidate) => candidate.text === "ok");
+    const lightHalf = findNode(
+      node,
+      (candidate) => candidate.text === "passing",
+    );
+    expect(accentHalf?.style).toMatchObject({
+      color: readableInk(DARK_THEME.accent),
+      backgroundColor: DARK_THEME.accent,
+    });
+    expect(accentHalf?.style?.color).not.toBe("#ffffff");
+    expect(lightHalf?.style).toMatchObject({
+      color: readableInk(lightFill),
+      backgroundColor: lightFill,
+    });
+    expect(lightHalf?.style?.color).toBe("#000000");
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

@@ -32,6 +32,9 @@ const JSON_401_LINE =
   "http json fail_widget code=http_status status=401 host=example.com attempt=1";
 const CHIPS_404_LINE =
   "http chips fail_widget code=http_status status=404 host=shieldcn.dev attempt=1";
+const CHIPS_MISSING_PACKAGE_LINE =
+  "http chips fail_widget code=missing_package";
+const CHIPS_FORBIDDEN_PATH_LINE = "http chips fail_widget code=forbidden_path";
 
 const HTTP_JSON_YAML = `version: 1
 format: svg
@@ -131,6 +134,42 @@ function chipsRequest(): WidgetRenderRequest {
     config,
     inputs,
     capabilities: PUBLIC_CAPABILITIES,
+  };
+}
+
+function chipsNpmRequestWithoutPackage(): WidgetRenderRequest {
+  const request = chipsRequest();
+  const options = request.options;
+  if (!("preset" in options)) {
+    throw new Error("expected chips options");
+  }
+  return {
+    ...request,
+    options: {
+      filename: options.filename,
+      preset: options.preset,
+      types: ["npm"],
+      repo: options.repo,
+      workflow: options.workflow,
+      timeout_ms: options.timeout_ms,
+      animate: options.animate,
+    },
+  };
+}
+
+function chipsNpmRequestWithPackage(packageName: string): WidgetRenderRequest {
+  const request = chipsRequest();
+  const options = request.options;
+  if (!("preset" in options)) {
+    throw new Error("expected chips options");
+  }
+  return {
+    ...request,
+    options: {
+      ...options,
+      types: ["npm"],
+      package: packageName,
+    },
   };
 }
 
@@ -321,6 +360,70 @@ describe("createHttpRenderWidget", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(lookup).toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("maps chips expand missing_package to fail_widget with expand code", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const fetch = vi.fn<HttpFetch>(async () => jsonResponse({ ok: true }));
+    const render = createHttpRenderWidget({
+      client: createHttpClient({ fetch, lookup: publicLookup() }),
+    });
+
+    const result = await render(chipsNpmRequestWithoutPackage());
+    const stderr = capturedWrites(vi.mocked(process.stderr.write));
+
+    expect(result).toEqual({ id: "chips", outcome: "fail_widget" });
+    expect(result.outcome).not.toBe("fail_run");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(stderr).toContain(`${CHIPS_MISSING_PACKAGE_LINE}\n`);
+    expect(stderr).not.toContain("code=http_status");
+    expectNoSecrets(stderr);
+  });
+
+  it("maps chips expand forbidden_path to fail_widget preferring expand code", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const fetch = vi.fn<HttpFetch>(async () => jsonResponse({ ok: true }));
+    const render = createHttpRenderWidget({
+      client: createHttpClient({ fetch, lookup: publicLookup() }),
+    });
+
+    const result = await render(chipsNpmRequestWithPackage("foo/../bar"));
+    const stderr = capturedWrites(vi.mocked(process.stderr.write));
+
+    expect(result).toEqual({ id: "chips", outcome: "fail_widget" });
+    expect(result.outcome).not.toBe("fail_run");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(stderr).toContain(`${CHIPS_FORBIDDEN_PATH_LINE}\n`);
+    expect(stderr).not.toContain("code=http_status");
+    expect(stderr).not.toContain("code=missing_package");
+    expectNoSecrets(stderr);
+  });
+
+  it("emits ::warning:: for chips missing_package when GITHUB_ACTIONS is true", async () => {
+    vi.stubEnv("GITHUB_ACTIONS", "true");
+    const fetch = vi.fn<HttpFetch>(async () => jsonResponse({ ok: true }));
+    const render = createHttpRenderWidget({
+      client: createHttpClient({
+        fetch,
+        lookup: publicLookup(),
+        token: HTTP_TOKEN,
+      }),
+    });
+
+    const result = await render(chipsNpmRequestWithoutPackage());
+    const stdout = capturedWrites(vi.mocked(process.stdout.write));
+    const stderr = capturedWrites(vi.mocked(process.stderr.write));
+    const haystack = `${stdout}${stderr}`;
+
+    expect(result.outcome).toBe("fail_widget");
+    expect(stdout).toContain(`::warning::${CHIPS_MISSING_PACKAGE_LINE}\n`);
+    expect(stdout).toContain("::group::http chips\n");
+    expect(stdout).toContain("::endgroup::\n");
+    expect(stdout).not.toContain("::error::");
+    expect(stderr).toContain(`${CHIPS_MISSING_PACKAGE_LINE}\n`);
+    expectNoSecrets(haystack);
   });
 
   it("maps chips 404 to fail_widget and does not throw", async () => {

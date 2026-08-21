@@ -1,4 +1,4 @@
-import { HTTP_RESPONSE_MAX_BYTES } from "@profile-bits/core";
+import { HTTP_RESPONSE_MAX_BYTES, type RunLogEvent } from "@profile-bits/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createHttpClient,
@@ -55,10 +55,21 @@ describe("createHttpClient", () => {
       );
       const client = createHttpClient({ fetch, lookup: publicLookup() });
       await expect(client.fetchJson({ url: JSON_URL })).rejects.toSatisfy(
-        (error: unknown) =>
-          error instanceof HttpClientError &&
-          error.outcome === "fail_widget" &&
-          error.status === status,
+        (error: unknown) => {
+          if (
+            !(
+              error instanceof HttpClientError &&
+              error.outcome === "fail_widget" &&
+              error.status === status
+            )
+          ) {
+            return false;
+          }
+          expect(error.message).toContain("example.com");
+          expect(error.message).toContain(`${status}`);
+          expect(error.message).not.toContain(JSON_URL);
+          return true;
+        },
       );
       expect(fetch).toHaveBeenCalledTimes(1);
     }
@@ -252,6 +263,40 @@ describe("createHttpClient", () => {
       ).resolves.toEqual({ ok: true });
       expect(fetch).toHaveBeenCalledTimes(1);
     }
+  });
+
+  it("records one call event on a successful GET without logging secrets", async () => {
+    const events: RunLogEvent[] = [];
+    const fetch = vi.fn<HttpFetch>(async () => jsonResponse({ ok: true }));
+    const client = createHttpClient({
+      fetch,
+      lookup: publicLookup(),
+      token: "secret",
+      logger: (event) => {
+        events.push(event);
+      },
+    });
+
+    await client.fetchJson({ url: JSON_URL, auth: "none" });
+    await client.fetchJson({ url: JSON_URL, auth: "none" });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0]?.[1]?.headers?.Authorization).toBeUndefined();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      v: 1,
+      src: "profile-bits",
+      kind: "call",
+      pkg: "integrations",
+      integration: "http",
+      op: "rest.get",
+      outcome: "ok",
+      status: 200,
+      host: "example.com",
+      path: "/api.json",
+    });
+    expect(events[0]?.duration_ms).toEqual(expect.any(Number));
+    expect(JSON.stringify(events)).not.toMatch(/Authorization|Bearer|secret/i);
   });
 
   it("fails omitted auth with an empty token without GET", async () => {

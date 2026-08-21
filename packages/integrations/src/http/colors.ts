@@ -1,3 +1,5 @@
+import { isHexColor, normalizeHex, parseHex } from "@profile-bits/themes";
+
 const BRIGHTGREEN = "#44cc11";
 const GREEN = "#97ca00";
 const YELLOWGREEN = "#a4a61d";
@@ -6,9 +8,6 @@ const ORANGE = "#fe7d37";
 const RED = "#e05d44";
 const BLUE = "#007ec6";
 const LIGHTGREY = "#9f9f9f";
-
-const HEX3 = /^#([0-9a-f]{3})$/iu;
-const HEX6 = /^#([0-9a-f]{6})$/iu;
 
 export const SHIELDS_NAMED_COLORS: Readonly<Record<string, string>> =
   Object.freeze({
@@ -39,9 +38,10 @@ export function resolveChipColor(
   if (trimmed === "") {
     return accent;
   }
-  const named = SHIELDS_NAMED_COLORS[trimmed.toLowerCase()];
-  if (named != null) {
-    return named;
+  const key = trimmed.toLowerCase();
+  // Own keys only — `__proto__` / `constructor` must not walk Object.prototype.
+  if (Object.hasOwn(SHIELDS_NAMED_COLORS, key)) {
+    return SHIELDS_NAMED_COLORS[key];
   }
   const hex = normalizeHexColor(trimmed);
   if (hex != null) {
@@ -51,15 +51,10 @@ export function resolveChipColor(
 }
 
 function normalizeHexColor(value: string): string | undefined {
-  const hex6 = HEX6.exec(value);
-  if (hex6?.[1] != null) {
-    return `#${hex6[1].toLowerCase()}`;
-  }
-  const hex3 = HEX3.exec(value);
-  const digits = hex3?.[1];
-  if (digits == null || digits.length !== 3) {
+  // Themes accepts #RRGGBBAA; Shields/chips must reject it and must not strip alpha to 6-digit.
+  if (!isHexColor(value) || value.length === 9) {
     return undefined;
   }
-  const [r, g, b] = digits.toLowerCase();
-  return `#${r}${r}${g}${g}${b}${b}`;
+  parseHex(value);
+  return normalizeHex(value);
 }

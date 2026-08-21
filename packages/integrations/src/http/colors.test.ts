@@ -1,3 +1,4 @@
+import { isHexColor, normalizeHex } from "@profile-bits/themes";
 import { describe, expect, it } from "vitest";
 import { resolveChipColor, SHIELDS_NAMED_COLORS } from "./colors.js";
 
@@ -56,6 +57,11 @@ describe("resolveChipColor", () => {
     expect(resolveChipColor("chartreuse", ACCENT)).toBe(ACCENT);
   });
 
+  it("returns accent for inherited Object.prototype keys", () => {
+    expect(resolveChipColor("__proto__", "#112233")).toBe("#112233");
+    expect(resolveChipColor("constructor", "#112233")).toBe("#112233");
+  });
+
   it("returns accent for null or missing color", () => {
     expect(resolveChipColor(null, ACCENT)).toBe(ACCENT);
     expect(resolveChipColor(undefined, ACCENT)).toBe(ACCENT);
@@ -68,7 +74,15 @@ describe("resolveChipColor", () => {
     );
     expect(resolveChipColor("rgb(255, 0, 0)", ACCENT)).toBe(ACCENT);
     expect(resolveChipColor("#ffff", ACCENT)).toBe(ACCENT);
-    expect(resolveChipColor("#ffffffff", ACCENT)).toBe(ACCENT);
     expect(resolveChipColor("#aabbcc;background:url(x)", ACCENT)).toBe(ACCENT);
+  });
+
+  it("rejects #rrggbbaa without stripping alpha to #rrggbb", () => {
+    expect(isHexColor("#aabbccff")).toBe(true);
+    expect(normalizeHex("#AABBCCFF")).toBe("#aabbccff");
+    expect(resolveChipColor("#ffffffff", ACCENT)).toBe(ACCENT);
+    expect(resolveChipColor("#AABBCCFF", ACCENT)).toBe(ACCENT);
+    expect(resolveChipColor("#aabbcc80", ACCENT)).toBe(ACCENT);
+    expect(resolveChipColor("#aabbccdd", ACCENT)).toBe(ACCENT);
   });
 });

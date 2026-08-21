@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ACTION_CONFIG_PATH_DEFAULT } from "@profile-bits/core";
@@ -104,6 +104,17 @@ function isEngineFailJob(error: unknown): error is EngineError {
     !(error instanceof UnhandledActionWidgetError) &&
     error.decision === "fail_job"
   );
+}
+
+function assertBakedStillCardSvg(svg: string): void {
+  expect(svg).toMatch(/<svg\b[^>]*\bwidth="480"/);
+  expect(svg).toMatch(/<svg\b[^>]*\bheight="160"/);
+  expect(svg).toMatch(/<svg\b[^>]*\bviewBox="0 0 480 160"/);
+  expect(svg).not.toMatch(/<text[\s>]/i);
+  expect(svg).not.toMatch(/<style[\s>]/i);
+  expect(svg).not.toContain("@keyframes");
+  expect(svg).not.toMatch(/<(animate|animateTransform|animateMotion|set)\b/i);
+  expect(svg).not.toMatch(/<foreignObject[\s>]/i);
 }
 
 function errorText(error: unknown): string {
@@ -353,6 +364,12 @@ describe("runMain http chips", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(lookup).toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
+
+    const svg = await readFile(join(cwd, "profile-bits", "chips.svg"), "utf8");
+    expect(svg.length).toBeGreaterThan(0);
+    assertBakedStillCardSvg(svg);
+    expect(svg).toMatch(/<use\s+href="#g\d+"/);
+    expect(svg).toMatch(/<clipPath\b/);
   });
 
   it("fails the job on chips-only 404 unless allow_skipped", async () => {

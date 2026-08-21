@@ -1,0 +1,18 @@
+# Consumer chips sample (vercel/next.js). This-repo toolkit yaml is .github/profile-bits.yml.
+version: 1
+format: svg
+theme: dark
+output_pair: false
+animated: false
+timezone: UTC
+output_dir: profile-bits
+plugins:
+  http:
+    widgets:
+      chips:
+        filename: chips
+        preset: shieldcn
+        types: [npm, stars, license]
+        package: react
+        repo: vercel/next.js
+        workflow: ci.yml

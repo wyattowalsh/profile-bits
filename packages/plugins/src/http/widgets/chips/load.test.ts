@@ -1,5 +1,6 @@
 import { CHIPS_OPTION_DEFAULTS, type ChipsOptions } from "@profile-bits/core";
 import {
+  ChipsExpandError,
   chipFixture,
   createHttpClient,
   expandChipsRequest,
@@ -140,7 +141,8 @@ describe("loadChipsPayloads", () => {
     } catch (error: unknown) {
       thrown = error;
     }
-    assertChipsWidgetError(thrown);
+    const wrapped = assertChipsWidgetError(thrown);
+    expect(wrapped.code).toBe("missing_package");
     expect(fetchJson).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -227,6 +229,26 @@ describe("toChipsWidgetError", () => {
     expect(wrapped).toBeInstanceOf(ChipsWidgetError);
     expect(wrapped).not.toBe(cause);
     expect(wrapped.cause).toBe(cause);
+    expect(wrapped.code).toBeUndefined();
     expect(toChipsWidgetError(wrapped)).toBe(wrapped);
+  });
+
+  it("copies ChipsExpandError.code onto ChipsWidgetError", () => {
+    const missing = new ChipsExpandError(
+      "missing_package",
+      "chips npm type requires package",
+    );
+    const missingWrapped = toChipsWidgetError(missing);
+    expect(missingWrapped).toBeInstanceOf(ChipsWidgetError);
+    expect(missingWrapped.code).toBe("missing_package");
+    expect(missingWrapped.cause).toBe(missing);
+
+    const forbidden = new ChipsExpandError(
+      "forbidden_path",
+      "chips npm package must be one name or a scoped @scope/name",
+    );
+    const forbiddenWrapped = toChipsWidgetError(forbidden);
+    expect(forbiddenWrapped.code).toBe("forbidden_path");
+    expect(forbiddenWrapped.cause).toBe(forbidden);
   });
 });

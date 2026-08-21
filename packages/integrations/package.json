@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@profile-bits/core": "workspace:*",
+    "@profile-bits/themes": "workspace:*",
     "@rowanmanning/feed-parser": "catalog:",
     "ipaddr.js": "catalog:",
     "ssrfcheck": "catalog:",

@@ -5,7 +5,18 @@ import {
   HTTP_CHIP_TYPES,
   type HttpChipPreset,
   type HttpChipType,
+  type ThemeConfig,
+  themeMembersFor,
 } from "@profile-bits/core";
+import type { ThemePalette } from "@profile-bits/themes";
+import { parse } from "@/src/preview/permalink";
+import {
+  isPreviewCustomTheme,
+  isPreviewNamedTheme,
+  type PreviewNamedTheme,
+  type PreviewTheme,
+  previewThemeParam,
+} from "@/src/preview/types";
 
 export const HTTP_PLAYGROUND_PLUGIN = "http" as const;
 export const HTTP_PLAYGROUND_WIDGET = "chips" as const;
@@ -14,8 +25,7 @@ export const HTTP_PLAYGROUND_HREF = "/playground/http";
 export const HTTP_PLAYGROUND_README = "![](./profile-bits/chips.svg)";
 export const HTTP_PLAYGROUND_CARD_WIDTH = 480;
 export const HTTP_PLAYGROUND_CARD_HEIGHT = 160;
-export const HTTP_PLAYGROUND_THEMES = ["light", "dark"] as const;
-export type HttpPlaygroundTheme = (typeof HTTP_PLAYGROUND_THEMES)[number];
+export type HttpPlaygroundTheme = PreviewTheme;
 export const PRIMARY_CTA = "Copy";
 
 export const HTTP_CHIP_PRESET_IDS = HTTP_CHIP_PRESETS;
@@ -31,6 +41,13 @@ export type HttpPlaygroundSearchParams = {
   repo?: string | string[];
   workflow?: string | string[];
   theme?: string | string[];
+  cbg?: string | string[];
+  ccard?: string | string[];
+  ctext?: string | string[];
+  cmuted?: string | string[];
+  caccent?: string | string[];
+  cborder?: string | string[];
+  cpair?: string | string[];
 };
 
 export type HttpPlaygroundState = {
@@ -84,8 +101,87 @@ function isChipType(value: string): value is HttpChipType {
   return TYPE_SET.has(value);
 }
 
-function isHttpPlaygroundTheme(value: string): value is HttpPlaygroundTheme {
-  return (HTTP_PLAYGROUND_THEMES as readonly string[]).includes(value);
+function searchParamsFromPlayground(
+  search: HttpPlaygroundSearchParams | undefined,
+): URLSearchParams {
+  const params = new URLSearchParams();
+  if (search == null) {
+    return params;
+  }
+  for (const [key, value] of Object.entries(search)) {
+    if (value == null) {
+      continue;
+    }
+    const items = Array.isArray(value) ? value : [value];
+    for (const item of items) {
+      if (typeof item === "string") {
+        params.append(key, item);
+      }
+    }
+  }
+  return params;
+}
+
+/** GlobalBar permalink theme: named catalog id, or `theme=custom` + c* roles. */
+export function parseHttpPlaygroundTheme(
+  search: HttpPlaygroundSearchParams | undefined,
+): PreviewTheme {
+  return parse(searchParamsFromPlayground(search)).theme;
+}
+
+/**
+ * Resolve permalink theme for chips SVG. Named catalog ids pass through;
+ * custom roles become a palette. Unknown dump ids stay unmapped (not dark).
+ */
+export function chipsThemeForPlayground(
+  theme: PreviewTheme,
+): PreviewNamedTheme | ThemePalette | null {
+  if (typeof theme === "string") {
+    return isPreviewNamedTheme(theme) ? theme : null;
+  }
+  if (!isPreviewCustomTheme(theme)) {
+    return null;
+  }
+  const custom: ThemeConfig = {
+    custom: {
+      bg: theme.custom.bg,
+      card: theme.custom.card,
+      text: theme.custom.text,
+      muted: theme.custom.muted,
+      accent: theme.custom.accent,
+      border: theme.custom.border,
+    },
+  };
+  try {
+    const member = themeMembersFor({
+      theme: custom,
+      output_pair: false,
+    })[0];
+    return member?.theme ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function httpPlaygroundThemeQueryFields(
+  theme: PreviewTheme,
+): Array<{ name: string; value: string }> {
+  if (typeof theme === "string") {
+    return [{ name: "theme", value: theme }];
+  }
+  const fields = [
+    { name: "theme", value: previewThemeParam(theme) },
+    { name: "cbg", value: theme.custom.bg },
+    { name: "ccard", value: theme.custom.card },
+    { name: "ctext", value: theme.custom.text },
+    { name: "cmuted", value: theme.custom.muted },
+    { name: "caccent", value: theme.custom.accent },
+    { name: "cborder", value: theme.custom.border },
+  ];
+  if (theme.custom.pair !== undefined) {
+    fields.push({ name: "cpair", value: theme.custom.pair });
+  }
+  return fields;
 }
 
 export function parseHttpPlaygroundSearch(
@@ -109,7 +205,6 @@ export function parseHttpPlaygroundSearch(
   const packageRaw = first(search?.package);
   const repoRaw = first(search?.repo);
   const workflowRaw = first(search?.workflow);
-  const themeRaw = first(search?.theme)?.trim() ?? "";
 
   return {
     preset,
@@ -124,9 +219,7 @@ export function parseHttpPlaygroundSearch(
       workflowRaw !== undefined && workflowRaw.trim() !== ""
         ? workflowRaw.trim()
         : HTTP_PLAYGROUND_DEFAULTS.workflow,
-    theme: isHttpPlaygroundTheme(themeRaw)
-      ? themeRaw
-      : HTTP_PLAYGROUND_DEFAULTS.theme,
+    theme: parseHttpPlaygroundTheme(search),
   };
 }
 

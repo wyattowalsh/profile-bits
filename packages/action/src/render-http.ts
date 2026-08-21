@@ -1,8 +1,11 @@
 import type { ChipsOptions, JsonOptions } from "@profile-bits/core";
-import { type HttpClient, HttpClientError } from "@profile-bits/integrations";
+import {
+  ChipsExpandError,
+  type HttpClient,
+  HttpClientError,
+} from "@profile-bits/integrations";
 import {
   ChipsWidgetError,
-  JsonWidgetError,
   renderChipsFromClient,
   renderJsonFromClient,
 } from "@profile-bits/plugins";
@@ -12,6 +15,7 @@ import type {
   WidgetRenderRequest,
   WidgetRenderResult,
 } from "./engine.ts";
+import { mapRenderError } from "./map-render-error.ts";
 import { logWorkflowWarning } from "./workflow-log.ts";
 
 export class UnhandledHttpWidgetError extends Error {
@@ -51,11 +55,9 @@ async function renderHttpWidget(
         ],
       };
     } catch (error: unknown) {
-      if (error instanceof ChipsWidgetError) {
-        logHttpFailWidget("chips", error);
-        return { id: request.id, outcome: "fail_widget" };
-      }
-      throw error;
+      const mapped = mapRenderError(error);
+      logHttpFailWidget("chips", error);
+      return { id: request.id, ...mapped };
     }
   }
   if (request.id !== "json") {
@@ -81,11 +83,9 @@ async function renderHttpWidget(
       ],
     };
   } catch (error: unknown) {
-    if (error instanceof JsonWidgetError || error instanceof HttpClientError) {
-      logHttpFailWidget("json", error);
-      return { id: request.id, outcome: "fail_widget" };
-    }
-    throw error;
+    const mapped = mapRenderError(error);
+    logHttpFailWidget("json", error);
+    return { id: request.id, ...mapped };
   }
 }
 
@@ -101,12 +101,18 @@ function formatHttpFailWidgetLine(
   error: unknown,
 ): string {
   const parts = [`http ${widget} fail_widget`];
+  const expandCode = chipsExpandCodeFromCause(error);
   const clientError = httpClientErrorFromCause(error);
-  if (clientError === undefined) {
+  if (expandCode !== undefined) {
+    parts.push(`code=${expandCode}`);
+  } else if (clientError === undefined) {
     return parts.join(" ");
   }
-  if (clientError.code !== undefined) {
+  if (expandCode === undefined && clientError?.code !== undefined) {
     parts.push(`code=${clientError.code}`);
+  }
+  if (clientError === undefined) {
+    return parts.join(" ");
   }
   if (clientError.status !== undefined) {
     parts.push(`status=${clientError.status}`);
@@ -119,6 +125,26 @@ function formatHttpFailWidgetLine(
     parts.push(`attempt=${clientError.attempt}`);
   }
   return parts.join(" ");
+}
+
+function chipsExpandCodeFromCause(error: unknown): string | undefined {
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (current != null && !seen.has(current)) {
+    seen.add(current);
+    if (current instanceof ChipsExpandError) {
+      return current.code;
+    }
+    if (current instanceof ChipsWidgetError && current.code !== undefined) {
+      return current.code;
+    }
+    if (current instanceof Error) {
+      current = current.cause;
+      continue;
+    }
+    break;
+  }
+  return undefined;
 }
 
 function httpClientErrorFromCause(error: unknown): HttpClientError | undefined {
