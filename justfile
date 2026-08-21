@@ -1,6 +1,6 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-# Install workspace dependencies. T014 owns the lockfile; do not run until then.
+# Install workspace dependencies.
 install:
     pnpm install
 
@@ -20,7 +20,7 @@ docs-dev:
 render *args:
     pnpm render -- {{ args }}
 
-# Core codegen (thin action.yml). Filled by T030c. Pass `--check` in pre-commit/CI.
+# Core codegen (thin action.yml). Pass `--check` in pre-commit/CI.
 generate-action *args:
     pnpm generate-action {{ args }}
 

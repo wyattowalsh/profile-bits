@@ -1,6 +1,6 @@
 # Vendored Geist (Latin last-resort)
 
-Geist Latin last-resort weights **300–800** (regular; no italics). Takumi `registerFont` will load these in T100. Do not call `googleFonts()` in CI — it needs network; these files keep CI deterministic.
+Geist Latin last-resort weights **300–800** (regular; no italics). Takumi `registerFont` loads these at renderer init. Do not call `googleFonts()` in CI — it needs network; these files keep CI deterministic.
 
 | Weight | File |
 | ---: | --- |

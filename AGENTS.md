@@ -70,6 +70,8 @@ Read the package file when working in that tree:
 - `packages/integrations/AGENTS.md`
 - `packages/plugins/AGENTS.md`
 - `packages/action/AGENTS.md`
+- `packages/bits/AGENTS.md`
+- `packages/themes/AGENTS.md`
 - `apps/docs/AGENTS.md`
 - `.agents/profile-bits/AGENTS.md`
 

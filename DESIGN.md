@@ -226,23 +226,23 @@ Live catalog is `packages/core/src/types.ts` (`FIRST_PARTY_*`, `WIDGET_INTEGRATI
 | `github` | `demo`, `stats`, `languages` | `static` / `github` | none / optional |
 | `wakatime` | `coding` | `wakatime` | required |
 | `rss` | `feed` | `rss` | none |
-| `http` | `json` | `http` | optional |
+| `http` | `json`, `chips` | `http` | optional |
 
-Pack defaults: github on with no widget list → `stats` + `languages` (`demo` opt-in). Wakatime on with no widget list → `coding`. `plugins.http: {}` is widget-less; `json` only when `widgets.json` is present (https `url`). Rss `feed` requires https `url`.
+Pack defaults: github on with no widget list → `stats` + `languages` (`demo` opt-in). Wakatime on with no widget list → `coding`. `plugins.http: {}` is widget-less; `json` only when `widgets.json` is present (https `url`); `chips` only when `widgets.chips` is present (`preset` + `types`). Rss `feed` requires https `url`.
 
 ### Code vs archived spec vs in-flight
 
 | Layer | What it says |
 | --- | --- |
-| Live types | Four packs, six widgets, five integrations (table above). |
+| Live types | Four packs, seven widgets, five integrations (table above). |
 | Archived `openspec/specs/plugin-contract` | github-only v0 (`demo` / `stats` / `languages`). **Lag.** Follow live types. |
-| `engine.ts` `EnabledWidget` | `demo` \| `stats` \| `languages` \| `feed` \| `json`. **Not** `coding`. |
-| `enabledWidgets` | Github widgets + rss `feed` + http `json`. |
-| `main.ts` | `runEngine(loaded)` with **no deps**. `renderWidget` is a required port. |
-| On-disk adapters | `render-http.ts` + `composeRenderWidgets` (json + optional github). No `render-rss.ts`. No `render-wakatime.ts`. |
-| In-flight `openspec/changes/wire-wakatime-action-runtime/` | Wire `coding` through the Action. Document the hole; do not wire it here. That change's prose may lag live `feed`/`json` engine enablement. |
+| `engine.ts` `EnabledWidget` | `demo` \| `stats` \| `languages` \| `coding` \| `feed` \| `json` \| `chips`. |
+| `enabledWidgets` | Github widgets + wakatime `coding` + rss `feed` + http `json` / `chips`. |
+| `main.ts` | `runEngine(loaded, { renderWidget, … })`. `renderWidget` is a required port. |
+| On-disk adapters | `render-github.ts`, `render-wakatime.ts`, `render-feed.ts`, `render-http.ts`. `composeRenderWidgets` routes `json` \|\| `chips` → `adapters.json`; `feed` → rss; other ids → github dispatcher (`coding` included). |
+| Playground | `/playground/github` (`PREVIEW_WIDGET_IDS`: `demo` / `stats` / `languages`). Fixtures-only `/playground/http` explorer. No `/playground/wakatime` or `/playground/rss`. |
 
-Wakatime and http exist as library packs. Http `json` is in `EnabledWidget`; wakatime `coding` is not. Neither is composed from `runMain` today.
+Hex palettes SSOT is `packages/themes` (named flavors). Renderer `themes.ts` consumes that catalog; do not copy flavor hex into plugins or bits.
 
 ## Pipeline
 
@@ -289,7 +289,7 @@ Http: `auth: optional`. Unset `http_token_env` sends no Authorization. Named env
 
 ## Playground
 
-Routes: `/playground` → `/playground/github`. No `/playground/http` UI. `PREVIEW_PLUGIN_IDS` is `github` only (`demo`, `stats`, `languages`).
+Routes: `/playground` → `/playground/github`. Fixtures-only `/playground/http` explorer exists (`json` / `chips`; do not add those ids to `PREVIEW_WIDGET_IDS`). No `/playground/wakatime` or `/playground/rss`. GitHub preview widgets stay `demo`, `stats`, `languages`.
 
 `POST /api/preview` is a docs layout/time-axis preview, not a stable embed API. Dual pane: WASM layout + README mode (`renderSvg` / `renderAnimation`). No App token → fixtures, zero outbound GitHub. Wakatime / rss / http preview: fixtures only. `PREVIEW_TOKEN_QUERY_KEYS` includes `github_token`, `wakatime_token`, `http_token_env`, `http_token` so permalinks cannot round-trip secrets. `Cache-Control: no-store`.
 
@@ -304,7 +304,8 @@ Canonical plugin: `.agents/profile-bits/` (`plugin.json`, four skills). Install 
 | `DESIGN.md` | Visual tokens + honest runtime (this file) |
 | `AGENTS.md` | Agent locks; nested package `AGENTS.md` per tree |
 | `packages/core/src/types.ts` | Catalog SSOT |
-| `packages/renderer/src/themes.ts` | Hex palettes |
+| `packages/themes` | Named-theme hex SSOT |
+| `packages/renderer/src/themes.ts` | Resolved palettes for Takumi |
 | `packages/bits/src/*` | Bit metrics |
 | `packages/action/src/engine.ts` | `EnabledWidget` / `enabledWidgets` |
 | `openspec/specs/` | Archived contract after sync (may lag types) |
