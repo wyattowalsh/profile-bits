@@ -1,0 +1,28 @@
+version: 1
+format: svg
+theme: dark
+output_pair: false
+animated: false
+timezone: UTC
+output_dir: profile-bits
+plugins:
+  github:
+    widgets:
+      stats:
+        filename: stats
+        include: [followers, repos, stars]
+        hide_rank: true
+        avatar: true
+        animate: false
+        include_private: false
+        include_forks: false
+        include_archived: false
+      languages:
+        filename: languages
+        limit: 8
+        min_pct: 1
+        exclude: []
+        animate: false
+        include_private: false
+        include_forks: false
+        include_archived: false

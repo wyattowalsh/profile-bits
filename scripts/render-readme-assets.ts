@@ -11,16 +11,10 @@ import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import React, { createElement, type ReactElement } from "react";
 import {
   Chip,
-  Divider,
   Frame,
   Muted,
-  Row,
-  Stack,
-  Stat,
-  Text,
   Theme,
   useBitTheme,
 } from "../packages/bits/src/index.ts";
@@ -46,24 +40,32 @@ import { jsonTemplate } from "../packages/plugins/src/http/widgets/json/template
 import { feedTemplate } from "../packages/plugins/src/rss/widgets/feed/template.ts";
 import { codingTemplate } from "../packages/plugins/src/wakatime/widgets/coding/template.ts";
 import { toCodingViewModel } from "../packages/plugins/src/wakatime/widgets/coding/view-model.ts";
+import React, {
+  createElement,
+  type ReactElement,
+} from "../packages/renderer/node_modules/react/index.js";
 import {
-  assertTakumiTree,
   DARK_THEME,
   fromJsx,
-  getRenderer,
   LIGHT_THEME,
   type Node,
   render,
   type ThemePalette,
 } from "../packages/renderer/src/index.ts";
+import { element as architectureElement } from "./readme-assets/architecture.ts";
+import { element as cliVsActionElement } from "./readme-assets/cli-vs-action.ts";
+import { element as formatsElement } from "./readme-assets/formats.ts";
+import { element as heroElement } from "./readme-assets/hero.ts";
+import { element as howItWorksElement } from "./readme-assets/how-it-works.ts";
+import { element as locksElement } from "./readme-assets/locks.ts";
+import { element as pluginMapElement } from "./readme-assets/plugin-map.ts";
+import { assertPng, dataPng, rasterPng } from "./readme-assets/raster.ts";
+import type { Composition, ThemeName } from "./readme-assets/types.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = join(ROOT, "docs/assets/readme");
-const HERO_WIDTH = 1200;
-const HERO_HEIGHT = 400;
 const CARD_WIDTH = 480;
 const CARD_HEIGHT = 160;
-const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 
 const CHIP_TYPES = [
   "npm",
@@ -79,7 +81,13 @@ const WAKATIME_FIXTURE = join(
   "packages/integrations/src/wakatime/fixtures/last_7_days.json",
 );
 
-type ThemeName = "dark" | "light";
+const STATS_INCLUDE = [
+  "followers",
+  "repos",
+  "stars",
+  "forks",
+  "gists",
+] as const;
 
 type AssetRow = {
   path: string;
@@ -96,60 +104,8 @@ function palette(theme: ThemeName): ThemePalette {
   return theme === "light" ? LIGHT_THEME : DARK_THEME;
 }
 
-function pngSize(bytes: Uint8Array): { width: number; height: number } {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  return {
-    width: view.getUint32(16),
-    height: view.getUint32(20),
-  };
-}
-
-function assertPng(bytes: Uint8Array, width: number, height: number): void {
-  if (bytes.byteLength < 1024) {
-    throw new Error(`png too small: ${bytes.byteLength} bytes`);
-  }
-  const magicOk = PNG_MAGIC.every((value, index) => bytes[index] === value);
-  if (!magicOk) {
-    throw new Error("not a PNG");
-  }
-  const size = pngSize(bytes);
-  if (size.width !== width || size.height !== height) {
-    throw new Error(
-      `png ${size.width}×${size.height}, expected ${width}×${height}`,
-    );
-  }
-}
-
-function dataPng(bytes: Uint8Array): string {
-  return `data:image/png;base64,${Buffer.from(bytes).toString("base64")}`;
-}
-
-function HeroSample({ src }: { src: string }): ReactElement {
-  const theme = useBitTheme();
-  return createElement(
-    "div",
-    {
-      tw: "flex",
-      style: {
-        display: "flex",
-        borderWidth: 1,
-        borderColor: theme.border,
-        backgroundColor: theme.card,
-      },
-    },
-    createElement("img", {
-      src,
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
-      alt: "github stats sample",
-      style: { width: CARD_WIDTH, height: CARD_HEIGHT },
-    }),
-  );
-}
-
 const NO_CHIPS_DATA = "No data";
 
-/** Same Frame/Chip wrap as `packages/plugins/src/http/widgets/chips/widget.tsx`. */
 function ChipsBody({
   badges,
 }: {
@@ -210,82 +166,8 @@ function chipsElement(
   );
 }
 
-function heroElement(theme: ThemeName, sampleSrc: string): ReactElement {
-  return createElement(
-    Theme,
-    { theme },
-    createElement(
-      Frame,
-      null,
-      createElement(
-        "div",
-        {
-          tw: "w-full h-full flex",
-          style: {
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingLeft: 48,
-            paddingRight: 48,
-            gap: 40,
-          },
-        },
-        createElement(
-          Stack,
-          { gap: 14 },
-          createElement(
-            Row,
-            { gap: 8 },
-            createElement(Chip, null, "JSX → PNG"),
-            createElement(Chip, null, "480×160"),
-            createElement(Chip, null, "Geist"),
-          ),
-          createElement(Text, { size: 40, weight: 700 }, "profile-bits"),
-          createElement(
-            Muted,
-            { size: 16 },
-            "GitHub profile widgets, rendered from JSX by Takumi.",
-          ),
-          createElement(
-            Row,
-            { gap: 8 },
-            createElement(Chip, { label: "pack", message: "github" }),
-            createElement(Chip, { label: "pack", message: "wakatime" }),
-            createElement(Chip, { label: "pack", message: "rss" }),
-            createElement(Chip, { label: "pack", message: "http" }),
-          ),
-          createElement(Divider),
-          createElement(
-            Row,
-            { gap: 24 },
-            createElement(Stat, { label: "canvas", value: "480×160" }),
-            createElement(Stat, { label: "ratio", value: "3:1" }),
-            createElement(Stat, { label: "engine", value: "Takumi" }),
-          ),
-        ),
-        createElement(HeroSample, { src: sampleSrc }),
-      ),
-    ),
-  );
-}
-
 async function rasterCard(node: Node): Promise<Uint8Array> {
-  assertTakumiTree(node);
   return render(node, "png");
-}
-
-async function rasterHero(node: Node): Promise<Uint8Array> {
-  assertTakumiTree(node);
-  const renderer = await getRenderer();
-  const bytes = await renderer.render(node, {
-    width: HERO_WIDTH,
-    height: HERO_HEIGHT,
-    format: "png",
-  });
-  return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
 }
 
 async function writeAsset(
@@ -316,6 +198,54 @@ function loadCodingPayload() {
     JSON.parse(readFileSync(WAKATIME_FIXTURE, "utf8")) as unknown,
   );
   return selectCodingPayload(envelope.data, ["languages", "editors"], 8);
+}
+
+function optionalDataPng(name: string): string | undefined {
+  try {
+    return dataPng(readFileSync(join(OUT_DIR, name)));
+  } catch {
+    return undefined;
+  }
+}
+
+async function writeChrome(
+  name: string,
+  composition: Composition,
+  theme: ThemeName,
+  width: number,
+  height: number,
+  extras: Parameters<Composition>[1],
+  meta: Omit<AssetRow, "path" | "width" | "height" | "bytes">,
+): Promise<AssetRow> {
+  const node = await fromJsx(composition(theme, extras));
+  const bytes = await rasterPng(node, width, height);
+  return writeAsset(name, bytes, width, height, meta);
+}
+
+function manifestMarkdown(rows: readonly AssetRow[]): string {
+  const dark = rows.filter((row) => !row.path.includes("-light.png"));
+  const light = rows.filter((row) => row.path.includes("-light.png"));
+  const table = (list: readonly AssetRow[]) =>
+    [
+      "| Path | Pixels | Bytes | Plugin / widget | Fixture | Alt text |",
+      "| --- | ---: | ---: | --- | --- | --- |",
+      ...list.map(
+        (row) =>
+          `| \`${row.path}\` | ${row.width}×${row.height} | ${row.bytes} | ${row.plugin} / ${row.widget} | ${row.fixture} | ${row.alt} |`,
+      ),
+    ].join("\n");
+  return `# README asset manifest
+
+Takumi-rasterized stills for the GitHub README showcase. Dark is default. Light is the \`light-*\` pair. No live GitHub, WakaTime, feeds, or shield fetches.
+
+## Dark (default)
+
+${table(dark)}
+
+## Light pair
+
+${table(light)}
+`;
 }
 
 async function main(): Promise<void> {
@@ -362,7 +292,12 @@ async function main(): Promise<void> {
       widget: "stats",
       theme,
       payload: fixtures,
-      options: { stats: { avatar: false } },
+      options: {
+        stats: {
+          avatar: false,
+          include: [...STATS_INCLUDE],
+        },
+      },
     });
     const statsBytes = await rasterCard(statsNode);
     rows.push(
@@ -375,8 +310,8 @@ async function main(): Promise<void> {
           plugin: "github",
           widget: "stats",
           fixture:
-            "packages/integrations/src/static/fixtures/octocat.json (avatar omitted, offline)",
-          alt: "octocat GitHub stats card: followers, repos, stars",
+            "octocat.json (avatar omitted, include followers/repos/stars/forks/gists)",
+          alt: "octocat GitHub stats card: followers, repos, stars, forks, gists",
         },
       ),
     );
@@ -387,10 +322,11 @@ async function main(): Promise<void> {
       payload: fixtures,
       options: { languages: { limit: 4 } },
     });
+    const languagesBytes = await rasterCard(languagesNode);
     rows.push(
       await writeAsset(
         `github-languages${suffix}.png`,
-        await rasterCard(languagesNode),
+        languagesBytes,
         CARD_WIDTH,
         CARD_HEIGHT,
         {
@@ -398,6 +334,37 @@ async function main(): Promise<void> {
           widget: "languages",
           fixture: "packages/integrations/src/static/fixtures/octocat.json",
           alt: "language mix card from octocat fixture bytes",
+        },
+      ),
+    );
+
+    const helloWorld = fixtures.repos[0];
+    if (helloWorld == null) {
+      throw new Error("octocat fixture missing repos[0]");
+    }
+    const repoNode = await githubPreviewNode({
+      widget: "repo",
+      theme,
+      payload: {
+        ...fixtures,
+        repository: {
+          ...helloWorld,
+          ownerAvatarUrl: fixtures.user.avatarUrl,
+        },
+      },
+      options: { repo: { repo: helloWorld.fullName } },
+    });
+    rows.push(
+      await writeAsset(
+        `github-repo${suffix}.png`,
+        await rasterCard(repoNode),
+        CARD_WIDTH,
+        CARD_HEIGHT,
+        {
+          plugin: "github",
+          widget: "repo",
+          fixture: "octocat.json repos[0] Hello-World (no live GET /repos)",
+          alt: "octocat Hello-World GitHub repo card from the static fixture",
         },
       ),
     );
@@ -466,10 +433,11 @@ async function main(): Promise<void> {
         theme,
       ),
     );
+    const chipsBytes = await rasterCard(chipsNode);
     rows.push(
       await writeAsset(
         `http-chips${suffix}.png`,
-        await rasterCard(chipsNode),
+        chipsBytes,
         CARD_WIDTH,
         CARD_HEIGHT,
         {
@@ -482,23 +450,116 @@ async function main(): Promise<void> {
       ),
     );
 
-    const heroNode = await fromJsx(heroElement(theme, dataPng(statsBytes)));
+    const markSrc = optionalDataPng(
+      theme === "light" ? "mark-light.png" : "mark.png",
+    );
+    const grainSrc =
+      theme === "dark" ? optionalDataPng("grain.png") : undefined;
+
     rows.push(
-      await writeAsset(
+      await writeChrome(
         `hero${suffix}.png`,
-        await rasterHero(heroNode),
-        HERO_WIDTH,
-        HERO_HEIGHT,
+        heroElement,
+        theme,
+        1200,
+        400,
+        {
+          sampleSrcs: {
+            stats: dataPng(statsBytes),
+            languages: dataPng(languagesBytes),
+            chips: dataPng(chipsBytes),
+          },
+          markSrc,
+          grainSrc,
+        },
         {
           plugin: "readme",
           widget: "hero",
-          fixture: "bits + sampled github-stats PNG",
+          fixture: "bits + scaled stats/languages/chips stills",
           alt: "profile-bits README hero: JSX to PNG GitHub profile widgets",
         },
       ),
     );
+
+    const chrome: Array<{
+      name: string;
+      composition: Composition;
+      width: number;
+      height: number;
+      widget: string;
+      alt: string;
+    }> = [
+      {
+        name: `how-it-works${suffix}.png`,
+        composition: howItWorksElement,
+        width: 1200,
+        height: 200,
+        widget: "how-it-works",
+        alt: "yaml SSOT to Takumi engine to committed files",
+      },
+      {
+        name: `plugin-map${suffix}.png`,
+        composition: pluginMapElement,
+        width: 1200,
+        height: 240,
+        widget: "plugin-map",
+        alt: "first-party packs github wakatime rss http",
+      },
+      {
+        name: `architecture${suffix}.png`,
+        composition: architectureElement,
+        width: 1200,
+        height: 240,
+        widget: "architecture",
+        alt: "yaml and thin Action inputs through Takumi to widget files",
+      },
+      {
+        name: `locks${suffix}.png`,
+        composition: locksElement,
+        width: 1200,
+        height: 120,
+        widget: "locks",
+        alt: "no embed API, yaml SSOT, never unauth GitHub, Action commits files",
+      },
+      {
+        name: `formats${suffix}.png`,
+        composition: formatsElement,
+        width: 1200,
+        height: 80,
+        widget: "formats",
+        alt: "output formats svg png jpeg webp ico gif apng",
+      },
+      {
+        name: `cli-vs-action${suffix}.png`,
+        composition: cliVsActionElement,
+        width: 1200,
+        height: 120,
+        widget: "cli-vs-action",
+        alt: "CLI output_action none versus Marketplace commit",
+      },
+    ];
+
+    for (const item of chrome) {
+      rows.push(
+        await writeChrome(
+          item.name,
+          item.composition,
+          theme,
+          item.width,
+          item.height,
+          undefined,
+          {
+            plugin: "readme",
+            widget: item.widget,
+            fixture: "bits + DESIGN.md tokens",
+            alt: item.alt,
+          },
+        ),
+      );
+    }
   }
 
+  await writeFile(join(OUT_DIR, "MANIFEST.md"), manifestMarkdown(rows));
   console.log(`\n${rows.length} files → ${OUT_DIR}`);
 }
 

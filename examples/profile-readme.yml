@@ -1,0 +1,19 @@
+name: Profile Bits
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  profile-bits:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: wyattowalsh/profile-bits@v1
+        with:
+          user: ${{ github.repository_owner }}
+          github_token: ${{ github.token }}
+          committer_token: ${{ github.token }}
+          config: .github/profile-bits.yml
+          output_action: commit
