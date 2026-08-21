@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Defines Agent Plugin 1.0.0 packaging at `.agents/profile-bits` and the authoring skills that generate integrations, widgets, and packs from the three-layer contract without inventing Action inputs or silently expanding first-party catalogs.
+Defines Agent Plugin 1.0.0 packaging at `.agents/profile-bits` and exactly six authoring skills for bits, palettes, integrations, widgets, and packs without inventing Action inputs or silently expanding first-party catalogs.
 
 ## Requirements
 
 ### Requirement: Agent Plugin 1.0.0 lives at .agents/profile-bits
-The authoring plugin MUST be packaged as an Agent Plugin 1.0.0 at `.agents/profile-bits`. `plugin.json` MUST validate against the Agent Plugins 1.0.0 schema (`additionalProperties: false`). The plugin `name` MUST be `profile-bits`. The plugin MUST NOT declare MCP, a `skills` array, or unknown top-level fields. This capability MUST NOT rewrite `plugin-contract`, `widget-contract`, or `integration-contract`. The plugin root MUST be a real file tree at `.agents/profile-bits` (sibling of `.agents/skills`), MUST NOT live inside `.agents/skills`, MUST NOT be a copied skills tree under `.agents/skills` or `.cursor`, and MUST NOT keep an `agent-plugin/` directory, alias, or copy. Install is a documented human command, not an agent step in this repo. Install MUST be `npx skills add ./.agents/profile-bits`. Install MUST NOT pass `--all`. Install MUST NOT pass `-a claude-code` or create `.claude/` / `.claude/skills`. This repo already commits relative symlinks (git `120000`): `.agents/skills/author{,-integration,-widget,-plugin}` → `../profile-bits/skills/<id>`. Agents MUST NOT run `skills add` here.
+The authoring plugin MUST be packaged as an Agent Plugin 1.0.0 at `.agents/profile-bits`. `plugin.json` MUST validate against the Agent Plugins 1.0.0 schema (`additionalProperties: false`). The plugin `name` MUST be `profile-bits`. The plugin MUST NOT declare MCP, a `skills` array, or unknown top-level fields. This capability MUST NOT rewrite `plugin-contract`, `widget-contract`, or `integration-contract`. The plugin root MUST be a real file tree at `.agents/profile-bits` (sibling of `.agents/skills`), MUST NOT live inside `.agents/skills`, MUST NOT be a copied skills tree under `.agents/skills` or `.cursor`, and MUST NOT keep an `agent-plugin/` directory, alias, or copy. Install is a documented human command, not an agent step in this repo. Install MUST be `npx skills add ./.agents/profile-bits`. Install MUST NOT pass `--all`. Install MUST NOT pass `-a claude-code` or create `.claude/` / `.claude/skills`. This repo already commits six relative authoring symlinks (git `120000`) from `.agents/skills/<id>` to `../profile-bits/skills/<id>`. Agents MUST NOT run `skills add` here.
 
 #### Scenario: plugin.json validates as Agent Plugins 1.0.0
 - **WHEN** `.agents/profile-bits/plugin.json` is validated
@@ -32,8 +32,8 @@ The plugin MUST NOT include `mcp.json`. Validation MUST fail if `mcp.json` is pr
 - **WHEN** the authoring plugin is packaged for v0
 - **THEN** `mcp.json` MUST be omitted and MCP MUST NOT be required for the plugin to be valid
 
-### Requirement: Four skills plus umbrella author routing
-The plugin MUST ship four skills whose frontmatter `name` matches the skill directory: `author` (umbrella router), `author-integration`, `author-widget`, and `author-plugin`. Each skill MUST declare portable-core frontmatter: `name`, `description`, `license: MIT`, `compatibility`, `metadata.author: profile-bits`, and `metadata.version: "0.1.0"`. Compatibility MUST be: `Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.` The plugin MUST NOT ship a fifth skill (including `author-bit` or `author-ideate`). The umbrella skill MUST read the OpenSpec contracts (`plugin-contract`, `widget-contract`, `integration-contract`, and this capability when present) plus `packages/core/src/types.ts` before routing, except empty arguments and help, which MUST skip Before routing (MUST NOT read those contracts or `types.ts`). A new data source MUST route to `author-integration` first. A new card MUST route to `author-widget` on an existing pack unless the author asked for a new pack. A new pack MUST route to `author-plugin`, referencing existing or new integrations. Ideate/next/brainstorm MUST be an `author` mode (not a separate skill). Empty arguments MUST show a gallery that lists ideate as item 0 (items 0–3 only) and MUST then stop; empty arguments MUST NOT inventory, rank, or write files. A named kind MUST be honored unless a lock fires (MCP, flattened `plugin_*_*_*` inputs, unauthenticated GitHub, REST `/languages`, a second pack for an existing first-party id, or an invented Action input).
+### Requirement: Six skills plus umbrella author routing
+The plugin MUST ship exactly six skills whose frontmatter `name` matches the skill directory: `author`, `author-bit`, `author-palette`, `author-integration`, `author-widget`, and `author-plugin`. Each skill MUST declare portable-core frontmatter: `name`, `description`, `license: MIT`, `compatibility`, `metadata.author: profile-bits`, and `metadata.version: "0.1.0"`. `author` MUST be a read-only router: it classifies, ideates, and names a handoff but MUST NOT write files or copy templates. Before mutating handoff it MUST read the OpenSpec contracts and live `packages/core/src/types.ts`; empty arguments and help MUST skip those reads, show gallery items 0–5, and stop without inventorying, ranking, or writing. Ideate/next/brainstorm MUST re-read live disk, rank only `kind=bit`, `kind=palette`, `kind=integration`, `kind=widget`, or `kind=pack`, name the handoff, and stop. It MUST NOT emit `kind=theme` or `kind=badge`. A new data source MUST route to `author-integration` first. A new card MUST route to `author-widget` on an existing pack unless the author asked for a new pack. A new pack MUST route to `author-plugin`.
 
 #### Scenario: New data source routes to author-integration
 - **WHEN** the author asks to add a new data source such as WakaTime
@@ -49,11 +49,11 @@ The plugin MUST ship four skills whose frontmatter `name` matches the skill dire
 
 #### Scenario: Empty arguments gallery then stop
 - **WHEN** the umbrella skill is invoked with empty arguments
-- **THEN** it MUST show a gallery that includes ideate as item 0 and MUST stop without inventorying or writing files
+- **THEN** it MUST show gallery items 0–5 with ideate as item 0 and MUST stop without inventorying or writing files
 
 #### Scenario: Empty arguments and help skip Before routing
 - **WHEN** the umbrella skill is invoked with empty arguments or help
-- **THEN** it MUST skip Before routing, MUST NOT read `packages/core/src/types.ts` or the OpenSpec contracts, MUST show a gallery that includes ideate as item 0 (items 0–3 only), and MUST stop without inventorying, ranking, or writing files
+- **THEN** it MUST skip Before routing, MUST NOT read `packages/core/src/types.ts` or the OpenSpec contracts, MUST show gallery items 0–5 with ideate as item 0, and MUST stop without inventorying, ranking, or writing files
 
 #### Scenario: Ideate mode ranks one next without writing
 - **WHEN** the author asks `ideate`, `next`, `brainstorm`, or what to add next
@@ -63,8 +63,34 @@ The plugin MUST ship four skills whose frontmatter `name` matches the skill dire
 - **WHEN** the author names a kind such as adding a widget on an existing pack
 - **THEN** the umbrella skill MUST route to that kind unless a lock fires and MUST NOT ignore the named kind solely because another hole ranks higher
 
+### Requirement: Bit and palette authoring have distinct destinations
+The plugin MUST route shared UI primitives to `author-bit` and host-owned theme data to `author-palette`. Frozen bits MUST land at `packages/bits/src/<BitName>.tsx` with exports in `packages/bits/src/index.ts`. Named palette families MUST land at `packages/themes/src/families/<family>.ts` with registration in `packages/themes/src/registry.ts`. Completing an existing bit or palette MUST extend rather than overwrite complete sources. A 12th bit name, new named palette id/family, or changed yaml theme shape MUST require OpenSpec first. The palette skill MUST NOT create `packages/palettes/`. Templates MUST be skill-local and MUST NOT contain parent traversal. The bit skill MUST ship one generic `Bit.template` for an approved 12th name and MUST NOT ship one template per frozen bit.
+
+#### Scenario: Theme bit routes to author-bit
+- **WHEN** the author asks to complete the `Theme` UI primitive
+- **THEN** the router MUST hand off to `author-bit` at `packages/bits/src/Theme.tsx` and MUST NOT treat the request as yaml theme data
+
+#### Scenario: Yaml theme routes to author-palette
+- **WHEN** the author asks for a named yaml theme, flavor, swatches, pair, or seven-token map
+- **THEN** the router MUST hand off to `author-palette` under `packages/themes` and MUST NOT edit the `Theme` bit
+
+#### Scenario: New bit or palette id is OpenSpec-first
+- **WHEN** the author asks for a 12th bit or a new palette id/family
+- **THEN** the specialized skill MUST require an OpenSpec delta before copying its contained generic template or changing a live registry
+
+### Requirement: Theme and badge aliases do not become skills
+The plugin MUST NOT ship `author-theme`, `author-badge`, `author-chip`, or any seventh skill directory. Bare “theme” without a destination MUST return to the `author` gallery rather than guess. The `Theme` bit and in-card `Chip` MUST route to `author-bit`. Yaml theme and named palettes MUST route to `author-palette`. Shields.io README image rows MUST route to sibling README tooling or `add-badges`. A new data-backed badge pack MUST remain OpenSpec-first and then route through integration, plugin, and widget authoring.
+
+#### Scenario: In-card Chip is not a README badge
+- **WHEN** the author asks for an in-card pill implemented with `Chip`
+- **THEN** the router MUST hand off to `author-bit` and MUST NOT create `author-badge`
+
+#### Scenario: Shields README badge leaves this plugin
+- **WHEN** the author asks for Shields.io image rows in a README
+- **THEN** the router MUST name sibling README tooling and MUST NOT create an authoring skill or first-party pack
+
 ### Requirement: Templates stay in the plugin root
-Skill templates MUST live under the plugin root (skill-local `assets/templates/` or equivalent inside `.agents/profile-bits`). Template paths MUST NOT contain `../`. Destination paths MUST be documented as repo-root paths in the skill body, not as plugin-relative escapes. Documented dest examples MUST include `packages/integrations/src/<id>/` and `packages/plugins/src/<pack>/widgets/<id>/`. Pack registry dest MUST be `packages/plugins/src/<pack>/plugin.ts`. Validation MUST fail if any template path contains `../`. Skills MUST NOT add a new integration `index.ts.template`. Pack skills MUST NOT ship a per-pack `index.ts.template` (live packs have no per-pack `index.ts`). The integrations barrel `packages/integrations/src/index.ts` is mention-only.
+Skill templates MUST live under the plugin root in their owning skill. Template paths MUST NOT contain parent traversal. Destination paths MUST be documented as repo-root paths in the skill body, not as plugin-relative escapes. Documented dest examples MUST include `packages/bits/src/<BitName>.tsx`, `packages/themes/src/families/<family>.ts`, `packages/integrations/src/<id>/`, and `packages/plugins/src/<pack>/widgets/<id>/`. Pack registry dest MUST be `packages/plugins/src/<pack>/plugin.ts`. Validation MUST fail if a template resolves outside the plugin root. Skills MUST NOT add a new integration `index.ts.template`, and pack skills MUST NOT ship a per-pack `index.ts.template`.
 
 #### Scenario: Template path with parent segments fails validation
 - **WHEN** a skill template path contains `../`
@@ -72,7 +98,7 @@ Skill templates MUST live under the plugin root (skill-local `assets/templates/`
 
 #### Scenario: Templates generate into packages only when skills run
 - **WHEN** authoring skills copy templates
-- **THEN** the template files MUST remain inside the plugin root and live package source MUST be written only as the documented repo-root destination of a skill run (`packages/integrations/src/<id>/` or `packages/plugins/src/<pack>/widgets/<id>/`)
+- **THEN** the template files MUST remain inside the plugin root and live package source MUST be written only as the documented repo-root destination of the specialized skill
 
 #### Scenario: Complete-existing does not clobber live files
 - **WHEN** authoring skills run against a pack, widget, or integration that already exists on disk
@@ -88,6 +114,10 @@ Skill templates MUST live under the plugin root (skill-local `assets/templates/`
 #### Scenario: Harness author skill is a symlink
 - **WHEN** `.agents/skills/author` is resolved after migrate
 - **THEN** it MUST be a relative symlink to `.agents/profile-bits/skills/author` and MUST NOT be a copied file tree
+
+#### Scenario: Six author harness projections are symlinks
+- **WHEN** all authoring harness entries are inspected
+- **THEN** exactly the six allowed ids MUST resolve to their plugin-local skill directories as relative `120000` links
 
 #### Scenario: Generated OpenSpec skills stay untouched
 - **WHEN** harness projections for authoring skills are created
@@ -203,7 +233,7 @@ When `md` or `mdx` widgets declare `md.families`, each family MUST be exclusive 
 - **THEN** the skill MUST apply an exclusive family swap and MUST NOT stack pretty-code with starry-night
 
 ### Requirement: Locked evals
-Each skill MUST ship Agent Skills evals (`evals/evals.json`) with `skill_name` and `evals[]` entries that include `id`, `prompt`, `expected_output`, and `assertions`. Umbrella `author` evals MUST cover all seven generation cases below as **routing** cases, plus ideate/empty-args/refuse cases. Specialized skills MUST own the deep assertions.
+Each skill MUST ship Agent Skills evals (`evals/evals.json`) with `skill_name` and `evals[]` entries that include `id`, `prompt`, `expected_output`, and `assertions`. This expansion MUST add 10 `author-bit` evals, 8 `author-palette` evals, and 9 routing-only `author` evals. Theme/Chip/Shields handoff and alias-refusal evals MUST live under `author/evals`; specialized bit and palette evals MUST own destination, complete-existing, OpenSpec, and refusal assertions.
 
 | Eval | Primary skill | Expected routing / outcome |
 | --- | --- | --- |
@@ -217,20 +247,20 @@ Each skill MUST ship Agent Skills evals (`evals/evals.json`) with `skill_name` a
 | Ideate next best | author | Inventory + one ranked kind + handoff; no files written |
 | Empty-args does not ideate | author | Gallery including ideate; does not inventory or write |
 
-#### Scenario: Umbrella evals cover all seven as routing
+#### Scenario: Umbrella evals own bit and palette routing
 - **WHEN** umbrella `author` evals are run
-- **THEN** they MUST cover all seven generation cases as routing assertions (integration vs widget vs pack) and MUST NOT omit the WakaTime, languages-option, or new-pack cases
+- **THEN** they MUST cover Theme bit, yaml theme, Chip, Shields README, and forbidden alias routing without copying templates
 
 #### Scenario: Specialized skills own deep assertions
-- **WHEN** `author-integration`, `author-widget`, or `author-plugin` evals are run
-- **THEN** they MUST assert the deep outcomes in the table (mocked HTTP, OpenSpec-delta-first, exclusive family swap, Takumi-safe output, no second pack) rather than routing only
+- **WHEN** specialized skill evals are run
+- **THEN** each skill MUST assert its own destinations, complete-existing behavior, OpenSpec gate, and refusal locks rather than umbrella routing
 
 #### Scenario: Umbrella evals cover ideate and empty-args
 - **WHEN** umbrella `author` evals are run
-- **THEN** they MUST include an ideate case that ranks without writing and an empty-args case that galleries and does not inventory
+- **THEN** they MUST include an ideate case that ranks without writing or copying and an empty-args case that lists all six roles without inventory
 
 ### Requirement: Plugin validation suite
-The plugin MUST ship a validate script (`scripts/validate.sh`) that (1) validates `plugin.json` against Agent Plugins 1.0.0, (2) rejects `mcp.json` if present anywhere under the plugin root (recursive), (3) runs `pnpm dlx skills-ref@0.1.5 validate skills/<id>` on each `skills/<id>` (name MUST match directory) with no `agentskills` fallback, (4) runs `just generate-action --check` from the repo root when that recipe exists, (5) fails if any template path contains `../`, (6) contains template paths with Node 24 `fs.realpathSync` plus `path.relative` and MUST fail if the relative path starts with `..`, (7) asserts `plugin.json` identity: `name` MUST equal `profile-bits`, `version` MUST equal `0.1.0`, `license` MUST equal `MIT`, and (8) asserts the `skills/` directory set equals exactly `author`, `author-integration`, `author-widget`, and `author-plugin` and MUST fail on any other skill id.
+The plugin MUST ship a validate script (`scripts/validate.sh`) that validates `plugin.json` against Agent Plugins 1.0.0, rejects recursive `mcp.json`, runs `pnpm dlx skills-ref@0.1.5 validate skills/<id>` on each of exactly six allowed skill directories, requires every frontmatter name to match its directory, runs `just generate-action --check` when that recipe exists, enforces template containment with Node 24 `fs.realpathSync` and `path.relative`, and asserts manifest identity (`profile-bits`, `0.1.0`, MIT).
 
 #### Scenario: Validate script fails on mcp.json or parent template paths
 - **WHEN** `mcp.json` is present anywhere under the plugin root or a template path contains `../` or resolves outside the plugin root via `realpathSync`
@@ -238,10 +268,10 @@ The plugin MUST ship a validate script (`scripts/validate.sh`) that (1) validate
 
 #### Scenario: skills-ref validate runs on each skill
 - **WHEN** plugin validation runs
-- **THEN** `pnpm dlx skills-ref@0.1.5 validate` MUST run on `author`, `author-integration`, `author-widget`, and `author-plugin`, MUST require each skill `name` to match its directory, and MUST NOT fall back to `agentskills`
+- **THEN** `pnpm dlx skills-ref@0.1.5 validate` MUST run on all six allowed skills, MUST require each skill `name` to match its directory, and MUST NOT fall back to `agentskills`
 
 #### Scenario: Extra skill directory fails validation
-- **WHEN** `skills/` contains a fifth directory such as `author-bit` or any id other than `author`, `author-integration`, `author-widget`, and `author-plugin`
+- **WHEN** `skills/` contains a seventh directory or any id outside the six-skill allowlist
 - **THEN** the validate script MUST fail
 
 #### Scenario: plugin.json identity is asserted

@@ -76,6 +76,9 @@ Read the package file when working in that tree:
 - `.agents/profile-bits/AGENTS.md`
 
 Agent Plugin skills follow live `packages/core/src/types.ts` `FIRST_PARTY_*`, not a frozen four-id table to bump when packs are added.
+The authoring plugin ships exactly `author`, `author-bit`, `author-palette`,
+`author-integration`, `author-widget`, and `author-plugin`; read
+`.agents/profile-bits/AGENTS.md` before changing that tree.
 
 Install is a documented human command, not an agent step in this repo.
 

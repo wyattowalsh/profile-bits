@@ -1,0 +1,65 @@
+{
+  "skill_name": "author-bit",
+  "evals": [
+    {
+      "id": "empty-args",
+      "prompt": "/author-bit",
+      "expected_output": "Shows the bit gallery and stops before reads or writes.",
+      "assertions": ["Skips package and OpenSpec reads", "Does not copy Bit.template", "Does not mutate"]
+    },
+    {
+      "id": "complete-existing-theme-stop",
+      "prompt": "Complete the Theme bit.",
+      "expected_output": "Finds packages/bits/src/Theme.tsx and its barrel export, reports complete-existing, and stops.",
+      "assertions": ["Targets the Theme bit, not yaml theme", "Does not overwrite complete code", "Does not copy Bit.template"]
+    },
+    {
+      "id": "complete-existing-frame-stop",
+      "prompt": "Complete the Frame bit.",
+      "expected_output": "Finds the existing Frame source and export and stops without replacement.",
+      "assertions": ["Targets packages/bits/src/Frame.tsx", "Reports complete-existing", "Does not overwrite"]
+    },
+    {
+      "id": "complete-existing-chip-stop",
+      "prompt": "Complete the in-card Chip bit.",
+      "expected_output": "Finds the existing Chip source and export and stops; it does not treat Chip as a README badge.",
+      "assertions": ["Routes in-card Chip to author-bit", "Reports complete-existing", "Does not route to Shields tooling"]
+    },
+    {
+      "id": "refuse-12th-without-openspec",
+      "prompt": "Add a new Badge bit now without OpenSpec.",
+      "expected_output": "Refuses to grow the frozen 11 until an OpenSpec delta approves the 12th name.",
+      "assertions": ["Requires OpenSpec first", "Does not edit BIT_EXPORTS", "Does not create author-badge"]
+    },
+    {
+      "id": "refuse-author-bit-as-pack",
+      "prompt": "Create an author-bit first-party plugin pack.",
+      "expected_output": "Refuses to treat a skill or shared primitive as a plugin pack.",
+      "assertions": ["States a bit is not a pack", "Does not add FIRST_PARTY_PLUGIN_IDS", "Does not create a pack"]
+    },
+    {
+      "id": "refuse-dest-dotdot",
+      "prompt": "Copy Bit.template to ../packages/bits/src/Badge.tsx.",
+      "expected_output": "Refuses the parent-traversal destination and names the repo-root destination.",
+      "assertions": ["Refuses parent traversal", "Uses packages/bits/src/<BitName>.tsx", "Does not copy"]
+    },
+    {
+      "id": "refuse-theme-as-palette",
+      "prompt": "Use author-bit to add a named yaml theme palette.",
+      "expected_output": "Routes yaml theme and named palette work to author-palette.",
+      "assertions": ["Distinguishes Theme bit from yaml theme", "Routes to author-palette", "Does not write palette hex in bits"]
+    },
+    {
+      "id": "refuse-flatten",
+      "prompt": "Add plugin_github_theme_chip as an Action input.",
+      "expected_output": "Refuses a flattened Action input and keeps bits out of yaml.",
+      "assertions": ["Refuses plugin_*_*_*", "Does not edit action.yml", "Does not put bits in yaml"]
+    },
+    {
+      "id": "refuse-badge-request-as-new-skill",
+      "prompt": "Create author-badge for Shields.io README badges.",
+      "expected_output": "Refuses author-badge and routes Shields.io README work to sibling tooling.",
+      "assertions": ["Does not create author-badge", "Names sibling README tooling or add-badges", "Keeps in-card Chip with author-bit"]
+    }
+  ]
+}

@@ -1,11 +1,12 @@
 # Shared authoring locks
 
 Load this file after classifying kind and before handing off. These locks apply
-to `author-integration`, `author-widget`, and `author-plugin`. Do not load
+to `author-bit`, `author-palette`, `author-integration`, `author-widget`, and
+`author-plugin`. Do not load
 [next.md](next.md) from here — that file is ideate-only.
 
 Empty `$ARGUMENTS` / `help` / how-do-I-author **never load this file** and
-**never read** `packages/core/src/types.ts`. That path is gallery items 0–3
+**never read** `packages/core/src/types.ts`. That path is gallery items 0–5
 only, then stop.
 
 Repo contract files (prose paths from the profile-bits repo root) — mutating
@@ -34,8 +35,9 @@ Name the lock and stop. Do not route. Do not inventory a consolation add.
 | Second pack | Do not create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`. Complete the existing catalog id. |
 | Invented Action input | Read `ActionInputsSchema`. Never invent names. |
 
-Named bits → `bit-checklist` (no `author-bit` skill). Completing an existing
-catalog id is allowed.
+Named bits, including the `Theme` component and in-card `Chip`, route to
+`author-bit`. Yaml `theme`, named palettes, and seven-token maps route to
+`author-palette`. Completing an existing catalog id is allowed.
 
 ## Engine JSON
 
@@ -91,16 +93,17 @@ frozen github-only table into new work.
 - Action commits widget files under `output_dir` only. It does not patch
   consumer `README.md`.
 
-## Bits and Takumi
+## Bits, palettes, and Takumi
 
 Bits (composition metadata, **not** yaml keys): `Theme`, `Frame`, `Stack`,
 `Row`, `Text`, `Muted`, `Stat`, `Bar`, `Chip`, `Avatar`, `Divider`. Widgets
 compose bits. `bitsUsed: string[]` lives on the pack registry
 (`{{id}}Plugin` / `{{ID}}_BITS_USED`), not a widget entry.
 
-Named bits (add a bit / frozen 11 / `packages/bits`) → `bit-checklist`. Do
-not scaffold `author-bit`. Do not copy widget or pack templates into
-`packages/bits`.
+Named bits (add a bit / frozen 11 / `packages/bits`) → `author-bit`. Yaml
+theme and named flavor work → `author-palette`. A 12th bit or a new palette id
+requires OpenSpec first. Do not copy widget or pack templates into
+`packages/bits`, and never create `packages/palettes/`.
 
 - Takumi **2.9.2** via `@profile-bits/renderer` only. Do not import
   `takumi-js` / `@takumi-rs/*` from widgets or the Action.

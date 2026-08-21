@@ -1,14 +1,12 @@
 ---
 name: author
 description: >-
-  Routes profile-bits authoring and ranks the next add. Data source →
-  author-integration; card on an existing pack → author-widget; new pack →
-  author-plugin. Modes include ideate/next/brainstorm, which ranks one bit,
-  integration, widget, or pack from live FIRST_PARTY_* plus on-disk holes. Use
-  when adding a widget, integration, or pack, or asking what to add next. NOT
-  for Action runtime, Takumi renderer internals, docs playground/generate, MCP,
-  Marketplace, flattened plugin_*_*_* inputs, unauthenticated GitHub, REST
-  /languages, openspec --json, or a second pack for an id already in types.ts.
+  Routes profile-bits authoring across exactly six skills. Theme or Chip bit →
+  author-bit; yaml theme or named palette → author-palette; data source →
+  author-integration; card → author-widget; pack → author-plugin. Ideate ranks
+  the next bit, palette, integration, widget, or pack and stops. Use for
+  classify, ideate, next, brainstorm, or ambiguous theme/badge requests. This
+  router never mutates.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.
 metadata:
@@ -16,253 +14,137 @@ metadata:
   version: "0.1.0"
 ---
 
-# Author (router)
+# Author router
 
-Umbrella skill. Classify the request, then hand off. Do **not** implement
-integrations, widgets, or packs here. Ideate/next/brainstorm is a **mode** of
-this skill (not a fifth skill): inventory, rank, print a table, stop. Write no
-files from this router.
+Classify and hand off. This skill never writes files or copies templates.
+A plugin is a pack of widgets plus declared integrations, not one card or API.
 
-A **plugin** is a pack of widgets plus declared integrations (1..N widgets,
-0..N integrations) — not a single card and not a single API.
+Exactly six skills ship: `author`, `author-bit`, `author-palette`,
+`author-integration`, `author-widget`, and `author-plugin`.
 
-Empty `$ARGUMENTS` / `help` / “how do I author” **skip Before routing**. Show
-gallery items **0–3 only** and **stop**. Do not inventory. Do not read
-`packages/core/src/types.ts` or the OpenSpec contracts. Do not load
-[next.md](references/next.md) or [locks.md](references/locks.md).
+## Empty args / help
 
-Catalog SSOT is live `packages/core/src/types.ts`: `FIRST_PARTY_PLUGIN_IDS`,
-`FIRST_PARTY_WIDGET_IDS`, `FIRST_PARTY_INTEGRATION_IDS`, `WIDGET_INTEGRATIONS`,
-`INTEGRATION_AUTH`, `ActionInputsSchema`. Read those arrays from disk. Do not
-hardcode github-only. Do not paste a closed pack-id list into this skill.
-Completing an id already in those lists is allowed. Adding a new id requires
-OpenSpec first. Do not create a second pack for an id already in
-`FIRST_PARTY_PLUGIN_IDS`. WakaTime-class **architecture** (client, auth, scopes,
-inputs, mocked HTTP) still applies to **new** data sources. Thin Action names:
-read `ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
-never invent `plugin_*_*_*`.
+Empty `$ARGUMENTS`, `help`, and “how do I author” sit above Before routing.
+Show gallery items **0–5** and **stop**:
+
+0. **Ideate** — rank a next add from live disk.
+1. **Bit** — `author-bit` for `Theme`, `Chip`, or another shared bit.
+2. **Palette** — `author-palette` for yaml theme, named flavors, and tokens.
+3. **Data source** — `author-integration`.
+4. **Card** — `author-widget` on an existing pack.
+5. **Pack** — `author-plugin`.
+
+Do not read `packages/core/src/types.ts`, OpenSpec, or references. Do not
+inventory, rank, mutate, or copy templates.
 
 ## Dispatch
 
-| `$ARGUMENTS` | Handler |
+| Signal | Route |
 | --- | --- |
-| *(empty)* / `help` / how do I author | Empty-args gallery items **0–3** (ideate is item 0). **Skip Before routing.** **Stop.** Do not inventory. Do not read `types.ts`. |
-| `ideate` / `next` / `brainstorm` / what should I add | Load [next.md](references/next.md) **only**. Rank one kind. Write no files. |
-| Named bits / frozen 11 / `packages/bits` | `bit-checklist` (no `author-bit` skill). Do not inventory a substitute kind. |
-| New data source, API client, auth, scopes, WakaTime-class | `author-integration` |
-| New card, widget, template, yaml option, animation, MD/MDX, stylesheets | `author-widget` on an existing pack unless they asked for a new pack |
-| New pack / plugin id / catalog add | `author-plugin` |
-| consumer README / local CLI / `just render` / `pnpm render` | sibling plugin `.agents/profile-bits-readme` skill `render` (refuse to implement runtime here) |
-| MCP, flatten `plugin_*_*_*`, unauth GitHub, REST `/languages`, `openspec --json` | Refuse (NOT-for) |
+| *(empty)* / `help` / how do I author | Gallery 0–5; skip Before routing; stop |
+| `ideate` / `next` / `brainstorm` / what should I add | Load [next](references/next.md), rank, and stop |
+| Named frozen bit, `Theme bit`, `Chip` in a card, `packages/bits` | `author-bit` |
+| yaml `theme`, named palette/flavor, swatches, pair, theme tokens | `author-palette` |
+| Bare `theme` with no destination | Gallery; do not guess |
+| New API, client, auth, scopes, cache keys | `author-integration` |
+| New card or widget on an existing pack | `author-widget` |
+| New or complete plugin pack | `author-plugin` |
+| Shields.io README `<img>` rows | sibling `.agents/profile-bits-readme` or `add-badges` |
+| MCP, flatten, unauth GitHub, REST `/languages`, `openspec --json` | Refuse |
 
-Natural-language requests use the same table. Do not invent a mutating default.
+### Badge routing
 
-### Empty args / help
+- In-card `Chip` → `author-bit`.
+- README Shields.io images → sibling README tooling.
+- A pack that fetches badge data → OpenSpec, then `author-integration`,
+  `author-plugin`, and `author-widget`.
+- A proposed `Badge` primitive → `author-bit` after OpenSpec.
 
-When `$ARGUMENTS` is empty (or the user only asks `help` / how authoring
-works), show this gallery and **stop**. This path sits **above** Before
-routing and **never enters it**.
-
-Do not write files. Do not inventory. Do not load
-[next.md](references/next.md). Do not load [locks.md](references/locks.md).
-Do **not** read `packages/core/src/types.ts` or the OpenSpec contracts.
-
-0. **Ideate** — ask what to add next (`ideate` / `next` / `brainstorm`). Ranks
-   one bit, integration, widget, or pack from live `FIRST_PARTY_*` plus
-   on-disk holes. Does **not** run on empty args.
-1. **Data source** → `author-integration` (client, auth, scopes, mocked HTTP)
-   at `packages/integrations/src/<id>/`.
-2. **Card** → `author-widget` on an existing pack.
-3. **Pack** → `author-plugin` (`<id>Plugin`, derived integration union,
-   pack-level `bitsUsed`, `docsPath: "{{DOCS_PATH}}"`).
-
-Gallery items are **0–3 only**. Completing an existing catalog id is allowed
-once a mutating skill runs; empty args do not inventory or read `types.ts` to
-prove that.
-
-## Critical rules
-
-1. Empty `$ARGUMENTS` / `help` → gallery items 0–3 (ideate is item 0); skip Before routing; stop; do not inventory; do not read `types.ts`; do not load `next.md`; do not write files.
-2. `ideate` / `next` / `brainstorm` / “what should I add” → load `next.md` only; rank one kind + 1–2 runners-up; print the table; name the handoff skill; **stop**. Write no files; copy no templates. Do not continue Handoff steps 3–6.
-3. Honor a **named kind** unless a lock fires (MCP, flatten, unauth GitHub, REST `/languages`, `openspec --json`, second pack for an existing id, invented Action input).
-4. Named bits → `bit-checklist` (no `author-bit` skill). Do not load `next.md` for a named bit.
-5. Catalog SSOT is `types.ts` **after** empty-args/help is ruled out. Completing an existing id is allowed. New id → OpenSpec. No second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`.
-6. New data source → `author-integration` first, even if they also want a card. Dest `packages/integrations/src/<id>/`.
-7. Never invent `plugin_*_*_*`. Read `ActionInputsSchema` (optional `wakatime_token`, `http_token_env`).
-8. Do not write `packages/**` from this router. Hand off by skill name (`author-integration`, `author-widget`, `author-plugin`). Bit holes use `bit-checklist`.
-9. Public API → OpenSpec first. Engine JSON is a **subcommand flag** only — never `openspec --json`. Fail closed on stale codegen. Pack `bitsUsed` is pack-level on `<id>Plugin`. `docsPath` is `"{{DOCS_PATH}}"`.
-
-## Engine JSON
-
-Engine JSON is a **subcommand flag**, never `openspec --json`:
-
-```bash
-pnpm exec openspec status --change <id> --json
-pnpm exec openspec list --specs --json
-pnpm exec openspec list --json
-```
-
-(`just openspec …` is the same CLI.) Refuse any ask to run `openspec --json`.
-
-## Refuse (NOT-for)
-
-Do not use this skill to:
-
-- Change Action runtime, thin `action.yml` behavior, or Marketplace inputs
-- Edit Takumi renderer internals (`packages/renderer`)
-- Build docs `/playground` or `/generate`
-- Add MCP (`mcp.json`)
-- Add Marketplace flattened `plugin_<plugin>_<widget>_<option>` inputs
-- Call GitHub unauthenticated (empty / `""` / whitespace `github_token` fails the Action)
-- Use REST `/languages` (filter-then-cap + GraphQL `nodes(ids:)` batches of 100)
-- Run `openspec --json` (subcommand flag only)
-- Create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`
-- Implement the local CLI engine (`just render` / `pnpm render` / `runMain`); point to sibling plugin `.agents/profile-bits-readme` skill `render`
-
-Redirect those requests away. Name the lock. Do not route them to the
-specialized author skills. Do not inventory a consolation add.
-
-Empty `$ARGUMENTS` / `help` / how-do-I-author **never enter** Before routing.
-Show gallery 0–3 and stop.
+Never create `author-theme`, `author-badge`, or `author-chip`.
 
 ## Before routing
 
-Skip this entire section for empty `$ARGUMENTS` / `help` / how-do-I-author.
+Skip this entire section for empty args/help.
 
-1. Read these repo files (prose paths from the profile-bits repo root — not
-   skill-relative links):
-   - `openspec/specs/plugin-contract/spec.md`
-   - `openspec/specs/widget-contract/spec.md`
-   - `openspec/specs/integration-contract/spec.md`
-   - `packages/core/src/types.ts`
-   - `openspec/specs/author-plugin/spec.md` when that spec exists
-2. Load [shared locks](references/locks.md) for mutating handoff. Load
-   [next.md](references/next.md) **only** for ideate.
-3. Classify **kind**: data source vs card vs pack vs (ideate only) bit.
-4. Hand off to the matching specialized skill by **name**. Those skills live
-   as siblings under the Agent Plugin `skills/` directory. Do not use
-   parent-relative file paths. Do not copy this skill into a second tree.
-   Ideate and named bits **stop** after naming the skill (see Handoff); they
-   do not copy templates or run `just generate-action`.
+For ideate, load only [next](references/next.md), re-read live disk, print the
+ranked table, name the handoff skill, and **stop**.
 
-If the request includes a **new data source**, route `author-integration`
-**first**, even if they also want a card.
+For a mutating handoff:
 
-## Classification
+1. Read `openspec/specs/plugin-contract/spec.md`,
+   `openspec/specs/widget-contract/spec.md`,
+   `openspec/specs/integration-contract/spec.md`,
+   `openspec/specs/author-plugin/spec.md`, and
+   `packages/core/src/types.ts`.
+2. Load [shared locks](references/locks.md).
+3. Classify bit vs palette vs integration vs widget vs pack.
+4. Name the specialized skill. Do not implement from this router.
 
-| Signal | Kind | Route |
+New data source routes to `author-integration` first even when a card is also
+requested. A card stays on an existing pack unless the user explicitly asks
+for a new pack.
+
+## Theme split
+
+| Intent | Destination | Route |
 | --- | --- | --- |
-| `ideate` / `next` / `brainstorm` / what should I add | Unprompted next | This skill + [next.md](references/next.md) |
-| Named bits / frozen 11 / `packages/bits` | Bit | `bit-checklist` |
-| New API, client, token, scopes, cache keys, WakaTime / similar time-tracker | Data source | `author-integration` |
-| New card, widget file (`widget.tsx` / `.md` / `.mdx` / `.html`), yaml option, bits-in-a-card, Takumi template, CSS `@keyframes`, gif/apng, Tailwind `tw`/`className`, `md.families` | Card | `author-widget` |
-| New plugin id, pack registry, `docsPath`, derived integration union, expanding `FIRST_PARTY_PLUGIN_IDS` | Pack | `author-plugin` |
-| New card **and** they asked for a new pack | Pack then card | `author-plugin`, then `author-widget` |
-| New card on an existing pack id (any id already in `FIRST_PARTY_PLUGIN_IDS`) | Card on existing pack | `author-widget` only |
-| MCP / `mcp.json` | Refuse | Stop |
-| Flattened `plugin_*_*_*` | Refuse | Stop |
-| Unauthenticated GitHub (empty / `""` / whitespace token) | Refuse | Stop |
-| REST `/languages` | Refuse | Stop |
-| `openspec --json` | Refuse | Stop |
-| consumer README / local CLI / `just render` / `pnpm render` | Refuse | Sibling `.agents/profile-bits-readme` skill `render`. Do not implement `runMain` |
+| `Theme` UI primitive | `packages/bits/src/Theme.tsx` | `author-bit` |
+| Root yaml `theme` / custom role map | live core config schema | `author-palette` |
+| Named family/flavor/swatches | `packages/themes/src/families/<family>.ts` | `author-palette` |
+| Ambiguous bare theme | none | gallery and stop |
 
-### Routing examples
+## Catalog and public API
 
-| User intent | Route | Lock |
-| --- | --- | --- |
-| Add a WakaTime integration | `author-integration` | Complete existing `wakatime` id; no second pack |
-| Add a languages option | `author-widget` | OpenSpec delta first (yaml schema); no flattened Action input |
-| New pack using github + static | `author-plugin` | OpenSpec before expanding plugin ids |
-| Widget with CSS animation for gif/apng | `author-widget` | `@keyframes` authoring; APNG `.png`; SVG still stays baked |
-| Drop in `widget.mdx` with no `source` | `author-widget` | Prefer omit `source`; canonical `widget.mdx` |
-| Tailwind stylesheets widget | `author-widget` | Takumi-safe tw/className only on div/span/img; typed bit props; pack-level bitsUsed union |
-| Swap `md.families.code` to starry-night | `author-widget` | Exclusive family swap; do not stack pretty-code + starry-night |
-| What should I add next? | ideate | Load `next.md`; print table; name skill; stop. No files/templates |
-| Add a widget on rss | `author-widget` | Honor named kind; do **not** load `next.md`; existing `rss` pack |
-| Add a Theme / Frame bit | `bit-checklist` | No `author-bit` skill; do not inventory |
-| Add an MCP server | Refuse | No `mcp.json`. No inventory |
-| `plugin_github_stats_include` | Refuse | Flatten. Thin Action only |
-| Call GitHub with an empty token | Refuse | Unauth. Empty / `""` / whitespace fails the Action |
-| Fetch REST `/languages` | Refuse | Filter-then-cap + GraphQL `nodes(ids:)` batches of 100 |
-| Run `openspec --json` | Refuse | Subcommand flag only |
-| `just render` / `pnpm render` / local CLI | Refuse | Sibling `.agents/profile-bits-readme` skill `render`. Do not implement `runMain` |
+After empty args is ruled out, read live `packages/core/src/types.ts`:
+`FIRST_PARTY_PLUGIN_IDS`, `FIRST_PARTY_WIDGET_IDS`,
+`FIRST_PARTY_INTEGRATION_IDS`, `WIDGET_INTEGRATIONS`, `INTEGRATION_AUTH`, and
+`ActionInputsSchema`.
+
+Do not encode a closed pack-id table. Completing a live id is allowed. A new id
+or public yaml shape requires OpenSpec first, then types, then skills. Never
+invent flattened `plugin_<plugin>_<widget>_<option>` Action inputs.
+
+## Ideate
+
+Ideate never mutates. Re-read disk and rank:
+
+- `kind=bit`, handoff `author-bit`
+- `kind=palette`, handoff `author-palette`
+- `kind=integration`, handoff `author-integration`
+- `kind=widget`, handoff `author-widget`
+- `kind=pack`, handoff `author-plugin`
+
+Do not emit `kind=theme` or `kind=badge`. Print one top row and 1–2 runners-up,
+then stop. Copy no templates and do not continue a mutating workflow.
+
+## Refuse
+
+Name the lock and stop:
+
+- MCP or `mcp.json`
+- flattened Action inputs
+- unauthenticated GitHub; empty/blank token fails the Action
+- REST `/languages`; use filter-then-cap and GraphQL `nodes(ids:)` batches
+- `openspec --json`; JSON is a subcommand flag
+- a second pack for a live first-party id
+- parent-traversal destinations or templates
+- local CLI/runtime work; use sibling `.agents/profile-bits-readme`
 
 ## Handoff
 
-After classifying (never for empty args / help):
-
-1. Name the specialized skill and the kind (data source / card / pack / bit).
-2. Repeat the relevant locks from [shared locks](references/locks.md) for
-   mutating work. Ideate uses [next.md](references/next.md) instead: print
-   the table, name the handoff skill, **stop**. Named bits use
-   `bit-checklist` and **stop**.
-
-Do **not** continue this section after ideate or named bits. Write no files.
-Copy no templates.
-
-Steps 3–6 apply **only** to mutating integration / widget / pack routes
-(`author-integration`, `author-widget`, `author-plugin`).
-
-3. Follow that skill's instructions and copy from **its** templates. Do not
-   hand-edit a second skills tree. Do not write live package source from this
-   router.
-4. If the change is public API (yaml schema, plugin ids, Action inputs,
-   widget option trees), require an OpenSpec delta **before** code.
-5. Fail closed on stale codegen. Do not invent Action input names. Read
-   `ActionInputsSchema` in `packages/core/src/types.ts`.
-6. When `justfile` has `generate-action` / `generate-docs` (this repo does),
-   tell the user to run:
-
-   ```bash
-   just generate-action
-   just generate-docs
-   ```
-
-   CI uses `just generate-action --check`.
-
-## Gotchas
-
-- Empty args / help skip Before routing. They do **not** read `types.ts`.
-- `FIRST_PARTY_PLUGIN_IDS` is live in `types.ts` — read the file; do not keep a
-  closed pack-id list here. A new pack id is an OpenSpec +
-  `packages/core/src/types.ts` change, not a silent catalog add. Completing an
-  existing id is allowed (including a missing pack-level `bitsUsed` on an
-  existing `<id>Plugin`).
-- Yaml at `.github/profile-bits.yml` is config SSOT (`additionalProperties:
-  false`). Yaml present beats `plugin_github`. Widget options live in yaml,
-  never as flattened Action inputs.
-- Never invent Action input names. Thin inputs are listed in
-  [shared locks](references/locks.md).
-- Widgets do not perform HTTP. They consume a cached integration payload.
-- Default SVG is a baked still. CSS `@keyframes` are authoring input to
-  `renderAnimation`, not GitHub SVG runtime. APNG files are named `.png`.
-- Write from templates. Fail closed if codegen would emit flattened option
-  inputs or if public API moved without an OpenSpec delta.
-- Rank **1b** is pack-id-agnostic ([next.md](references/next.md)): a live pack
-  dir and `<id>Plugin` exist, but pack-level `bitsUsed` is missing. Re-read
-  disk every ideate run. Widget-entry `bitsUsed` does not close it. An
-  integrations-barrel re-export is not a pack hole. Do not freeze any pack id
-  as the hole.
-- Named bits → `bit-checklist` and stop. After ideate: print the table, name
-  the handoff skill, stop the same way. Empty args do not run ideate.
-  Mutating Handoff (copy templates, `just generate-action`) is
-  integration/widget/pack only.
-- Never `openspec --json`.
+Name the kind, specialized skill, repo-root destination, and relevant locks.
+The specialized skill owns any templates and writes. `author` always stops
+without mutation.
 
 ## Reference index
 
-Do not load all at once.
-
 | File | Load when |
 | --- | --- |
-| [locks.md](references/locks.md) | Mutating handoff (integration / widget / pack). **Not** empty args / help |
-| [next.md](references/next.md) | **Only** for `ideate` / `next` / `brainstorm` / “what should I add” |
+| [locks](references/locks.md) | Mutating handoff only |
+| [next](references/next.md) | Ideate/next/brainstorm only |
 
 ## Proof
 
-From the plugin root:
-
 ```bash
-bash scripts/validate.sh
 pnpm dlx skills-ref@0.1.5 validate skills/author
 ```

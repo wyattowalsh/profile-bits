@@ -5,7 +5,8 @@
 # 3. Reject mcp.json anywhere under the plugin root (recursive find).
 # 4. Run `pnpm dlx skills-ref@0.1.5 validate` on each skills/<id>.
 #    Frontmatter name MUST match the skill directory. Skill dirs MUST be
-#    exactly {author, author-integration, author-widget, author-plugin};
+#    exactly {author, author-bit, author-palette, author-integration,
+#    author-widget, author-plugin};
 #    any other id fails.
 # 5. If generate-action exists, run `just generate-action --check` (or `pnpm generate-action --check`).
 # 6. Fail if any template resolves outside the plugin root (Node fs.realpathSync +
@@ -14,7 +15,14 @@
 set -euo pipefail
 
 SKILLS_REF_PIN="0.1.5"
-ALLOWED_SKILL_IDS=(author author-integration author-widget author-plugin)
+ALLOWED_SKILL_IDS=(
+  author
+  author-bit
+  author-palette
+  author-integration
+  author-widget
+  author-plugin
+)
 
 die() {
   printf 'error: %s\n' "$*" >&2
@@ -312,7 +320,7 @@ validate_skills() {
   local plugin_root="$1"
   local skills_dir="$plugin_root/skills"
   [[ -d "$skills_dir" ]] ||
-    die "skills/ directory set must be exactly {author, author-integration, author-widget, author-plugin}"
+    die "skills/ directory set must be exactly {author, author-bit, author-palette, author-integration, author-widget, author-plugin}"
   command -v pnpm >/dev/null 2>&1 || die "pnpm is required to run skills-ref@${SKILLS_REF_PIN}"
 
   local skill_dir skill_id allowed

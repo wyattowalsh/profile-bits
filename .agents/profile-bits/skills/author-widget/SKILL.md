@@ -7,8 +7,9 @@ description: >-
   formats allow-list, md.presets/md.families for md/mdx, examples, and pack-level
   bitsUsed unioned into the pack Plugin. Use when adding a card, languages yaml
   option, CSS animation gif/apng, widget.mdx without source, Tailwind
-  tw/className stylesheets, or swapping md.families.code. NOT for new data
-  sources (author-integration), new packs (author-plugin), Action runtime,
+  tw/className stylesheets, or swapping md.families.code. NOT for authoring a
+  shared bit (author-bit), yaml themes or named palettes (author-palette), new
+  data sources (author-integration), new packs (author-plugin), Action runtime,
   renderer internals, MCP, Marketplace, flattened plugin_*_*_* inputs, or a
   second pack for an id already in types.ts.
 license: MIT
@@ -52,6 +53,8 @@ deep procedure. Do not load all at once.
 | `stylesheet` / `tailwind` `[pack] [widget]` | Takumi-safe `tw` / `className` only on native `div` / `span` / `img`; typed bit props. Missing pack or id → **stop** |
 | `families [family] [member] [pack] [widget]` | Exclusive `md.families` swap. Missing pack or id → **stop** |
 | `discover [path]` | `discoverSource` rules (read-only; no dest) |
+| Author a shared `Theme` / `Chip` / other bit | Stop → `author-bit` |
+| yaml `theme` / named palette / flavor / tokens | Stop → `author-palette` |
 | New card + new API | Refuse → `author-integration` (do not copy widget templates first) |
 | New data source / WakaTime-class | Refuse → `author-integration` |
 | New pack / plugin id / second pack | Refuse → `author-plugin` |
@@ -328,6 +331,8 @@ present beats `plugin_github`. Read `ActionInputsSchema` — do not invent names
 
 - New data source / WakaTime-class / **new card + new API** → `author-integration`
 - New pack / second pack for an existing plugin id → `author-plugin`
+- Shared bit source, including `Theme` or `Chip` → `author-bit`
+- Yaml theme, named palette/flavor, or seven-token map → `author-palette`
 - Write modes (`add`, `option`, `animation`, `mdx`, `stylesheet`, `families`) without pack id and widget id (do not invent dest). Animation on a named one-widget pack uses the sole live widget id; do not invent a new card
 - Action runtime, thin `action.yml`, Marketplace flattened inputs
 - Takumi renderer internals (`packages/renderer`) except calling it

@@ -16,8 +16,9 @@ npx skills add ./.agents/profile-bits
 ```
 
 MUST NOT pass `--all`. MUST NOT pass `-a claude-code` or create `.claude/` /
-`.claude/skills`. This repo already commits relative symlinks (git `120000`):
-`.agents/skills/author{,-integration,-widget,-plugin}` →
+`.claude/skills`. This repo already commits relative symlinks (git `120000`)
+for exactly `author`, `author-bit`, `author-palette`, `author-integration`,
+`author-widget`, and `author-plugin` →
 `../profile-bits/skills/<id>`. Agents MUST NOT run `skills add` here (it can
 replace `120000` with copies).
 
@@ -33,9 +34,14 @@ replace `120000` with copies).
 Read `openspec/specs/author-plugin/spec.md` for Agent Plugin packaging,
 skill routing, contained templates, harness projections, evals, and validate.
 
-Four skills: `author` (router + ideate mode), `author-integration`,
-`author-widget`, `author-plugin`. No `author-bit`. Empty-args gallery does
-not inventory.
+Six skills: `author` (read-only router + ideate), `author-bit`,
+`author-palette`, `author-integration`, `author-widget`, and `author-plugin`.
+Empty-args gallery items 0–5 skip Before routing and do not inventory.
+
+`Theme` component and in-card `Chip` route to `author-bit`. Yaml `theme`,
+named flavor/palette data, and seven-token maps route to `author-palette`.
+Shields.io README images stay in sibling README tooling. Do not create
+`author-theme` or `author-badge`.
 
 ## Types
 

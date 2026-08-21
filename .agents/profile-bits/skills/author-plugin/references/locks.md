@@ -69,7 +69,7 @@ existing dir):
   that pack’s widget-entry `bitsUsed` arrays. Widget-entry `bitsUsed` does
   not close the pack-level hole. Keep any existing widget registry export
   (`<id>WidgetRegistry`). Do **not** copy the six-name starter over the
-  existing pack. `openspec=no`. No fifth skill / no `author-bit`.
+  existing pack. `openspec=no`. Do not create alias skill directories.
 
 Do not change another live pack’s defaults when scaffolding a **different**
 pack. Do not assume `packages/plugins/src/<id>/` exists until inventory says

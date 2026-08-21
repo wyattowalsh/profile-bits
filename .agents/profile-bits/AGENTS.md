@@ -1,6 +1,7 @@
 # profile-bits Agent Plugin
 
-Authoring skills for profile-bits integrations, widgets, and plugin packs.
+Six authoring skills for profile-bits bits, palettes, integrations, widgets,
+and plugin packs.
 Plugin-local only — product runtime stays in `packages/**`.
 
 Canonical plugin root (SSOT) is `.agents/profile-bits/` (`plugin.json`,
@@ -15,34 +16,42 @@ npx skills add ./.agents/profile-bits
 
 MUST NOT pass `--all`. MUST NOT pass `-a claude-code` or create `.claude/` /
 `.claude/skills`. This repo already commits relative symlinks (git `120000`):
-`.agents/skills/author{,-integration,-widget,-plugin}` →
+`.agents/skills/author`, `author-bit`, `author-palette`,
+`author-integration`, `author-widget`, and `author-plugin` →
 `../profile-bits/skills/<id>`. Agents MUST NOT run `skills add` here (it can
 replace `120000` with copies).
 
-`.agents/skills/<id>` entries for `author`, `author-integration`,
-`author-widget`, and `author-plugin` are **relative symlink** projections of
-`skills/<id>` — not a copied SSOT. Do not copy skills. Do not hand-edit a
+The six `.agents/skills/author*` entries are **relative symlink** projections
+of `skills/<id>` — not a copied SSOT. Do not copy skills. Do not hand-edit a
 second tree. Leave generated `.agents/skills/openspec-*` and
 `.openspec-target` untouched. Do not write `.cursor/skills/` (OpenSpec
 regenerates those).
 
 Consumer README / local CLI (`just render` / `pnpm render`) lives in the
 sibling plugin `.agents/profile-bits-readme` (skill `render`; harness
-projection `.agents/skills/render`). This authoring plugin stays four skills
-and MUST NOT implement the local CLI engine.
+projection `.agents/skills/render`). This authoring plugin stays exactly six
+skills and MUST NOT implement the local CLI engine.
 
 ## Skills
 
 | Skill | Role |
 | --- | --- |
 | `author` | Router. Classify, read contracts, hand off. Ideate/next/brainstorm ranks the next add. |
+| `author-bit` | Complete frozen shared bits; a 12th name is OpenSpec-first. |
+| `author-palette` | Yaml theme, named flavors, swatches, pairs, and seven-token palettes. |
 | `author-integration` | Data source under `packages/integrations/src/<id>/`. |
 | `author-widget` | New card on an existing pack (union bits into pack-level `bitsUsed`). |
 | `author-plugin` | Pack registry (`<id>Plugin`, derived integration union, pack-level `bitsUsed`). |
 
-Four skills only. No `author-bit`. Ideate is a **mode of `author`**, not a
-fifth skill. Empty args on `author` show a gallery (ideate is item 0) and
-**stop** — they do not inventory.
+Exactly six skills. Do not add `author-theme`, `author-badge`, `help`, or
+`info`. Ideate is a **mode of `author`**, not another skill. Empty args on
+`author` show gallery items 0–5 (ideate is item 0) and **stop** — they do not
+inventory.
+
+`Theme` the bit and in-card `Chip` route to `author-bit`. Root yaml `theme`,
+named flavors, and token maps route to `author-palette`. Bare “theme” returns
+to the router gallery. Shields.io README images route to sibling README
+tooling; no `author-badge` directory ships.
 
 A **plugin** is a pack of widgets plus declared integrations (1..N widgets,
 0..N integrations). Catalog SSOT is live `packages/core/src/types.ts`

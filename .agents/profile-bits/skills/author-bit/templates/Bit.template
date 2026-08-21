@@ -1,0 +1,9 @@
+import type { ReactNode } from "react";
+
+export type {{BitName}}Props = {
+  readonly children?: ReactNode;
+};
+
+export function {{BitName}}({ children }: {{BitName}}Props) {
+  return <div>{children}</div>;
+}

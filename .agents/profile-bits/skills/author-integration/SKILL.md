@@ -6,7 +6,8 @@ description: >-
   existing FIRST_PARTY_INTEGRATION_IDS id is allowed when dest is empty or new;
   if dest client.ts exists, stop. A new id needs OpenSpec first. Use when
   adding a WakaTime-class API, GitHub client, REST/GraphQL, auth, scopes, or
-  cache keys. NOT for widgets (author-widget), packs (author-plugin), a second
+  cache keys. NOT for shared bits (author-bit), yaml themes or named palettes
+  (author-palette), widgets (author-widget), packs (author-plugin), a second
   pack for an existing plugin id, silent catalog append, live GitHub, REST
   /languages, flattened plugin_*_*_* inputs, unauthenticated GitHub, MCP /
   mcp.json, or dest paths that use ../.
@@ -45,6 +46,8 @@ never invent `plugin_*_*_*`.
 | `github` / add github | Implement existing `github` id — overwrite gate: stop if `client.ts` exists |
 | `fetch-policy` | GitHub crawl locks only (load [github-fetch](references/github-fetch.md)). Do not copy templates. |
 | `wakatime` / new API / data source | Integration only — stop if dest `client.ts` exists; OpenSpec for a new id |
+| `Theme` / `Chip` / shared bit | Stop — route to `author-bit` |
+| yaml `theme` / named palette / flavor / tokens | Stop — route to `author-palette` |
 | widget / card / `languages` option | Stop — route to `author-widget` |
 | new pack / new plugin / first-party id | Stop — route to `author-plugin` |
 | MCP / `mcp.json` | Refuse. No `mcp.json`. |
@@ -54,10 +57,12 @@ never invent `plugin_*_*_*`.
 ### Auto-detect
 
 1. New data source, WakaTime-class API, GitHub client, REST/GraphQL, auth, scopes, cache keys → **this skill**.
-2. New card / widget option on an existing pack → **`author-widget`**.
-3. New pack / extra first-party plugin id → **`author-plugin`**.
-4. Completing an id already in live `FIRST_PARTY_INTEGRATION_IDS` stays here. Do not create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`. If dest `client.ts` exists, **stop**.
-5. MCP / `mcp.json` → refuse. Dest `../` → refuse.
+2. Shared bit, `Theme` component, or in-card `Chip` → **`author-bit`**.
+3. Yaml theme, named flavor, or palette tokens → **`author-palette`**.
+4. New card / widget option on an existing pack → **`author-widget`**.
+5. New pack / extra first-party plugin id → **`author-plugin`**.
+6. Completing an id already in live `FIRST_PARTY_INTEGRATION_IDS` stays here. Do not create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`. If dest `client.ts` exists, **stop**.
+7. MCP / `mcp.json` → refuse. Dest `../` → refuse.
 
 ### Empty args
 

@@ -2,236 +2,58 @@
   "skill_name": "author",
   "evals": [
     {
-      "id": "route-wakatime-integration",
-      "prompt": "Add a WakaTime integration so profile widgets can show coding time stats.",
-      "expected_output": "Routes to author-integration to complete the existing wakatime data source. Does not create a second wakatime pack. Does not silently expand FIRST_PARTY_* without OpenSpec.",
-      "assertions": [
-        "Routes to author-integration",
-        "Treats WakaTime as an integration / data source to complete, not a second plugin pack",
-        "Does not create a second wakatime pack",
-        "Does not expand FIRST_PARTY_PLUGIN_IDS or FIRST_PARTY_INTEGRATION_IDS without OpenSpec",
-        "Does not route the primary work to author-plugin",
-        "Does not invent flattened Action inputs for WakaTime"
-      ]
-    },
-    {
-      "id": "route-languages-option",
-      "prompt": "Add a new option to the languages widget.",
-      "expected_output": "Routes to author-widget on the existing github pack. Requires an OpenSpec delta for the yaml schema first. Does not add a flattened Action input.",
-      "assertions": [
-        "Routes to author-widget",
-        "Keeps the option on the existing github pack (not a new pack)",
-        "Requires an OpenSpec delta first because yaml schema is public API",
-        "Does not invent a plugin_github_languages_* or other flattened Action input",
-        "Does not route to author-integration"
-      ]
-    },
-    {
-      "id": "route-new-pack-github-static",
-      "prompt": "Create a new plugin pack that uses the github and static integrations.",
-      "expected_output": "Routes to author-plugin for pack registry and derived integration union. Requires OpenSpec before expanding first-party plugin ids.",
-      "assertions": [
-        "Routes to author-plugin",
-        "Treats this as a new pack, not a silent catalog add",
-        "Requires OpenSpec before expanding FIRST_PARTY_PLUGIN_IDS",
-        "References existing github and static integrations rather than inventing new first-party packs for them",
-        "Does not treat github+static as a WakaTime-class data-source-only request"
-      ]
-    },
-    {
-      "id": "route-css-animation-gif-apng",
-      "prompt": "Add a widget with CSS animation for gif and apng output.",
-      "expected_output": "Routes to author-widget on an existing pack. CSS @keyframes are authoring input; APNG files use .png; default SVG stays a baked still.",
-      "assertions": [
-        "Routes to author-widget",
-        "Does not create a new pack or new integration for animation",
-        "Treats CSS @keyframes as authoring input to renderAnimation, not GitHub SVG runtime",
-        "Notes APNG output is named .png",
-        "Keeps default SVG as a baked still"
-      ]
-    },
-    {
-      "id": "route-widget-mdx-no-source",
-      "prompt": "Drop in a widget.mdx file with no source field.",
-      "expected_output": "Routes to author-widget. Prefer omit source; canonical filename widget.mdx.",
-      "assertions": [
-        "Routes to author-widget",
-        "Prefers omitting the source field",
-        "Uses canonical widget.mdx rather than inventing a source path",
-        "Does not route to author-plugin",
-        "Does not route to author-integration"
-      ]
-    },
-    {
-      "id": "route-tailwind-stylesheets",
-      "prompt": "Make a Tailwind stylesheets widget.",
-      "expected_output": "Routes to author-widget. Takumi-safe tw/className only on div/span/img; bits use typed props, never tw. Not a new pack or renderer change.",
-      "assertions": [
-        "Routes to author-widget",
-        "Requires Takumi-safe tw and/or className (not react-dom or Radix/shadcn DOM)",
-        "Composes bits rather than putting bits in yaml",
-        "Does not route to renderer internals or docs playground",
-        "Does not create a new first-party pack for Tailwind"
-      ]
-    },
-    {
-      "id": "route-md-families-code-starry-night",
-      "prompt": "Swap md.families.code to starry-night.",
-      "expected_output": "Routes to author-widget. Exclusive family swap; do not stack rehype-pretty-code with starry-night.",
-      "assertions": [
-        "Routes to author-widget",
-        "Treats this as an exclusive md.families.code swap",
-        "Does not stack pretty-code and starry-night",
-        "Does not route to author-integration",
-        "Does not invent a flattened Action input for the family"
-      ]
-    },
-    {
-      "id": "ideate-next-best",
-      "prompt": "What should I add next?",
-      "expected_output": "Loads next.md. Inventories live FIRST_PARTY_* plus on-disk holes. Rank 1b is any live pack missing pack-level bitsUsed after a re-read (kind=pack, handoff=author-plugin, openspec=no). Does not assume github is that hole (githubPlugin.bitsUsed is on disk). If no live pack lacks pack-level bitsUsed, does not emit a 1b row. Then 1-2 runners-up. Prints the table, names the handoff skill, and stops. Does not assume a missing pack dir or an absent packages/bits tree. Writes no files, copies no templates, and does not recommend just generate-action / just generate-docs.",
-      "assertions": [
-        "Enters ideate/next mode (not empty-args gallery stop)",
-        "Reads packages/core/src/types.ts FIRST_PARTY_* registries",
-        "Ranks pack-level bitsUsed missing (rank 1b) only when a live pack actually lacks pack-level bitsUsed",
-        "Does not treat github as today's missing pack-level bitsUsed hole",
-        "Prints the table, names the handoff skill, and stops (does not continue mutating Handoff)",
-        "Does not treat a named pack id's missing dir or an absent packages/bits tree as today's assumed hole",
-        "Includes an output table with kind, why, target, openspec, handoff",
-        "Does not write files or copy templates",
-        "Does not recommend just generate-action or just generate-docs"
-      ]
-    },
-    {
-      "id": "ideate-bit-vs-widget",
-      "prompt": "What should I add next? Should we start with bits?",
-      "expected_output": "Does not always pick bits first. Rank 1b (pack present, pack-level bitsUsed missing) outranks bits when that hole exists after a re-read. Rank 2 (frozen 11 / packages/bits) fires only when bits are actually missing and no rank 1/1b hole remains. Does not assume github is a missing pack or today's 1b hole. bit-checklist only when kind=bit wins. No author-bit skill. Writes no files.",
-      "assertions": [
-        "Does not always pick packages/bits first",
-        "Ranks pack-level bitsUsed missing (rank 1b) above bits when a live pack exists without pack-level bitsUsed",
-        "Does not assume github is today's missing pack dir or missing pack-level bitsUsed hole",
-        "Uses handoff bit-checklist only when kind=bit wins",
-        "Does not create an author-bit skill",
-        "Writes no files"
-      ]
-    },
-    {
-      "id": "ideate-existing-wakatime",
-      "prompt": "What next? Maybe another WakaTime pack?",
-      "expected_output": "Ids already include wakatime. No second pack. Prefer complete an existing pack or integration hole. Does not silently append FIRST_PARTY_*.",
-      "assertions": [
-        "Notes wakatime is already in FIRST_PARTY_PLUGIN_IDS and/or FIRST_PARTY_INTEGRATION_IDS",
-        "Refuses a second wakatime pack",
-        "Prefers completing an existing pack or integration",
-        "Does not silently append FIRST_PARTY_*",
-        "Writes no files"
-      ]
-    },
-    {
-      "id": "ideate-needs-integration",
-      "prompt": "I want a card for a brand-new time-tracker API we do not have yet. What first?",
-      "expected_output": "Named/inferred kind needs a new API → author-integration first. Does not start at author-widget. OpenSpec if the integration id is new.",
-      "assertions": [
-        "Hands off to author-integration first",
-        "Does not start by scaffolding a widget or a new pack",
-        "Treats a missing API as an integration hole",
-        "Notes OpenSpec before adding an id not in FIRST_PARTY_INTEGRATION_IDS",
-        "Writes no files from author ideate"
-      ]
-    },
-    {
-      "id": "ideate-empty-args-not-run",
+      "id": "empty-args-lists-six",
       "prompt": "/author",
-      "expected_output": "Empty-args/help gallery items 0-3 only (ideate is item 0). Skips Before routing. Does not read types.ts or OpenSpec contracts. Does not inventory. Does not load next.md. Does not write files.",
-      "assertions": [
-        "Shows the empty-args gallery",
-        "Lists ideate/next/brainstorm as gallery item 0",
-        "Gallery items are 0-3 only",
-        "Skips Before routing",
-        "Does not read packages/core/src/types.ts",
-        "Does not load next.md",
-        "Does not write files"
-      ]
+      "expected_output": "Shows gallery items 0-5 for ideate plus five specialized skills and stops before Before routing.",
+      "assertions": ["Lists exactly six skill roles", "Skips types.ts and OpenSpec reads", "Does not inventory or write"]
     },
     {
-      "id": "ideate-named-kind-honor",
-      "prompt": "Add a widget on rss",
-      "expected_output": "Named kind is widget. Routes to author-widget on the existing rss pack. Does not load next.md. Does not inventory. Does not redirect to complete pack-level bitsUsed (rank 1b) on any pack id, or any other unprompted hole.",
-      "assertions": [
-        "Routes to author-widget",
-        "Honors the named widget kind",
-        "Targets the existing rss pack",
-        "Does not load next.md",
-        "Does not redirect to complete pack-level bitsUsed (rank 1b) on any pack id or another unprompted hole first",
-        "Does not create a second rss pack"
-      ]
+      "id": "routes-theme-bit-to-author-bit",
+      "prompt": "Complete the Theme bit in packages/bits.",
+      "expected_output": "Routes the named Theme UI primitive to author-bit.",
+      "assertions": ["Routes to author-bit", "Names packages/bits/src/Theme.tsx", "Does not route to author-palette"]
     },
     {
-      "id": "ideate-refuse-mcp",
-      "prompt": "Add an MCP server so agents can generate widgets over MCP.",
-      "expected_output": "Refuse. No mcp.json. Does not inventory a substitute add.",
-      "assertions": [
-        "Refuses MCP",
-        "Does not create mcp.json",
-        "Does not route to author-integration, author-widget, or author-plugin for MCP",
-        "Does not inventory the next product add as a consolation"
-      ]
+      "id": "routes-yaml-theme-to-author-palette",
+      "prompt": "Add a named yaml theme palette with custom swatches.",
+      "expected_output": "Routes yaml theme and named palette work to author-palette.",
+      "assertions": ["Routes to author-palette", "Distinguishes it from the Theme bit", "Does not invent a flattened input"]
     },
     {
-      "id": "ideate-refuse-flatten",
-      "prompt": "Add Action input plugin_github_stats_include so Marketplace users can set include without yaml.",
-      "expected_output": "Refuse flattened plugin_*_*_* input. Thin Action only. Yaml remains SSOT.",
-      "assertions": [
-        "Refuses plugin_github_stats_include",
-        "Refuses plugin_<plugin>_<widget>_<option> names",
-        "Keeps thin Action inputs from ActionInputsSchema",
-        "Does not edit action.yml to add the flattened input"
-      ]
+      "id": "refuse-author-theme-dir",
+      "prompt": "Create an author-theme skill directory.",
+      "expected_output": "Refuses the alias and explains Theme bit versus author-palette routing.",
+      "assertions": ["Does not create author-theme", "Names author-bit for Theme UI", "Names author-palette for yaml theme"]
     },
     {
-      "id": "route-refuse-rest-languages",
-      "prompt": "Fetch language stats from REST /languages so we can skip GraphQL.",
-      "expected_output": "Refuse REST /languages. Languages use REST crawl, filter forks/archived then cap 500, GraphQL nodes(ids:) batches of 100. Does not inventory a substitute add.",
-      "assertions": [
-        "Refuses REST /languages",
-        "Names the lock (never REST /languages)",
-        "Does not route to author-integration, author-widget, or author-plugin to implement REST /languages",
-        "Does not inventory the next product add as a consolation"
-      ]
+      "id": "routes-chip-badge-to-author-bit",
+      "prompt": "Add a pill badge inside profile-bits cards using Chip.",
+      "expected_output": "Routes the in-card Chip primitive to author-bit.",
+      "assertions": ["Routes to author-bit", "Treats this as in-card Chip", "Does not create author-badge"]
     },
     {
-      "id": "route-refuse-unauth-github",
-      "prompt": "Call GitHub without a token so we stay under the unauthenticated 60/h/IP limit.",
-      "expected_output": "Refuse unauthenticated GitHub. Empty / \"\" / whitespace token fails the Action. Does not inventory a substitute add.",
-      "assertions": [
-        "Refuses unauthenticated GitHub",
-        "Treats empty / \"\" / whitespace github_token as a failing Action",
-        "Does not route to implement unauthenticated GitHub",
-        "Does not inventory the next product add as a consolation"
-      ]
+      "id": "routes-shields-readme-to-sibling",
+      "prompt": "Add Shields.io badge image rows to my README.",
+      "expected_output": "Routes README badge work to the sibling README plugin or add-badges.",
+      "assertions": ["Names sibling README tooling", "Does not route to author-bit for an img row", "Does not mutate"]
     },
     {
-      "id": "refuse-openspec-json",
-      "prompt": "Run openspec --json so I can see engine output.",
-      "expected_output": "Refuse openspec --json. Engine JSON is a subcommand flag only (pnpm exec openspec status --change <id> --json). Does not inventory a substitute add.",
-      "assertions": [
-        "Refuses openspec --json",
-        "States engine JSON is a subcommand flag only",
-        "Does not recommend or run openspec --json",
-        "Does not inventory the next product add as a consolation"
-      ]
+      "id": "refuse-author-badge-dir",
+      "prompt": "Create author-badge for all badge requests.",
+      "expected_output": "Refuses author-badge and applies Chip versus Shields routing.",
+      "assertions": ["Does not create author-badge", "Routes Chip to author-bit", "Routes Shields README to sibling tooling"]
     },
     {
-      "id": "refuse-local-cli-render",
-      "prompt": "Run just render / pnpm render so I can generate widgets locally without the Action.",
-      "expected_output": "Refuse to implement the local CLI engine here. Point to sibling plugin .agents/profile-bits-readme skill render. Does not implement runMain. Does not inventory a substitute add.",
-      "assertions": [
-        "Refuses to implement just render / pnpm render / local CLI in this authoring plugin",
-        "Names sibling plugin .agents/profile-bits-readme skill render",
-        "Does not implement runMain",
-        "Does not route to author-integration, author-widget, or author-plugin to build the local CLI",
-        "Does not inventory the next product add as a consolation"
-      ]
+      "id": "refuse-author-badge-as-skip-openspec-pack",
+      "prompt": "Use author-badge to add a new shields-fetching first-party pack without OpenSpec.",
+      "expected_output": "Refuses the alias and the skipped contract; a new pack is OpenSpec-first, then integration, plugin, and widget.",
+      "assertions": ["Requires OpenSpec first", "Names integration + plugin + widget flow", "Does not create author-badge"]
+    },
+    {
+      "id": "ideate-stops-no-copy",
+      "prompt": "What should I add next?",
+      "expected_output": "Re-reads live disk, ranks bit/palette/integration/widget/pack, prints the table and handoff, then stops.",
+      "assertions": ["Uses only bit, palette, integration, widget, or pack kinds", "Does not emit kind theme or badge", "Copies no templates and writes no files"]
     }
   ]
 }

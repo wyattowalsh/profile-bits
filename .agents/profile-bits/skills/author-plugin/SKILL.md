@@ -5,9 +5,10 @@ description: >-
   derived integration union, pack-level bitsUsed, defaults, and docsPath) into
   packages/plugins/src/{id}/. Completing an id already in FIRST_PARTY_PLUGIN_IDS
   is allowed; a new id needs OpenSpec first. Use when adding a pack registry,
-  plugin.ts, docsPath, or pack defaults. NOT for a card on an existing pack
-  (author-widget), a new data source (author-integration), a second pack for an
-  existing id, silent FIRST_PARTY_* append, flattened plugin_*_*_* Action
+  plugin.ts, docsPath, or pack defaults. NOT for a shared bit (author-bit),
+  yaml themes or named palettes (author-palette), a card on an existing pack
+  (author-widget), a new data source (author-integration), a second pack for
+  an existing id, silent FIRST_PARTY_* append, flattened plugin_*_*_* Action
   inputs, MCP / mcp.json, or dest paths that use ../.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.
@@ -70,6 +71,8 @@ Do not write files. Do not inventory live packs or the next product add
 | *(empty)* / `help` | Empty-args gallery then **stop** (no writes, no inventory) |
 | New pack / pack registry / `plugin.ts` / `docsPath` / pack defaults | **Pack** (this skill) |
 | Complete existing id in `FIRST_PARTY_PLUGIN_IDS` | **Pack** for that id (no second directory) |
+| Shared `Theme` / `Chip` / other bit | Stop → `author-bit` |
+| yaml `theme` / named palette / flavor / tokens | Stop → `author-palette` |
 | New card / widget on an **existing** pack | Stop → `author-widget` |
 | New data source / client / auth / scopes | Stop → `author-integration` |
 | Second pack for an id already in `FIRST_PARTY_PLUGIN_IDS` | **Refuse** duplicate id |
@@ -95,8 +98,9 @@ Direct “add MCP” / dest `../packages/plugins/...` → **refuse**.
 8. `PluginIdentitySchema` has no `bitsUsed`. Use `satisfies PluginIdentity & { bitsUsed: typeof … }`. Do not edit `packages/core`.
 9. For a **new** pack, starter `bitsUsed` is six layout names only (`Theme`, `Frame`, `Stack`, `Row`, `Text`, `Muted`). Do not stamp `Stat`, `Bar`, `Chip`, `Avatar`, `Divider` into the pack starter. When unioning `bitsUsed`, update `plugin.test.ts`; do not leave a hardcoded Theme, Frame, Stack, Row, Text, Muted literal array. Do not copy that six-name starter over an existing pack.
 10. MUST NOT rewrite `plugin-contract`, `widget-contract`, or `integration-contract`. Completing an existing catalog id is allowed.
-11. Complete-existing: inventory live files; extend rather than overwrite; keep any existing widget registry export; if a live pack has widget-entry `bitsUsed` and no pack-level `bitsUsed`, attach pack-level `{{PLUGIN_ID_UPPER}}_BITS_USED` as the unique union of that pack’s widget-entry arrays (do not copy the six-name starter over an existing pack); `openspec=no`; no fifth skill / no `author-bit`; do not shrink any live pack-level `{{ID}}_BITS_USED`; copy templates only into empty or new directories.
+11. Complete-existing: inventory live files; extend rather than overwrite; keep any existing widget registry export; if a live pack has widget-entry `bitsUsed` and no pack-level `bitsUsed`, attach pack-level `{{PLUGIN_ID_UPPER}}_BITS_USED` as the unique union of that pack’s widget-entry arrays (do not copy the six-name starter over an existing pack); `openspec=no`; do not create alias skill directories; do not shrink any live pack-level `{{ID}}_BITS_USED`; copy templates only into empty or new directories.
 12. Empty args / help → gallery and **stop**. Do not inventory. Do not write.
+13. Shared bit sources route to `author-bit`; yaml themes and named palettes route to `author-palette`. Never create `author-theme` or `author-badge`.
 
 ## Pack identity
 
@@ -163,7 +167,7 @@ Complete-existing pack (id already in `FIRST_PARTY_PLUGIN_IDS`):
 - Keep any existing widget registry export (`<id>WidgetRegistry`; github’s
   `githubWidgetRegistry` is one instance, not the only one).
 - Do **not** copy the six-name starter over an existing pack. `openspec=no`.
-  No fifth skill / no `author-bit`. Do not shrink any live pack-level
+  Do not create alias skill directories. Do not shrink any live pack-level
   `{{ID}}_BITS_USED`.
 
 ## Templates
@@ -204,7 +208,7 @@ Completing an existing id does not append the enum.
    export. If a live pack has widget-entry `bitsUsed` and no pack-level
    `bitsUsed`, attach pack-level `{{PLUGIN_ID_UPPER}}_BITS_USED` as the unique
    union of that pack’s widget-entry arrays; do **not** copy the six-name
-   starter over the existing pack (`openspec=no`; no `author-bit`). Do not
+   starter over the existing pack (`openspec=no`). Do not
    shrink any live pack-level `{{ID}}_BITS_USED`. Copy templates only into
    empty or new directories (`plugin.ts`, `plugin.test.ts` — no `index.ts`).
    For a new empty dir: keep `integrations = deriveIntegrationUnion(...)`.

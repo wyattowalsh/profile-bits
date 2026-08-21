@@ -1,0 +1,28 @@
+export const {{FAMILY_CONSTANT}}_FLAVORS: readonly ThemeFlavor[] = [
+  {
+    id: "{{THEME_ID}}",
+    family: "{{FAMILY_ID}}",
+    label: "{{LABEL}}",
+    polarity: "{{POLARITY}}",
+    pair: "{{PAIR_ID}}",
+    license: "{{LICENSE}}",
+    sourceUrl: "{{SOURCE_URL}}",
+    swatches: {
+      background: "{{BACKGROUND_HEX}}",
+      surface: "{{SURFACE_HEX}}",
+      foreground: "{{FOREGROUND_HEX}}",
+      subdued: "{{SUBDUED_HEX}}",
+      emphasis: "{{EMPHASIS_HEX}}",
+      outline: "{{OUTLINE_HEX}}",
+    },
+    roles: {
+      bg: "background",
+      card: "surface",
+      text: "foreground",
+      muted: "subdued",
+      accent: "emphasis",
+      border: "outline",
+      font: THEME_FONT,
+    },
+  },
+];

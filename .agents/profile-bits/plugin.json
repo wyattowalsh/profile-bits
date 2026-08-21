@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "profile-bits",
   "version": "0.1.0",
-  "description": "Author profile-bits integrations, plugins, and widgets.",
+  "description": "Author profile-bits bits, palettes, integrations, widgets, and plugin packs.",
   "license": "MIT",
   "keywords": [
     "profile-bits",

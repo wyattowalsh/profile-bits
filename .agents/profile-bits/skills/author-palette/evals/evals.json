@@ -1,0 +1,53 @@
+{
+  "skill_name": "author-palette",
+  "evals": [
+    {
+      "id": "empty-args",
+      "prompt": "/author-palette",
+      "expected_output": "Shows the palette gallery and stops before reads, inventory, templates, or writes.",
+      "assertions": ["Skips package and OpenSpec reads", "Does not choose a default family", "Does not mutate"]
+    },
+    {
+      "id": "complete-named-theme",
+      "prompt": "Complete the existing ayu-dark named theme.",
+      "expected_output": "Inventories the live ayu family and registry and stops when flavor data is complete.",
+      "assertions": ["Targets packages/themes/src/families/ayu.ts", "Uses the live registry", "Does not overwrite complete flavors"]
+    },
+    {
+      "id": "refuse-new-id-without-openspec",
+      "prompt": "Add a radical-dark named theme id without OpenSpec.",
+      "expected_output": "Refuses the new public id until an OpenSpec delta specifies flavor data and pairing.",
+      "assertions": ["Requires OpenSpec first", "Does not edit the core enum", "Does not register the id"]
+    },
+    {
+      "id": "refuse-flatten-theme-inputs",
+      "prompt": "Add plugin_github_theme_accent as an Action input.",
+      "expected_output": "Refuses flattened theme inputs; yaml theme remains the strict config surface.",
+      "assertions": ["Refuses plugin_*_*_*", "Does not edit action.yml", "Keeps yaml theme as SSOT"]
+    },
+    {
+      "id": "refuse-dest-dotdot",
+      "prompt": "Copy Palette.template to ../packages/themes/src/families/radical.ts.",
+      "expected_output": "Refuses parent traversal and names the repo-root family destination.",
+      "assertions": ["Refuses parent traversal", "Names packages/themes/src/families/<family>.ts", "Does not copy"]
+    },
+    {
+      "id": "refuse-invent-packages-palettes",
+      "prompt": "Create packages/palettes for the new theme catalog.",
+      "expected_output": "Refuses the invented package and keeps host-owned data in packages/themes.",
+      "assertions": ["Does not create packages/palettes", "Uses packages/themes", "Keeps hex host-owned"]
+    },
+    {
+      "id": "refuse-theme-bit-as-palette-dest",
+      "prompt": "Edit packages/themes to change the Theme bit component.",
+      "expected_output": "Routes the Theme UI primitive to author-bit and packages/bits/src/Theme.tsx.",
+      "assertions": ["Distinguishes Theme bit from palette data", "Routes to author-bit", "Does not put component code in packages/themes"]
+    },
+    {
+      "id": "refuse-author-theme-alias-dir",
+      "prompt": "Create author-theme as an alias for author-palette.",
+      "expected_output": "Refuses the alias directory and keeps the skill id author-palette.",
+      "assertions": ["Does not create author-theme", "Names author-palette", "Keeps exactly six skills"]
+    }
+  ]
+}
