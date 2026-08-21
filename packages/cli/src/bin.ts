@@ -9,11 +9,13 @@ import {
 } from "./errors.ts";
 import {
   collectSecrets,
+  collectSecretsFromArgv,
   defaultStderr,
   defaultStdout,
   installStdoutEpipeGuard,
   redactOutput,
 } from "./io.ts";
+import { mapInputs } from "./map-inputs.ts";
 import { type ParseCliOptions, parseCli } from "./program.ts";
 
 export type RunCliOptions = ParseCliOptions & {
@@ -37,10 +39,12 @@ export async function runCli(options: RunCliOptions = {}): Promise<number> {
   const env = options.env ?? process.env;
   const stdout = options.stdout ?? defaultStdout;
   const stderr = options.stderr ?? defaultStderr;
+  const args = options.args ?? process.argv.slice(2);
+  let parsed: Awaited<ReturnType<typeof parseCli>> | undefined;
   try {
-    const parsed = await parseCli({
+    parsed = await parseCli({
       env,
-      args: options.args,
+      args,
       stdout,
       stderr,
       colors: options.colors,
@@ -62,7 +66,11 @@ export async function runCli(options: RunCliOptions = {}): Promise<number> {
     if (isCliExitError(error)) {
       return error.exitCode;
     }
-    stderr(formatUnexpectedError(error, env));
+    const secrets =
+      parsed === undefined
+        ? collectSecretsFromArgv(args, env)
+        : collectSecrets(mapInputs(parsed), env);
+    stderr(formatUnexpectedError(error, secrets));
     return EXIT_OPERATIONAL;
   } finally {
     uninstallEpipe();
@@ -88,15 +96,23 @@ if (isMain()) {
       if (error instanceof CliExitError) {
         process.exit(error.exitCode);
       }
-      process.stderr.write(`${formatUnexpectedError(error, process.env)}\n`);
+      process.stderr.write(
+        `${formatUnexpectedError(
+          error,
+          collectSecretsFromArgv(process.argv.slice(2), process.env),
+        )}\n`,
+      );
       process.exit(EXIT_OPERATIONAL);
     },
   );
 }
 
-function formatUnexpectedError(error: unknown, env: NodeJS.ProcessEnv): string {
+function formatUnexpectedError(
+  error: unknown,
+  secrets: readonly string[],
+): string {
   return redactOutput(
     error instanceof Error ? error.message : String(error),
-    collectSecrets({}, env),
+    secrets,
   );
 }

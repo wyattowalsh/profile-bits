@@ -32,6 +32,7 @@ catalog:
   "@clack/prompts": "1.7.0"
   tsx: "4.23.12"
   tsdown: "0.22.14"
+  "@types/node": "24.13.3"
 allowBuilds:
   "@fission-ai/openspec": true
   esbuild: true

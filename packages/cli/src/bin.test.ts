@@ -164,4 +164,45 @@ describe("runCli", () => {
     expect(stderr.join("\n")).not.toContain(TOKEN);
     expect(stderr.join("\n")).toContain("[redacted]");
   });
+
+  it("redacts --github-token argv values in unexpected errors", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const code = await runCli({
+      args: ["render", "--github-token", TOKEN, "--not-a-real-flag"],
+      env: {},
+      cwd: "/repo",
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text),
+      colors: false,
+      stdinIsTTY: false,
+      stderrIsTTY: false,
+      installSignals: false,
+      onExit: (): never => {
+        throw new Error(`unexpected ${TOKEN}`);
+      },
+    });
+    expect(code).toBe(1);
+    expect(stderr.join("\n")).not.toContain(TOKEN);
+    expect(stderr.join("\n")).toContain("[redacted]");
+  });
+
+  it("accepts --no-color without failing", async () => {
+    runMain.mockResolvedValue(RESULT);
+    const result = await invoke(["render", "--no-color"], {
+      GITHUB_TOKEN: TOKEN,
+    });
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe("profile-bits/stats.svg");
+  });
+
+  it("accepts NO_COLOR without failing", async () => {
+    runMain.mockResolvedValue(RESULT);
+    const result = await invoke(["render"], {
+      GITHUB_TOKEN: TOKEN,
+      NO_COLOR: "1",
+    });
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe("profile-bits/stats.svg");
+  });
 });

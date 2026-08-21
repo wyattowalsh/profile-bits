@@ -42,6 +42,7 @@ export async function handleRender(
       : { output: options.stderrStream }),
     signal: controller.signal,
     stderrIsTTY: options.stderrIsTTY ?? process.stderr.isTTY === true,
+    env: options.env,
   });
   const uninstallSignals =
     options.installSignals === true

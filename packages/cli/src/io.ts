@@ -79,6 +79,12 @@ export function formatJsonResult(result: JsonRenderResult): string {
   return JSON.stringify(payload);
 }
 
+const ARGV_SECRET_FLAGS = {
+  "--github-token": "github_token",
+  "--wakatime-token": "wakatime_token",
+  "--committer-token": "committer_token",
+} as const;
+
 export function collectSecrets(
   values: Readonly<Record<string, unknown>>,
   env: NodeJS.ProcessEnv,
@@ -95,6 +101,26 @@ export function collectSecrets(
     pushSecret(secrets, env[httpTokenEnv]);
   }
   return secrets;
+}
+
+export function collectSecretsFromArgv(
+  args: readonly string[],
+  env: NodeJS.ProcessEnv,
+): string[] {
+  const values: Record<string, unknown> = {};
+  for (let i = 0; i < args.length; i++) {
+    for (const [flag, key] of Object.entries(ARGV_SECRET_FLAGS)) {
+      const value = readFlagValue(args, i, flag);
+      if (value !== undefined) {
+        values[key] = value;
+      }
+    }
+    const httpTokenEnv = readFlagValue(args, i, "--http-token-env");
+    if (httpTokenEnv !== undefined) {
+      values.http_token_env = httpTokenEnv;
+    }
+  }
+  return collectSecrets(values, env);
 }
 
 export function redactOutput(text: string, secrets: readonly string[]): string {
@@ -151,14 +177,17 @@ export function startRenderSpinner(
     output?: Writable;
     signal?: AbortSignal;
     stderrIsTTY?: boolean;
+    env?: NodeJS.ProcessEnv;
   } = {},
 ): SpinnerResult | undefined {
   if (!shouldShowSpinner(presentation, options.stderrIsTTY ?? false)) {
     return undefined;
   }
+  const disableColor = shouldDisableSpinnerColor(presentation, options.env);
   const spinner = createSpinner({
     output: options.output ?? process.stderr,
     ...(options.signal === undefined ? {} : { signal: options.signal }),
+    ...(disableColor ? { styleFrame: unstyledSpinnerFrame } : {}),
   });
   spinner.start("Rendering widgets");
   return spinner;
@@ -191,4 +220,42 @@ function pushSecret(secrets: string[], value: unknown): void {
     return;
   }
   secrets.push(trimmed);
+}
+
+function readFlagValue(
+  args: readonly string[],
+  index: number,
+  flag: string,
+): string | undefined {
+  const arg = args[index];
+  if (arg === undefined) {
+    return undefined;
+  }
+  const prefix = `${flag}=`;
+  if (arg.startsWith(prefix)) {
+    return arg.slice(prefix.length);
+  }
+  if (arg !== flag) {
+    return undefined;
+  }
+  const next = args[index + 1];
+  if (next === undefined || next.startsWith("--")) {
+    return undefined;
+  }
+  return next;
+}
+
+function hasNoColorEnv(env: NodeJS.ProcessEnv): boolean {
+  return env.NO_COLOR != null && env.NO_COLOR !== "";
+}
+
+function shouldDisableSpinnerColor(
+  presentation: Presentation,
+  env: NodeJS.ProcessEnv | undefined,
+): boolean {
+  return presentation.noColor || hasNoColorEnv(env ?? process.env);
+}
+
+function unstyledSpinnerFrame(frame: string): string {
+  return frame;
 }
