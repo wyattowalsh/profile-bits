@@ -23,7 +23,7 @@ catalog:
   "@biomejs/biome": "2.5.8"
   zod: "4.4.3"
   yaml: "2.9.0"
-  typescript: "5.9.3"
+  typescript: "7.0.2"
   "@optique/core": "1.2.1"
   "@optique/run": "1.2.1"
   "@optique/zod": "1.2.1"
