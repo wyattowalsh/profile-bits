@@ -4,6 +4,10 @@ import {
   type Capabilities,
   parseConfig,
 } from "@profile-bits/core";
+import {
+  type WakatimeClient,
+  WakatimeClientError,
+} from "@profile-bits/integrations";
 import { describe, expect, it, vi } from "vitest";
 import {
   EngineError,
@@ -12,17 +16,27 @@ import {
   type RunEngineInput,
   runEngine,
 } from "./engine.ts";
+import { formatWorkflowError } from "./main.ts";
 import {
   INSTALLATION_COMMIT_MESSAGE,
   type OutputPorts,
   USER_PAT_COMMIT_MESSAGE,
 } from "./output.ts";
+import { createWakatimeRenderWidget } from "./render-wakatime.ts";
 
 const TOKEN = "ghs_test_token";
 const WAKATIME_TOKEN = "waka_secret_do_not_leak";
 
 const WAKATIME_ONLY_YAML = `version: 1
 format: svg
+plugins:
+  wakatime: {}
+`;
+
+const WAKATIME_OUTPUT_PAIR_YAML = `version: 1
+format: svg
+theme: catppuccin-mocha
+output_pair: true
 plugins:
   wakatime: {}
 `;
@@ -177,5 +191,74 @@ describe("runEngine wakatime publish probe", () => {
     expect(writeFiles).not.toHaveBeenCalled();
     expect(commitWidgets).not.toHaveBeenCalled();
     expect(gistWidgets).not.toHaveBeenCalled();
+  });
+
+  it("writes filename and filename-dark for coding when output_pair is true", async () => {
+    const writeFiles = vi.fn(async (files: { path: string }[]) =>
+      files.map((file) => file.path),
+    );
+
+    const result = await runEngine(
+      {
+        inputs: inputs({ output_action: "none" }),
+        config: parseConfig({ yaml: WAKATIME_OUTPUT_PAIR_YAML }),
+      },
+      {
+        probeCapabilities: () => PUBLIC_CAPABILITIES,
+        renderWidget: renderCoding,
+        writeFiles,
+      },
+    );
+
+    expect(writeFiles).toHaveBeenCalledOnce();
+    const written =
+      writeFiles.mock.calls[0]?.[0].map((file) => file.path) ?? [];
+    expect(written).toEqual([
+      "profile-bits/wakatime.svg",
+      "profile-bits/wakatime-dark.svg",
+    ]);
+    expect(result.files).toEqual(written);
+  });
+
+  it("throws EngineError without writing when coding 401 maps to fail_run", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const writeFiles = vi.fn(async (files: { path: string }[]) =>
+      files.map((file) => file.path),
+    );
+    const client: WakatimeClient = {
+      fetchStats: async () => {
+        throw new WakatimeClientError(
+          "fail_run",
+          `unauthorized ${WAKATIME_TOKEN}`,
+          401,
+        );
+      },
+    };
+
+    try {
+      await expect(
+        runEngine(loaded(), {
+          renderWidget: createWakatimeRenderWidget({ client }),
+          writeFiles,
+          probeCapabilities: () => PUBLIC_CAPABILITIES,
+        }),
+      ).rejects.toSatisfy((error: unknown) => {
+        if (!(error instanceof EngineError) || error.decision !== "fail_run") {
+          return false;
+        }
+        expect(error.message).toBe("widget coding fail run");
+        expect(formatWorkflowError(error)).toBe(
+          "fail_run widget coding fail run",
+        );
+        expect(error.message).not.toContain(WAKATIME_TOKEN);
+        expect(error.message).not.toContain(TOKEN);
+        return true;
+      });
+
+      expect(writeFiles).not.toHaveBeenCalled();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });

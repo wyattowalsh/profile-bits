@@ -5,6 +5,7 @@ import {
   selectCodingPayload,
   WakatimeStatsEnvelopeSchema,
 } from "@profile-bits/integrations";
+import { resolveTheme, THEME_REGISTRY } from "@profile-bits/themes";
 import { describe, expect, it, vi } from "vitest";
 import { renderCodingSvg } from "./render.js";
 
@@ -61,5 +62,28 @@ describe("renderCodingSvg", () => {
         limit: 8,
       }),
     ).resolves.toMatch(/<svg\b/);
+  });
+
+  it("bakes mocha card hex instead of Primer dark", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const envelope = WakatimeStatsEnvelopeSchema.parse(
+      loadFixture("last_7_days.json"),
+    );
+    const payload = selectCodingPayload(
+      envelope.data,
+      ["languages", "editors"],
+      8,
+    );
+    const svg = await renderCodingSvg({
+      payload,
+      include: ["languages", "editors"],
+      limit: 8,
+      theme: resolveTheme("catppuccin-mocha", THEME_REGISTRY),
+    });
+    expect(svg).toContain("#181825");
+    expect(svg).not.toContain("#0d1117");
+    expect(svg).not.toMatch(/<style\b|@keyframes|<animate\b|foreignObject/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });

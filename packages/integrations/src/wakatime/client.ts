@@ -6,6 +6,10 @@ import {
   type CodingIncludeToken,
   type CodingRange,
   isMissingToken,
+  publicUrlParts,
+  type RunLogEvent,
+  type RunLogSink,
+  redactLogMessage,
   redactSecrets,
   type SkipFailOutcome,
 } from "@profile-bits/core";
@@ -142,6 +146,7 @@ export type CreateWakatimeClientInput = {
   lookup?: DnsLookup;
   cache?: WakatimeRequestCache;
   sleep?: (ms: number) => Promise<void>;
+  logger?: RunLogSink;
 };
 
 export type WakatimeClient = {
@@ -172,6 +177,7 @@ export function createWakatimeClient(
   const lookup = input.lookup ?? dnsLookup;
   const cache = input.cache ?? new WakatimeRequestCache();
   const sleep = input.sleep ?? defaultSleep;
+  const logger = input.logger;
   const auth = encodeBasicAuthorization(token);
 
   return {
@@ -202,6 +208,7 @@ export function createWakatimeClient(
             auth,
             fetchImpl,
             sleep,
+            logger,
           });
         },
       );
@@ -263,10 +270,13 @@ async function fetchStatsUncached(input: {
   auth: string;
   fetchImpl: typeof fetch | undefined;
   sleep: (ms: number) => Promise<void>;
+  logger: RunLogSink | undefined;
 }): Promise<WakatimeStatsEnvelope> {
+  const secrets = [input.token, input.auth] as const;
   let lastOutcome: SkipFailOutcome = "fail_run";
   let lastStatus: number | undefined;
   for (let attempt = 1; attempt <= WAKATIME_MAX_ATTEMPTS; attempt += 1) {
+    const started = performance.now();
     let status = 0;
     let body: unknown;
     try {
@@ -280,7 +290,16 @@ async function fetchStatsUncached(input: {
       status = response.status;
       body = parseJsonText(await readCappedBody(response));
     } catch (error) {
+      const durationMs = elapsedMs(started);
       if (error instanceof WakatimeClientError) {
+        emitWakatimeCall(input.logger, {
+          url: input.url,
+          durationMs,
+          status: error.status ?? (status === 0 ? undefined : status),
+          outcome: error.outcome,
+          message: error.message,
+          secrets,
+        });
         throw error;
       }
       if (isRedirectFetchError(error)) {
@@ -291,26 +310,55 @@ async function fetchStatsUncached(input: {
           error instanceof Error
             ? error.message
             : "WakaTime stats request failed";
-        throw new WakatimeClientError(
-          "fail_widget",
-          redactSecrets(raw, [input.token, input.auth]),
-        );
+        const message = redactSecrets(raw, secrets);
+        emitWakatimeCall(input.logger, {
+          url: input.url,
+          durationMs,
+          outcome: "fail_widget",
+          message,
+          secrets,
+        });
+        throw new WakatimeClientError("fail_widget", message);
       }
     }
+    const durationMs = elapsedMs(started);
     const outcome = classifyWakatimeHttp({ status, body });
     lastOutcome = outcome;
     lastStatus = status;
     if (outcome === "render") {
       const parsed = WakatimeStatsEnvelopeSchema.safeParse(body);
       if (!parsed.success) {
+        emitWakatimeCall(input.logger, {
+          url: input.url,
+          durationMs,
+          status,
+          outcome: "fail_widget",
+          message: "WakaTime stats response is invalid",
+          secrets,
+        });
         throw new WakatimeClientError(
           "fail_widget",
           "WakaTime stats response is invalid",
           status,
         );
       }
+      emitWakatimeCall(input.logger, {
+        url: input.url,
+        durationMs,
+        status,
+        outcome: "ok",
+        secrets,
+      });
       return parsed.data;
     }
+    emitWakatimeCall(input.logger, {
+      url: input.url,
+      durationMs,
+      status,
+      outcome,
+      message: `WakaTime stats request failed (${status})`,
+      secrets,
+    });
     if (outcome !== "fail_after_backoff" || attempt === WAKATIME_MAX_ATTEMPTS) {
       throw new WakatimeClientError(
         outcome,
@@ -326,6 +374,45 @@ async function fetchStatsUncached(input: {
     `WakaTime stats request failed (${lastStatus ?? "unknown"})`,
     lastStatus,
   );
+}
+
+function elapsedMs(started: number): number {
+  return Math.max(0, Math.round(performance.now() - started));
+}
+
+function emitWakatimeCall(
+  logger: RunLogSink | undefined,
+  input: {
+    url: URL;
+    durationMs: number;
+    status?: number;
+    outcome?: RunLogEvent["outcome"];
+    message?: string;
+    secrets: readonly (string | undefined | null)[];
+  },
+): void {
+  if (logger == null) {
+    return;
+  }
+  const { host, path } = publicUrlParts(input.url.href);
+  logger({
+    v: 1,
+    src: "profile-bits",
+    kind: "call",
+    pkg: "integrations",
+    integration: "wakatime",
+    op: "GET",
+    duration_ms: input.durationMs,
+    host,
+    path,
+    ...(input.status != null && input.status !== 0
+      ? { status: input.status }
+      : {}),
+    ...(input.outcome != null ? { outcome: input.outcome } : {}),
+    ...(input.message != null && input.message !== ""
+      ? { message: redactLogMessage(input.message, input.secrets) }
+      : {}),
+  });
 }
 
 async function performGet(

@@ -5,6 +5,7 @@ import type { RequestOptions } from "node:https";
 import { dirname, join } from "node:path";
 import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
+import type { RunLogEvent } from "@profile-bits/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 import {
@@ -578,6 +579,9 @@ describe("createWakatimeClient", () => {
       headerValue(captured.options?.headers, "Host") ?? captured.url?.host;
     expect(host).toBe("wakatime.com");
     expect(host).not.toBe("1.1.1.1");
+    expect(headerValue(captured.options?.headers, "Authorization")).toBe(
+      encodeBasicAuthorization(TOKEN),
+    );
   }, 8_000);
 
   it("reuses the REST cache on a same-run hit", async () => {
@@ -839,5 +843,84 @@ describe("createWakatimeClient", () => {
     expect(message).not.toContain("Unsafe api_domain");
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it("emits a run-log call event on success when a logger is injected", async () => {
+    const events: RunLogEvent[] = [];
+    const fetchImpl = vi.fn(async () => jsonResponse(200, last7Days));
+    const client = createWakatimeClient({
+      token: TOKEN,
+      apiDomain: "wakatime.com",
+      fetch: fetchImpl,
+      lookup: publicLookup,
+      logger: (event) => {
+        events.push(event);
+      },
+    });
+    await client.fetchStats({
+      range: "last_7_days",
+      include: ["languages"],
+      limit: 8,
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      v: 1,
+      src: "profile-bits",
+      kind: "call",
+      pkg: "integrations",
+      integration: "wakatime",
+      outcome: "ok",
+      status: 200,
+      host: "wakatime.com",
+      path: "/api/v1/users/current/stats/last_7_days",
+    });
+    expect(events[0]?.duration_ms).toEqual(expect.any(Number));
+    expect(events[0]?.duration_ms).toBeGreaterThanOrEqual(0);
+    const haystack = JSON.stringify(events);
+    expect(haystack).not.toContain(TOKEN);
+    expect(haystack).not.toContain("api_key");
+    expect(haystack).not.toContain(encodeBasicAuthorization(TOKEN));
+    expect(haystack).not.toMatch(/Basic\s+\S+/i);
+  });
+
+  it("maps 401 to fail_run and may log a secret-free fail_run call event", async () => {
+    const events: RunLogEvent[] = [];
+    const fetchImpl = vi.fn(async () => jsonResponse(401));
+    const client = createWakatimeClient({
+      token: TOKEN,
+      apiDomain: "wakatime.com",
+      fetch: fetchImpl,
+      lookup: publicLookup,
+      logger: (event) => {
+        events.push(event);
+      },
+    });
+    await expect(
+      client.fetchStats({
+        range: "last_7_days",
+        include: ["languages"],
+        limit: 8,
+      }),
+    ).rejects.toMatchObject({
+      name: "WakatimeClientError",
+      outcome: "fail_run",
+      status: 401,
+      code: "http_unauthorized",
+    });
+    expect(events.length).toBeGreaterThanOrEqual(1);
+    expect(events[0]).toMatchObject({
+      kind: "call",
+      pkg: "integrations",
+      integration: "wakatime",
+      outcome: "fail_run",
+      status: 401,
+      host: "wakatime.com",
+      path: "/api/v1/users/current/stats/last_7_days",
+    });
+    const haystack = JSON.stringify(events);
+    expect(haystack).not.toContain(TOKEN);
+    expect(haystack).not.toContain("api_key");
+    expect(haystack).not.toContain(encodeBasicAuthorization(TOKEN));
+    expect(haystack).not.toMatch(/Basic\s+\S+/i);
   });
 });

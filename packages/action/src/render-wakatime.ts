@@ -10,6 +10,8 @@ import type {
   WidgetRenderRequest,
   WidgetRenderResult,
 } from "./engine.ts";
+import { mapRenderError } from "./map-render-error.ts";
+import { logWorkflowWarning } from "./workflow-log.ts";
 
 const MAPPED_WAKATIME_OUTCOMES = [
   "fail_widget",
@@ -78,9 +80,20 @@ async function renderWakatimeWidget(
       error instanceof WakatimeClientError &&
       isMappedWakatimeOutcome(error.outcome)
     ) {
+      if (error.outcome === "fail_widget") {
+        logWorkflowWarning({
+          message: "wakatime coding fail_widget",
+          group: "wakatime coding",
+        });
+      }
       return { id: request.id, outcome: error.outcome };
     }
-    throw error;
+    const mapped = mapRenderError(error);
+    logWorkflowWarning({
+      message: "wakatime coding fail_widget",
+      group: "wakatime coding",
+    });
+    return { id: request.id, ...mapped };
   }
 }
 
