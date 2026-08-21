@@ -1,0 +1,54 @@
+name: Check dist
+
+on:
+  push:
+    branches: [main, release/v1]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-dist-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-dist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Pack
+        run: node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/package-action.mts
+      - name: Check action size
+        run: node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/check-action-size.mts
+      # dist/ is gitignored on main; git diff --exit-code dist would always fail there.
+      # Compare only on the orphan branch (do not checkout release/v1 from main).
+      - name: Assert committed dist matches pack
+        if: ${{ github.ref_name == 'release/v1' }}
+        run: |
+          set -euo pipefail
+          if [[ ! -d dist ]]; then
+            echo "dist/ missing after pack" >&2
+            exit 1
+          fi
+          git add --force -A -- dist
+          if git diff --cached --quiet -- dist; then
+            echo "committed dist matches pack"
+            exit 0
+          fi
+          echo "committed dist does not match pack" >&2
+          git diff --cached --name-only -- dist >&2
+          git diff --cached --stat -- dist >&2
+          exit 1

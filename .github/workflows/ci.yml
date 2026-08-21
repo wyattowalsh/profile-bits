@@ -88,6 +88,16 @@ jobs:
         run: pnpm render --help
       - name: CLI typecheck
         run: pnpm --filter @profile-bits/cli exec tsc --noEmit
+      # NodeNext .js specifiers need tsx; type stripping does not rewrite them.
+      - name: Renderer still-format smoke
+        run: |
+          node --import ./packages/cli/node_modules/tsx/dist/loader.mjs --experimental-strip-types --disable-warning=ExperimentalWarning -e '
+          import { renderCli } from "./packages/renderer/src/cli.ts";
+          const svg = await renderCli("svg");
+          if (typeof svg !== "string" || !svg.includes("<svg") || /foreignObject/i.test(svg)) process.exit(1);
+          const png = await renderCli("png");
+          if (!(png instanceof Uint8Array) || png[0] !== 0x89) process.exit(1);
+          '
 
   action-dry-run:
     name: action dry-run
@@ -104,8 +114,126 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
+      # NodeNext .js specifiers need tsx; type stripping does not rewrite them.
       - name: Action dry-run
-        run: echo "placeholder: action dry-run (T120c)"
+        env:
+          INPUT_GITHUB_TOKEN: ${{ github.token }}
+          INPUT_USER: ${{ github.repository_owner }}
+          INPUT_DRY_RUN: "true"
+          INPUT_OUTPUT_ACTION: none
+          INPUT_ALLOW_SKIPPED: "true"
+          INPUT_CONFIG: ${{ runner.temp }}/profile-bits-toolkit.yml
+        run: |
+          cat > "$INPUT_CONFIG" <<'EOF'
+          version: 1
+          format: svg
+          theme: dark
+          output_pair: false
+          animated: false
+          timezone: UTC
+          output_dir: profile-bits
+          plugins:
+            github:
+              widgets:
+                demo: {}
+                repo:
+                  filename: repo
+                  repo: wyattowalsh/profile-bits
+                  include: [stars, forks, issues, license]
+                  avatar: true
+                  animate: false
+            http:
+              widgets:
+                chips:
+                  filename: chips
+                  preset: shieldcn
+                  types: [stars, forks, license]
+                  repo: wyattowalsh/profile-bits
+                  workflow: ci.yml
+            rss:
+              widgets:
+                feed:
+                  filename: feed
+                  url: https://github.com/wyattowalsh/profile-bits/releases.atom
+          EOF
+          node --import ./packages/cli/node_modules/tsx/dist/loader.mjs --experimental-strip-types --disable-warning=ExperimentalWarning packages/action/src/main.ts
+
+  live-wakatime:
+    name: live wakatime
+    if: ${{ secrets.WAKATIME_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      # Skip-if-missing: this job does not run when WAKATIME_TOKEN is unset.
+      # NodeNext .js specifiers need tsx; type stripping does not rewrite them.
+      - name: Live wakatime dry-run
+        env:
+          INPUT_GITHUB_TOKEN: ${{ github.token }}
+          INPUT_USER: ${{ github.repository_owner }}
+          INPUT_WAKATIME_TOKEN: ${{ secrets.WAKATIME_TOKEN }}
+          INPUT_DRY_RUN: "true"
+          INPUT_OUTPUT_ACTION: none
+          INPUT_ALLOW_SKIPPED: "true"
+          INPUT_CONFIG: ${{ runner.temp }}/profile-bits-wakatime.yml
+        run: |
+          cat > "$INPUT_CONFIG" <<'EOF'
+          version: 1
+          format: svg
+          plugins:
+            wakatime: {}
+          EOF
+          node --import ./packages/cli/node_modules/tsx/dist/loader.mjs --experimental-strip-types --disable-warning=ExperimentalWarning packages/action/src/main.ts
+
+  # Chips auth is none (no token). Json live smoke omitted — no invented URL.
+  live-http:
+    name: live http chips
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      # NodeNext .js specifiers need tsx; type stripping does not rewrite them.
+      - name: Live http chips dry-run
+        env:
+          INPUT_GITHUB_TOKEN: ${{ github.token }}
+          INPUT_USER: ${{ github.repository_owner }}
+          INPUT_DRY_RUN: "true"
+          INPUT_OUTPUT_ACTION: none
+          INPUT_ALLOW_SKIPPED: "true"
+          INPUT_CONFIG: ${{ runner.temp }}/profile-bits-chips.yml
+        run: |
+          cat > "$INPUT_CONFIG" <<'EOF'
+          version: 1
+          format: svg
+          plugins:
+            http:
+              widgets:
+                chips:
+                  filename: chips
+                  preset: shieldcn
+                  types: [stars, forks, license]
+                  repo: wyattowalsh/profile-bits
+                  workflow: ci.yml
+          EOF
+          node --import ./packages/cli/node_modules/tsx/dist/loader.mjs --experimental-strip-types --disable-warning=ExperimentalWarning packages/action/src/main.ts
 
   pack-smoke:
     name: native+WASM pack smoke
@@ -123,4 +251,7 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Native + WASM pack smoke
-        run: echo "placeholder: ncc --external + gnu .node + wasm (T121/T412)"
+        run: |
+          node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/package-action.mts
+          node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/check-action-size.mts
+
