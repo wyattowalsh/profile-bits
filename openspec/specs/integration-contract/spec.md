@@ -234,6 +234,216 @@ The rss client MUST parse with rss-parser **or equivalent** and MUST NOT use any
 - **WHEN** the rss client loads a feed
 - **THEN** it MUST parse a fetched XML string and MUST NOT call a parser-owned URL/fetch API
 
+### Requirement: http integration auth is optional
+Integration `http` MUST use auth `optional`. Optional MUST NOT mean “always send Authorization”. Unset or whitespace `http_token_env` MUST send no `Authorization` header. When `http_token_env` names an environment variable whose value is empty or whitespace, the widget MUST fail (`fail_widget`). When the named variable has a value, the client MUST send `Authorization: Bearer ${value}` unless the value already has scheme prefix `Bearer`, `token`, or `Basic` (case-insensitive) — then the client MUST send the raw value. Token values MUST never appear in yaml or logs. One http client instance MUST be shared per Action, playground, or generate preview run. Playground and docs preview MUST use fixtures and MUST NOT fetch live URLs.
+
+#### Scenario: unset http_token_env sends no Authorization
+- **WHEN** `http_token_env` is omitted or whitespace
+- **THEN** no `Authorization` header MUST be sent
+
+#### Scenario: named env empty fails widget
+- **WHEN** `http_token_env` names a variable whose value is empty or whitespace
+- **THEN** the widget MUST fail and MUST NOT send a request with an empty Authorization
+
+#### Scenario: Bearer vs raw scheme
+- **WHEN** the named env value has no scheme prefix
+- **THEN** the client MUST send `Authorization: Bearer ${value}`; when the value already starts with `Bearer`, `token`, or `Basic` (case-insensitive), the client MUST send the raw value
+
+#### Scenario: Shared http client per run
+- **WHEN** two callers in one run use integration `http`
+- **THEN** they MUST share one client instance for that integration
+
+#### Scenario: Playground uses fixtures not live URLs
+- **WHEN** the docs playground at `/playground/http` previews the json widget
+- **THEN** it MUST use fixtures with zero live URLs
+
+### Requirement: http request cache and single-flight
+The http client MUST cache GET responses with key `(method, url, params, auth, headers)` for the run, where `auth` is `"none"` or `"bearer"` (never the secret) and `headers` are the canonicalized yaml extra headers (sorted, lowercase names). Concurrent callers of the same key MUST share one in-flight GET (single-flight). `params` MUST be sorted URL search params. Yaml headers MUST be forwarded on the GET. Required `Accept: application/json` and `User-Agent: profile-bits-http/0` MUST win over yaml extras with those names (any casing). Other allowed extras MUST still be forwarded. The cache key MUST use the canonicalized yaml extra headers, not the merged wire headers.
+
+#### Scenario: http cache key is method url params auth headers
+- **WHEN** an http request is cached
+- **THEN** the cache key MUST be `(method, url, params, auth, headers)` with `auth` `"none"` or `"bearer"`, MUST include canonicalized yaml headers, and MUST NOT include the token value
+
+#### Scenario: yaml headers are sent on GET
+- **WHEN** `widgets.json.headers` contains allowed extra headers
+- **THEN** the GET MUST include those headers and MUST NOT reuse a cached body from the same URL with a different header set
+
+#### Scenario: in-flight single-flight
+- **WHEN** two callers request the same url on one http client instance before the GET completes
+- **THEN** the client MUST issue one GET and MUST share that result
+
+#### Scenario: required Accept and User-Agent win over yaml extras
+- **WHEN** yaml extra headers include `Accept` or `User-Agent` under any casing
+- **THEN** the GET MUST send `Accept: application/json` and `User-Agent: profile-bits-http/0`, MUST still forward other allowed extras, and the cache key MUST use the yaml headers not the merged wire headers
+
+### Requirement: http https SSRF protections
+Http fetch MUST use https only. Redirects MUST use `redirect: "manual"` semantics: each hop MUST re-validate scheme, host, and resolved IPs; at most 5 hops; https→http MUST fail the widget. A 3xx response body MUST be cancelled or destroyed before the client follows `Location`. DNS lookup MUST return all A/AAAA records. Every address MUST be public unicast after IPv4-mapped conversion; loopback, link-local, private (`192.168.0.0/16` not `/8`), CGNAT, unique-local, multicast, unspecified, reserved, and IPv4-mapped forms of those ranges MUST fail the widget before connect. Mixed public A plus private AAAA MUST fail closed. The validated address set MUST be the addresses used for the TCP/TLS connection (DNS-rebinding pin). TLS server name MUST be the original hostname. When `createHttpClient` is constructed without `fetch`, GET MUST use DNS-pinned `https.request` and MUST NOT call `globalThis.fetch`. Fetch MUST abort after the widget `timeout_ms` (default 10000, max 20000). One abort signal MUST cover DNS lookup, every redirect hop, and body read for that `httpGet` attempt (MUST NOT start a new timer per hop). A `loadJson` retry MAY start a fresh `timeout_ms` deadline after backoff sleep. The client MUST abort if `Content-Length` exceeds 1048576 bytes or if accumulated (decompressed) body bytes exceed 1 MiB. Requests MUST send `User-Agent: profile-bits-http/0` and `Accept: application/json`. Metadata hostnames `metadata.google.internal`, `metadata.internal`, and `169.254.169.254` MUST fail before connect.
+
+#### Scenario: http scheme fails at parse or fetch
+- **WHEN** the configured url uses `http://`
+- **THEN** yaml parse MUST fail; when a redirect target uses `http://`, fetch MUST fail the widget
+
+#### Scenario: private or loopback address fails widget
+- **WHEN** the url host resolves to loopback, link-local, private, CGNAT, unique-local, multicast, unspecified, reserved, or IPv4-mapped forms of those ranges
+- **THEN** the widget MUST fail before connect
+
+#### Scenario: mixed A and AAAA fails closed
+- **WHEN** lookup returns a public A record and a private AAAA record
+- **THEN** the widget MUST fail before connect
+
+#### Scenario: oversize body fails widget
+- **WHEN** `Content-Length` is greater than 1048576 or accumulated body bytes exceed 1 MiB
+- **THEN** the widget MUST fail
+
+#### Scenario: metadata hostnames fail before connect
+- **WHEN** the url host is `metadata.google.internal`, `metadata.internal`, or `169.254.169.254`
+- **THEN** the widget MUST fail before connect
+
+#### Scenario: timeout bounds DNS hops and body for one attempt
+- **WHEN** http fetch performs DNS lookup, redirect hops, and body read for one `loadJson` attempt
+- **THEN** one `timeout_ms` abort signal MUST cover DNS, every hop, and the body, MUST NOT start a new timer per hop, and a retry MAY start a fresh deadline after backoff sleep
+
+#### Scenario: redirect body is cancelled before following Location
+- **WHEN** a json request returns HTTP 3xx with a `Location` header
+- **THEN** the client MUST cancel or destroy that response body before following the redirect
+
+#### Scenario: cross-origin 302 drops Authorization on hop 1
+- **WHEN** a token is present and the GET receives HTTP 302 to another https origin
+- **THEN** hop 0 MAY send `Authorization` and hop 1 MUST NOT send `Authorization`
+
+#### Scenario: same-origin 302 keeps Authorization
+- **WHEN** a token is present and the GET receives HTTP 302 whose `Location` is a same-origin path or relative URL
+- **THEN** the following hop MUST keep `Authorization`
+
+#### Scenario: Authorization drop is sticky across later hops
+- **WHEN** a token is present and the GET redirects from origin A to a foreign https origin B and then back to A
+- **THEN** `Authorization` MUST be dropped when the current hop origin differs from the `Location` origin, MUST NOT use hop-0 origin equality, and MUST NOT be sent on later hops including the return to A
+
+#### Scenario: chips auth none sends no Authorization on any hop
+- **WHEN** chips `auth` is `"none"`
+- **THEN** the client MUST NOT send `Authorization` on any hop
+
+#### Scenario: production GET pins DNS without global fetch
+- **WHEN** `createHttpClient` is constructed without `fetch`
+- **THEN** GET MUST use DNS-pinned `https.request` and MUST NOT call `globalThis.fetch`
+
+### Requirement: http HTTP skip and fail matrix
+Http HTTP outcomes MUST follow this matrix. Fail-after-backoff for http MUST retry with backoff then **fail the widget** (not `fail_job` / `fail_run`). A single json 429 or 5xx MUST NOT fail github widgets or the whole job unless json is the only enabled widget (see plugin-contract http-only non-render).
+
+| Outcome | Terminal |
+| --- | --- |
+| 401 / 404 | `fail_widget` (no retry) |
+| 403 / 429 / 5xx | retry then `fail_widget` |
+| 2xx non-JSON | `fail_widget` (no retry) |
+| timeout / SSRF | `fail_widget` |
+| JSON / jmespath throw | `fail_widget` (not skip) |
+
+Backoff MUST be 3 attempts at 200/400/800ms, honoring `Retry-After` capped at 10s. A `fail_widget` HTTP error message MUST include the hostname and status and MUST NOT include `url.href`, search, or hash. A `fail_widget` timeout message MUST include the hostname and `timeout_ms`. Hop-layer timeout MUST throw `HttpSsrfError("timeout")`; wrapping MAY append hostname and `timeout_ms`. `fail_widget` messages MUST never include token values.
+
+#### Scenario: http 401 and 404 fail the widget without retry
+- **WHEN** the JSON URL returns HTTP 401 or 404
+- **THEN** that widget MUST fail without retry and the job MUST NOT fail solely because of that status unless json is the only enabled widget
+
+#### Scenario: http 403 429 and 5xx fail widget after backoff
+- **WHEN** the JSON URL returns HTTP 403, 429, or 5xx
+- **THEN** the client MUST retry with backoff and then fail the widget, and MUST NOT fail the run or skip silently
+
+#### Scenario: 2xx non-JSON fails widget without retry
+- **WHEN** the response is 2xx and the body is not JSON
+- **THEN** the widget MUST fail without retry
+
+#### Scenario: http timeout or SSRF fails the widget
+- **WHEN** fetch times out or SSRF checks reject the url
+- **THEN** the widget MUST fail
+
+#### Scenario: fail_widget HTTP error message includes hostname and status
+- **WHEN** http GET fails with an HTTP error status
+- **THEN** the `fail_widget` error message MUST include the hostname and status and MUST NOT include `url.href`, search, or hash
+
+#### Scenario: fail_widget timeout message includes hostname and timeout_ms
+- **WHEN** http GET times out
+- **THEN** the hop layer MUST throw `HttpSsrfError("timeout")`, wrapping MAY append hostname and `timeout_ms`, and the `fail_widget` message MUST include hostname and `timeout_ms` and MUST NOT include `url.href`, search, or hash
+
+#### Scenario: fail_widget messages never include token values
+- **WHEN** http GET fails with `fail_widget`
+- **THEN** `HttpClientError.message` MUST NOT include token values
+
+### Requirement: Chips reuse integration http with no new integration id
+Widget `chips` MUST declare integration `http` only. The system MUST NOT add first-party integration ids `shieldcn`, `shields`, or any id beyond `static`, `github`, `wakatime`, `rss`, and `http`. Chips MUST GET JSON through the existing shared http client (one instance per Action, playground, or generate preview run). Auth MUST remain `optional` on integration `http`. Chips MUST NOT introduce a second HTTP client, MUST NOT import octokit from the http module, and MUST NOT add a new thin Action token input. N types MUST expand to N https GET JSON requests that share the existing run-scoped cache and single-flight, issued concurrently (`Promise.all`), then normalized to `{ label, message, color? }` with `message = message ?? value`.
+
+#### Scenario: chips uses integration http only
+- **WHEN** widget `chips` is registered
+- **THEN** its integrations list MUST be `["http"]` and MUST NOT include a new integration id
+
+#### Scenario: chips shares the existing http client
+- **WHEN** json and chips run in the same Action run
+- **THEN** they MUST share one http client instance and MUST NOT construct a vendor-specific client
+
+#### Scenario: N types issue N cached GETs
+- **WHEN** a chips widget has N unique types after dedupe
+- **THEN** the client MUST perform at most N GET JSON calls for that widget, MUST share cache/single-flight with other http callers, and MUST issue those GETs concurrently
+
+### Requirement: Closed chips preset expander and origin allowlist
+A preset expander under the existing http integration MUST map `(preset, type, user, repo, package, workflow)` to a single https URL. One chips widget MUST use exactly one preset. The expander MUST emit **only** these origins: `https://shieldcn.dev` and `https://img.shields.io`. The origin allowlist MUST apply **in addition to** existing http SSRF checks (https, DNS pin, no private redirects, 1 MiB cap). The expander MUST reject `http://`, `www` hosts, `shields.io` without the `img` subdomain, and any other host.
+
+`repo` containing `/` MUST split `owner/repo`; otherwise owner MUST be Action `user` and the repo name MUST be the short `repo` value. Missing package or owner after that expand MUST fail the widget (parse MAY omit those fields). `workflow` MUST default to `ci.yml` and MUST be used only for shields `ci`.
+
+Closed type enum: `npm | stars | forks | license | release | issues | prs | ci`.
+
+**shieldcn** origin `https://shieldcn.dev`:
+
+- `npm` → `/npm/{package}.json`
+- `stars` → `/github/stars/{owner}/{repo}.json`
+- `forks` → `/github/forks/{owner}/{repo}.json`
+- `license` → `/github/license/{owner}/{repo}.json`
+- `release` → `/github/release/{owner}/{repo}.json`
+- `issues` → `/github/issues/{owner}/{repo}.json`
+- `prs` → `/github/prs/{owner}/{repo}.json`
+- `ci` → `/github/ci/{owner}/{repo}.json`
+
+**shields** origin `https://img.shields.io`:
+
+- `npm` → `/npm/v/{package}.json`
+- `stars` → `/github/stars/{owner}/{repo}.json`
+- `forks` → `/github/forks/{owner}/{repo}.json`
+- `license` → `/github/license/{owner}/{repo}.json`
+- `release` → `/github/v/release/{owner}/{repo}.json`
+- `issues` → `/github/issues/{owner}/{repo}.json`
+- `prs` → `/github/issues-pr/{owner}/{repo}.json`
+- `ci` → `/github/actions/workflow/status/{owner}/{repo}/{workflow}.json`
+
+The expander MUST NOT emit `/badge/dynamic/json`, `/https/{hostname}`, `/memo`, discord, reddit, nba, or views paths. The expander MUST NOT accept user-defined URLs, `dynamic`, or `endpoint` query URLs. Generic widget `json` remains the escape hatch for arbitrary SSRF-safe https URLs.
+
+Live JSON shapes the expander MUST accept: shieldcn npm `{ label, value, link }` with no color; shields `{ label, message, color, name, value }`. Tests MUST use fixtures and MUST NOT perform live network.
+
+#### Scenario: shieldcn npm expands to allowlisted json url
+- **WHEN** preset is `shieldcn`, type is `npm`, and package is `react`
+- **THEN** the expander MUST emit `https://shieldcn.dev/npm/react.json` and MUST NOT emit a dynamic or endpoint URL
+
+#### Scenario: shields ci uses workflow default
+- **WHEN** preset is `shields`, type is `ci`, owner/repo are present, and workflow is omitted
+- **THEN** the expander MUST emit `https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/ci.yml.json`
+
+#### Scenario: repo without slash uses Action user as owner
+- **WHEN** `repo` is `next.js` with no `/` and Action `user` is `vercel`
+- **THEN** github types MUST expand with owner `vercel` and repo `next.js`
+
+#### Scenario: repo with slash splits owner and repo
+- **WHEN** `repo` is `vercel/next.js`
+- **THEN** github types MUST expand with owner `vercel` and repo `next.js`
+
+#### Scenario: disallowed origin fails closed
+- **WHEN** expansion would target a host other than `shieldcn.dev` or `img.shields.io`, including `www` or `shields.io` without `img`
+- **THEN** the widget MUST fail and MUST NOT fetch that host
+
+#### Scenario: forbidden vendor paths are not emitted
+- **WHEN** a chips widget is expanded
+- **THEN** the URLs MUST NOT include `/badge/dynamic/json`, `/https/{hostname}`, `/memo`, discord, reddit, nba, or views
+
+#### Scenario: shieldcn value maps to message
+- **WHEN** the JSON body is `{ "label": "npm", "value": "19.0.0", "link": "https://example.com" }` with no color
+- **THEN** normalize MUST yield message `19.0.0`, MUST ignore `link`, and MUST omit color so render uses theme accent
+
 ### Requirement: Chips expander uses exact path identity
 The closed chips preset expander MUST reject whole-segment `""`, `.`, and `..` on package, owner, and repo name. Workflow MUST reject values that are exactly `.` or `..`. Scoped npm `@scope/name` MUST remain valid: one path segment, or two segments whose first matches `@[^/]+`. Names that contain dots other than a whole-segment `.` or `..`, including `next.js` and `ci.yml`, MUST remain valid.
 
@@ -297,3 +507,85 @@ Json callers that omit the auth field MUST keep existing optional-auth behavior:
 #### Scenario: pack http auth stays optional
 - **WHEN** chips uses per-request auth `none`
 - **THEN** integration `http` pack auth MUST remain `optional` and MUST NOT be changed to `none`
+
+### Requirement: wakatime integration requires auth
+Integration `wakatime` MUST use auth `required`. Empty / `""` / whitespace `wakatime_token` MUST be treated as missing. When the wakatime pack is on and the token is missing, the Action MUST fail the job (`fail_job`). When the pack is absent, the token MUST NOT be required. Every wakatime request MUST include `Authorization`. The client MUST NEVER send a request without `Authorization`. The system MUST NEVER scrape a public unauthenticated WakaTime profile as a fallback. Playground and docs preview MUST use fixtures or skip live WakaTime and MUST NEVER call WakaTime unauthenticated.
+
+#### Scenario: missing token with pack on fails the job
+- **WHEN** yaml `plugins.wakatime` is present and `wakatime_token` is empty, `""`, or whitespace
+- **THEN** the job MUST fail and MUST NOT send unauthenticated requests
+
+#### Scenario: pack absent does not require token
+- **WHEN** yaml omits `plugins.wakatime`
+- **THEN** a missing `wakatime_token` MUST NOT fail the job
+
+#### Scenario: wakatime request always has Authorization
+- **WHEN** the wakatime integration performs HTTP
+- **THEN** every request MUST include `Authorization` and MUST NOT fall back to public unauthenticated scrape
+
+#### Scenario: Playground never unauthenticated wakatime
+- **WHEN** the docs playground previews the coding widget
+- **THEN** it MUST use fixtures or skip live WakaTime and MUST NOT send unauthenticated WakaTime requests
+
+### Requirement: Shared wakatime client, path split, and REST cache
+One wakatime client instance MUST be shared per Action or playground run. Stats URLs MUST use a client-constructed path split: hostname `wakatime.com` (exact, lowercase) MUST use `https://wakatime.com/api/v1/users/current/stats/{range}`; any other allowed hostname MUST use `https://{api_domain}/api/compat/wakatime/v1/users/current/stats/{range}`. Range MUST appear in the path only and MUST be one of `last_7_days | last_30_days | last_6_months | last_year`. The client MUST NOT send `?range=`, `?is_including_today=`, or `?api_key=`. REST cache key MUST be `(method, url, params)`. Same-run cache hits MUST skip fetch.
+
+#### Scenario: Shared wakatime client per run
+- **WHEN** two callers in one run use integration `wakatime`
+- **THEN** they MUST share one client instance for that integration
+
+#### Scenario: Cloud hostname uses official path
+- **WHEN** `api_domain` is `wakatime.com`
+- **THEN** the request URL MUST be `https://wakatime.com/api/v1/users/current/stats/{range}`
+
+#### Scenario: Non-cloud hostname uses Wakapi compat path
+- **WHEN** `api_domain` is an allowed hostname other than `wakatime.com`
+- **THEN** the request URL MUST be `https://{api_domain}/api/compat/wakatime/v1/users/current/stats/{range}`
+
+#### Scenario: wakatime REST cache key is method url params
+- **WHEN** a wakatime REST request is cached
+- **THEN** the cache key MUST be `(method, url, params)` and MUST NOT be keyed as `POST /graphql`
+
+### Requirement: wakatime HTTP skip and fail matrix
+WakaTime HTTP outcomes MUST follow this matrix. The client MUST set `redirect: "error"`. Fail-after-backoff MUST retry with bounded backoff (max 3) then fail. The system MUST NOT reuse the GitHub HTTP classifier for WakaTime.
+
+| Outcome | Terminal |
+| --- | --- |
+| 401 | `fail_run` |
+| 403 / 429 / 302 / 202 / 5xx | `fail_after_backoff` |
+| 404 / 400 | `fail_widget` |
+| 200 with `is_up_to_date` false | `fail_after_backoff` |
+
+#### Scenario: wakatime 401 fails the run
+- **WHEN** WakaTime returns HTTP 401
+- **THEN** the run MUST fail
+
+#### Scenario: wakatime 403 429 302 202 and 5xx fail after backoff
+- **WHEN** WakaTime returns HTTP 403, 429, 302, 202, or 5xx
+- **THEN** the client MUST retry with backoff and then fail (not skip the widget)
+
+#### Scenario: wakatime 404 and 400 fail the widget
+- **WHEN** WakaTime returns HTTP 404 or 400
+- **THEN** that widget MUST fail and MUST NOT write output
+
+#### Scenario: 200 with is_up_to_date false fails after backoff
+- **WHEN** WakaTime returns HTTP 200 with `is_up_to_date` false
+- **THEN** the client MUST fail-after-backoff
+
+### Requirement: wakatime payload is totals plus requested include slices
+The client MUST consume `data.total_seconds`, `data.human_readable_total`, plus named slices for requested include keys only. `os` MUST map from `operating_systems`. Each slice MUST be sorted by `total_seconds` descending and capped at `limit`. Unrequested keys MUST be omitted entirely. The client MUST NOT invent `0` for omitted include tokens.
+
+#### Scenario: requested include slices only
+- **WHEN** `include` is `[languages, editors]` and the API body also contains `projects` and `operating_systems`
+- **THEN** the payload MUST expose totals plus languages and editors only and MUST NOT invent `0` for omitted keys
+
+### Requirement: wakatime api_domain SSRF protections
+`api_domain` MUST be a hostname only. The client MUST construct https URLs itself and MUST NEVER interpolate a user path, scheme, port, or userinfo into the request URL. Literal IPs, `localhost`, `.local` labels, metadata hosts, and private/link-local resolved addresses MUST fail closed. DNS lookup MUST reject private IPs before fetch. Fetch MUST use `redirect: "error"`.
+
+#### Scenario: localhost http and path injection fail closed
+- **WHEN** `api_domain` is `localhost`, uses `http://`, contains a path, userinfo, port, literal IP, or metadata host
+- **THEN** parse and/or the client MUST fail closed and MUST NOT send the request
+
+#### Scenario: DNS private IP fails before fetch
+- **WHEN** an otherwise allowed hostname resolves to a private, loopback, link-local, or metadata IP
+- **THEN** the client MUST fail before fetch

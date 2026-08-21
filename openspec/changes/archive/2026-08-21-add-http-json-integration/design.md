@@ -70,6 +70,8 @@ Constraints: Node 24, pnpm catalog, OpenSpec 1.9.0, Takumi 2.9.2 via `@profile-b
 - **Choice:** Catalog pins `ssrfcheck@1.4.0` and `ipaddr.js@2.5.0` (reuse if rss already added ipaddr). `assertSafeHttpUrl` + `assertSafeResolvedAddresses`. Order: `isSSRFSafeURL(url, { allowedProtocols: ["https"], allowUsername: false })` → ipaddr `parse` / `range()` / `isIPv4MappedAddress()` / `toIPv4Address()` → **allow only `unicast` after mapping**. `lookup({ all: true })`; **any** non-unicast fails closed (mixed A/AAAA). Pin IPs into connect lookup; TLS `servername` = original host. `redirect: "manual"`, max 5 hops, reject https→http, re-validate each `Location`, cancel or destroy the 3xx body before following `Location`. Abort if `Content-Length` or accumulated (decompressed) body > 1 MiB. Metadata hostnames: `metadata.google.internal`, `metadata.internal`, `169.254.169.254`. RFC1918 is `192.168.0.0/16` not `/8`.
 - **Why:** ssrfcheck covers localhost names, octal/decimal IPs, userinfo, dot-domains — not DNS, not redirects. ipaddr encodes private ranges correctly. Hand-rolled denylist can get `/8` wrong.
 - **Alternative:** Extra undici — rejected. Alternative: `private-ip` / `is-ip` — superseded. Alternative: Zod `z.httpUrl()` — rejected; allows `http`.
+- **D-note (Fetch HTTP-redirect-fetch):** When `Location` origin !== current hop origin (`URL.origin`), drop `Authorization` and never restore (A→B→A stays unauthenticated). This is **not** hop-0 equality. WHATWG [HTTP-redirect-fetch](https://fetch.spec.whatwg.org/#http-redirect-fetch) deletes Authorization the moment another origin is seen after the initial request ([whatwg/fetch#1544](https://github.com/whatwg/fetch/pull/1544)). Manual `redirect: "manual"` + pinned `https.request` means we implement this ourselves; undici follow-mode strip does not run.
+- **D-note (RV-S-006):** MAY: if abort wins, after one microtask, if `workCause` is a non-timeout `HttpSsrfError`, throw that. MUST NOT await a pending lookup.
 
 ### 6. HTTP backoff terminal outcome is `fail_widget`
 
@@ -101,8 +103,8 @@ Constraints: Node 24, pnpm catalog, OpenSpec 1.9.0, Takumi 2.9.2 via `@profile-b
 ### 10. Exclusive-glob apply graph (B0–B5)
 
 - **Choice:** One writer per file. Same-file edits sequential. Never two agents on `types.ts`, `auth-policy.ts`, `action-yml.ts`, `action.yml`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `packages/renderer/src/index.ts`, `packages/renderer/src/render-svg.ts`, `packages/integrations/src/index.ts`, `packages/action/src/engine.ts`, `packages/action/src/main.ts`.
-- **Waves:** B0–B5 library apply and §8 Action json wiring already landed (`tasks.md` §1–§8 stay ticked). Remaining apply is `tasks.md` §9 (HTTP client timeout, pin tests, redirects, headers). No commit.
-- **Why:** cache/ssrf/renderer/headers did not need `types.ts` and ran with B1. Remaining work is `tasks.md` §9 HTTP client findings, not a second change.
+- **Waves:** B0–B5 library apply, §8 Action json wiring, and `tasks.md` §9 already landed (`tasks.md` §1–§9 stay ticked). Remaining apply is `tasks.md` §10. No commit.
+- **Why:** cache/ssrf/renderer/headers did not need `types.ts` and ran with B1. Remaining work is `tasks.md` §10 HTTP client findings, not a second change.
 - **Alternative:** Serialize all apply — rejected; wastes the disjoint globs. Alternative: start a second OpenSpec change for `engine.ts`/`main.ts` — rejected; json Action wiring belongs in this catalog add.
 
 ### 11. Action wires json only; engine stays a port
@@ -125,6 +127,8 @@ Constraints: Node 24, pnpm catalog, OpenSpec 1.9.0, Takumi 2.9.2 via `@profile-b
 - [Renderer exclusive-file fight] → Extend exports; do not replace `renderSvg`.
 - [DNS rebinding TOCTOU] → Pin validated IPs into connect lookup; TLS `servername` = original host.
 - [Redirect to private or http] → `redirect: "manual"`, re-validate each hop, max 5, reject https→http.
+- [Sticky Authorization on cross-origin 3xx] → Drop when `Location` origin !== current hop origin; never restore (A→B→A). Fetch HTTP-redirect-fetch, not hop-0 equality. Manual redirect + pinned `https.request` (undici follow-mode strip does not run).
+- [Timeout vs SSRF race] → RV-S-006 MAY: if abort wins, after one microtask, if `workCause` is a non-timeout `HttpSsrfError`, throw that. MUST NOT await a pending lookup.
 - [IPv4-mapped / CGNAT / unique-local / 192.168/8 typo] → ipaddr.js allow-only-unicast after mapping; RFC1918 `/16`.
 - [Mixed A/AAAA] → fail closed if any address is non-unicast.
 - [Lying or missing Content-Length] → Cap accumulated decompressed bytes at 1 MiB.
@@ -145,7 +149,7 @@ Constraints: Node 24, pnpm catalog, OpenSpec 1.9.0, Takumi 2.9.2 via `@profile-b
 
 ## Migration Plan
 
-Greenfield additive pack. Default committed yaml stays github-only; existing consumers unchanged. Library apply and Action json wiring already landed (`tasks.md` §1–§8). Remaining apply follows `tasks.md` §9 (do not untick §1–§8). Catalog pins already present; `pnpm install` only if Action workspace deps change the lockfile. Rollback: omit `plugins.http` from yaml; delete this change folder before archive. Do not archive or commit unless asked.
+Greenfield additive pack. Default committed yaml stays github-only; existing consumers unchanged. Library apply, Action json wiring, and `tasks.md` §9 already landed (`tasks.md` §1–§9 stay ticked). Remaining apply follows `tasks.md` §10 (do not untick §1–§9). Catalog pins already present; `pnpm install` only if Action workspace deps change the lockfile. Rollback: omit `plugins.http` from yaml; delete this change folder before archive. Do not archive or commit unless asked.
 
 ## Open Questions
 

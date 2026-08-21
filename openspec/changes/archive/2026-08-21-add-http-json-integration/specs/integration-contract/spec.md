@@ -73,6 +73,22 @@ Http fetch MUST use https only. Redirects MUST use `redirect: "manual"` semantic
 - **WHEN** a json request returns HTTP 3xx with a `Location` header
 - **THEN** the client MUST cancel or destroy that response body before following the redirect
 
+#### Scenario: cross-origin 302 drops Authorization on hop 1
+- **WHEN** a token is present and the GET receives HTTP 302 to another https origin
+- **THEN** hop 0 MAY send `Authorization` and hop 1 MUST NOT send `Authorization`
+
+#### Scenario: same-origin 302 keeps Authorization
+- **WHEN** a token is present and the GET receives HTTP 302 whose `Location` is a same-origin path or relative URL
+- **THEN** the following hop MUST keep `Authorization`
+
+#### Scenario: Authorization drop is sticky across later hops
+- **WHEN** a token is present and the GET redirects from origin A to a foreign https origin B and then back to A
+- **THEN** `Authorization` MUST be dropped when the current hop origin differs from the `Location` origin, MUST NOT use hop-0 origin equality, and MUST NOT be sent on later hops including the return to A
+
+#### Scenario: chips auth none sends no Authorization on any hop
+- **WHEN** chips `auth` is `"none"`
+- **THEN** the client MUST NOT send `Authorization` on any hop
+
 #### Scenario: production GET pins DNS without global fetch
 - **WHEN** `createHttpClient` is constructed without `fetch`
 - **THEN** GET MUST use DNS-pinned `https.request` and MUST NOT call `globalThis.fetch`
