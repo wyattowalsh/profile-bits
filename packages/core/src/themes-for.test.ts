@@ -125,6 +125,52 @@ describe("themeMembersFor", () => {
     expect(selected[0]?.theme).not.toMatchObject({ bg: "#eff1f5" });
   });
 
+  it("treats mocha backgrounds as dark and latte backgrounds as light", () => {
+    const mocha = themeMembersFor({
+      theme: { custom: MOCHA_CUSTOM },
+      output_pair: false,
+    });
+    expect(mocha).toHaveLength(1);
+    expect(mocha[0]?.polarity).toBe("dark");
+    expect(mocha[0]?.theme).toMatchObject({ bg: "#1e1e2e" });
+
+    const latte = themeMembersFor({
+      theme: { custom: LATTE_MAP },
+      output_pair: false,
+    });
+    expect(latte).toHaveLength(1);
+    expect(latte[0]?.polarity).toBe("light");
+    expect(latte[0]?.theme).toMatchObject({ bg: "#eff1f5" });
+  });
+
+  it("fails when a named pair shares polarity with the mix", () => {
+    expect(() =>
+      themeMembersFor({
+        theme: {
+          custom: {
+            ...MOCHA_CUSTOM,
+            pair: "nord",
+          },
+        },
+        output_pair: true,
+      }),
+    ).toThrow(/opposite polarity/);
+  });
+
+  it("fails when a named light pair shares polarity with a light mix", () => {
+    expect(() =>
+      themeMembersFor({
+        theme: {
+          custom: {
+            ...LATTE_MAP,
+            pair: "nord-light",
+          },
+        },
+        output_pair: true,
+      }),
+    ).toThrow(/opposite polarity/);
+  });
+
   it("fails when both custom maps share a polarity", () => {
     expect(() =>
       themeMembersFor({

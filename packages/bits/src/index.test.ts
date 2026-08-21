@@ -1,4 +1,5 @@
-import { DARK_THEME, fromJsx } from "@profile-bits/renderer";
+import { DARK_THEME, fromJsx, LIGHT_THEME } from "@profile-bits/renderer";
+import { readableInk } from "@profile-bits/themes";
 import { createElement } from "react";
 import { describe, expect, it } from "vitest";
 import { BIT_EXPORTS, Chip, Frame, Text, Theme } from "./index.js";
@@ -133,8 +134,75 @@ describe("bits", () => {
       backgroundColor: DARK_THEME.card,
     });
     expect(messageHalf?.style).toMatchObject({
-      color: "#ffffff",
+      color: readableInk("#4c1"),
       backgroundColor: "#4c1",
     });
+  });
+
+  it("does not force white ink on Primer dark accent", async () => {
+    expect(globalThis.document).toBeUndefined();
+    const node = (await fromJsx(
+      createElement(
+        Theme,
+        { theme: "dark" },
+        createElement(Chip, {
+          label: "npm",
+          message: "ok",
+        }),
+      ),
+    )) as TakumiNode;
+    const messageHalf = findNode(node, (candidate) => candidate.text === "ok");
+    const fill = DARK_THEME.accent;
+    expect(messageHalf?.style).toMatchObject({
+      color: readableInk(fill),
+      backgroundColor: fill,
+    });
+    expect(messageHalf?.style?.color).not.toBe("#ffffff");
+  });
+
+  it("keeps the more readable ink on a light message fill", async () => {
+    expect(globalThis.document).toBeUndefined();
+    const fill = "#ffff00";
+    const node = (await fromJsx(
+      createElement(
+        Theme,
+        { theme: "dark" },
+        createElement(Chip, {
+          label: "ci",
+          message: "passing",
+          messageColor: fill,
+        }),
+      ),
+    )) as TakumiNode;
+    const messageHalf = findNode(
+      node,
+      (candidate) => candidate.text === "passing",
+    );
+    expect(messageHalf?.style).toMatchObject({
+      color: readableInk(fill),
+      backgroundColor: fill,
+    });
+    expect(messageHalf?.style?.color).toBe("#000000");
+  });
+
+  it("keeps white ink on Primer light accent when white is more readable", async () => {
+    expect(globalThis.document).toBeUndefined();
+    const node = (await fromJsx(
+      createElement(
+        Theme,
+        { theme: "light" },
+        createElement(Chip, {
+          label: "npm",
+          message: "ok",
+        }),
+      ),
+    )) as TakumiNode;
+    const messageHalf = findNode(node, (candidate) => candidate.text === "ok");
+    const fill = LIGHT_THEME.accent;
+    expect(messageHalf?.style).toMatchObject({
+      color: readableInk(fill),
+      backgroundColor: fill,
+    });
+    expect(messageHalf?.style?.color).toBe("#ffffff");
   });
 });

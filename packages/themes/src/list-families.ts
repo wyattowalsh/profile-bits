@@ -1,4 +1,4 @@
-import type { ThemeFamilyGroup, ThemeFlavor, ThemeRegistry } from "./types.js";
+import type { ThemeFamilyGroup, ThemeFlavor, ThemeRegistry } from "./types.ts";
 
 export function listFamilies(registry: ThemeRegistry): ThemeFamilyGroup[] {
   const groups = new Map<string, ThemeFlavor[]>();

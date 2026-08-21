@@ -1,4 +1,4 @@
-import { normalizeHex } from "./hex.js";
+import { normalizeHex } from "./hex.ts";
 import {
   COLOR_ROLES,
   type ColorRef,
@@ -7,12 +7,84 @@ import {
   THEME_FONT,
   type ThemePalette,
   type ThemeRegistry,
-} from "./types.js";
+} from "./types.ts";
 
 const COLOR_ROLE_SET = new Set<string>(COLOR_ROLES);
+const MAX_SUGGEST_DISTANCE = 2;
 
 function isColorRole(token: string): token is ColorRole {
   return COLOR_ROLE_SET.has(token);
+}
+
+function editDistance(left: string, right: string): number {
+  const a = left.toLowerCase();
+  const b = right.toLowerCase();
+  const prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let diagonal = prev[0] ?? 0;
+    prev[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const insertion = (prev[j] ?? 0) + 1;
+      const deletion = (prev[j - 1] ?? 0) + 1;
+      const substitution = diagonal + (a[i - 1] === b[j - 1] ? 0 : 1);
+      diagonal = prev[j] ?? 0;
+      prev[j] = Math.min(insertion, deletion, substitution);
+    }
+  }
+  return prev[b.length] ?? a.length;
+}
+
+function closestSuggestion(
+  query: string,
+  candidates: readonly string[],
+): string | undefined {
+  let best: string | undefined;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const candidate of candidates) {
+    const distance = editDistance(query, candidate);
+    if (distance === 0) {
+      continue;
+    }
+    if (
+      distance < bestDistance ||
+      (distance === bestDistance && (best === undefined || candidate < best))
+    ) {
+      best = candidate;
+      bestDistance = distance;
+    }
+  }
+  if (best === undefined || bestDistance > MAX_SUGGEST_DISTANCE) {
+    return undefined;
+  }
+  return best;
+}
+
+function unknownFlavorError(flavorId: string, registry: ThemeRegistry): Error {
+  return withSuggestion(
+    `Unknown theme flavor "${flavorId}"`,
+    closestSuggestion(flavorId, Object.keys(registry)),
+  );
+}
+
+function unknownSwatchError(
+  token: string,
+  flavorId: string,
+  swatches: Readonly<Record<string, string>>,
+): Error {
+  return withSuggestion(
+    `Unknown swatch or role "${token}" on flavor "${flavorId}"`,
+    closestSuggestion(token, [...Object.keys(swatches), ...COLOR_ROLES]),
+  );
+}
+
+function withSuggestion(
+  message: string,
+  suggestion: string | undefined,
+): Error {
+  if (suggestion === undefined) {
+    return new Error(message);
+  }
+  return new Error(`${message}. Did you mean "${suggestion}"?`);
 }
 
 function isCustomThemeInput(
@@ -42,7 +114,7 @@ export function resolveColorRef(
   const { flavorId, token } = splitFlavorRef(ref);
   const flavor = registry[flavorId];
   if (!flavor) {
-    throw new Error(`Unknown theme flavor "${flavorId}"`);
+    throw unknownFlavorError(flavorId, registry);
   }
   if (isColorRole(token)) {
     const swatchId = flavor.roles[token];
@@ -54,9 +126,7 @@ export function resolveColorRef(
   }
   const hex = flavor.swatches[token];
   if (!hex) {
-    throw new Error(
-      `Unknown swatch or role "${token}" on flavor "${flavorId}"`,
-    );
+    throw unknownSwatchError(token, flavorId, flavor.swatches);
   }
   return normalizeHex(hex);
 }
@@ -64,7 +134,7 @@ export function resolveColorRef(
 function resolveNamedTheme(id: string, registry: ThemeRegistry): ThemePalette {
   const flavor = registry[id];
   if (!flavor) {
-    throw new Error(`Unknown theme flavor "${id}"`);
+    throw unknownFlavorError(id, registry);
   }
   return {
     bg: resolveColorRef(`${flavor.id}.bg`, registry),

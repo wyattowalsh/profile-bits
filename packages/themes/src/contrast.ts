@@ -1,4 +1,4 @@
-import { parseHex } from "./hex.js";
+import { parseHex } from "./hex.ts";
 
 function linearChannel(value: number): number {
   const srgb = value / 255;

@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@profile-bits/renderer": "workspace:*",
+    "@profile-bits/themes": "workspace:*",
     "react": "19.2.8"
   },
   "devDependencies": {

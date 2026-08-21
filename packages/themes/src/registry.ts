@@ -1,23 +1,23 @@
-import { AYU_FLAVORS } from "./families/ayu.js";
-import { BLULOCO_FLAVORS } from "./families/bluloco.js";
-import { CATPPUCCIN_FLAVORS } from "./families/catppuccin.js";
-import { DRACULA_FLAVORS } from "./families/dracula.js";
-import { EVERFOREST_FLAVORS } from "./families/everforest.js";
-import { FLEXOKI_FLAVORS } from "./families/flexoki.js";
-import { GITHUB_FLAVORS } from "./families/github.js";
-import { GRUVBOX_FLAVORS } from "./families/gruvbox.js";
-import { HORIZON_FLAVORS } from "./families/horizon.js";
-import { ICEBERG_FLAVORS } from "./families/iceberg.js";
-import { KANAGAWA_FLAVORS } from "./families/kanagawa.js";
-import { NIGHT_OWL_FLAVORS } from "./families/night-owl.js";
-import { NIGHTFOX_FLAVORS } from "./families/nightfox.js";
-import { NORD_FLAVORS } from "./families/nord.js";
-import { ONE_FLAVORS } from "./families/one.js";
-import { PAPERCOLOR_FLAVORS } from "./families/papercolor.js";
-import { ROSE_PINE_FLAVORS } from "./families/rose-pine.js";
-import { SOLARIZED_FLAVORS } from "./families/solarized.js";
-import { TOKYO_NIGHT_FLAVORS } from "./families/tokyo-night.js";
-import type { ThemeFlavor, ThemeRegistry } from "./types.js";
+import { AYU_FLAVORS } from "./families/ayu.ts";
+import { BLULOCO_FLAVORS } from "./families/bluloco.ts";
+import { CATPPUCCIN_FLAVORS } from "./families/catppuccin.ts";
+import { DRACULA_FLAVORS } from "./families/dracula.ts";
+import { EVERFOREST_FLAVORS } from "./families/everforest.ts";
+import { FLEXOKI_FLAVORS } from "./families/flexoki.ts";
+import { GITHUB_FLAVORS } from "./families/github.ts";
+import { GRUVBOX_FLAVORS } from "./families/gruvbox.ts";
+import { HORIZON_FLAVORS } from "./families/horizon.ts";
+import { ICEBERG_FLAVORS } from "./families/iceberg.ts";
+import { KANAGAWA_FLAVORS } from "./families/kanagawa.ts";
+import { NIGHT_OWL_FLAVORS } from "./families/night-owl.ts";
+import { NIGHTFOX_FLAVORS } from "./families/nightfox.ts";
+import { NORD_FLAVORS } from "./families/nord.ts";
+import { ONE_FLAVORS } from "./families/one.ts";
+import { PAPERCOLOR_FLAVORS } from "./families/papercolor.ts";
+import { ROSE_PINE_FLAVORS } from "./families/rose-pine.ts";
+import { SOLARIZED_FLAVORS } from "./families/solarized.ts";
+import { TOKYO_NIGHT_FLAVORS } from "./families/tokyo-night.ts";
+import type { ThemeFlavor, ThemeRegistry } from "./types.ts";
 
 const FAMILY_FLAVORS: readonly (readonly ThemeFlavor[])[] = [
   GITHUB_FLAVORS,

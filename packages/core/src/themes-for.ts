@@ -1,5 +1,5 @@
 import {
-  contrastRatio,
+  polarityFromHex,
   resolveTheme,
   THEME_REGISTRY,
   type ThemeId,
@@ -13,6 +13,9 @@ import {
 } from "./types.js";
 
 type ThemePolarity = "light" | "dark";
+
+const CUSTOM_PAIR_OPPOSITE_POLARITY =
+  "Custom pair must have the opposite polarity of the selected mix";
 
 export type ThemeMember = {
   polarity: ThemePolarity;
@@ -81,49 +84,37 @@ function customMembers(theme: CustomThemeConfig): {
   if (pair === undefined) {
     return {
       selected: {
-        polarity: polarityFromBg(customPalette.bg),
+        polarity: polarityFromHex(customPalette.bg),
         theme: customPalette,
       },
     };
   }
+  const selectedPolarity = polarityFromHex(customPalette.bg);
   if (typeof pair === "string") {
-    const pairFlavor = THEME_REGISTRY[pair];
-    if (pairFlavor === undefined) {
-      throw new Error(`Unknown theme flavor "${pair}"`);
-    }
+    const pairPalette = resolveTheme(pair, THEME_REGISTRY);
+    const pairPolarity = polarityFromHex(pairPalette.bg);
+    assertOppositePairPolarity(selectedPolarity, pairPolarity);
     return {
-      selected: {
-        polarity: oppositePolarity(pairFlavor.polarity),
-        theme: customPalette,
-      },
-      pair: { polarity: pairFlavor.polarity, theme: pair },
+      selected: { polarity: selectedPolarity, theme: customPalette },
+      pair: { polarity: pairPolarity, theme: pair },
     };
   }
   const pairPalette = resolveRoleMap(pair);
-  const selectedPolarity = polarityFromBg(customPalette.bg);
-  const pairPolarity = polarityFromBg(pairPalette.bg);
-  if (selectedPolarity === pairPolarity) {
-    throw new Error(
-      "Custom pair map must have the opposite polarity of the selected mix",
-    );
-  }
+  const pairPolarity = polarityFromHex(pairPalette.bg);
+  assertOppositePairPolarity(selectedPolarity, pairPolarity);
   return {
     selected: { polarity: selectedPolarity, theme: customPalette },
     pair: { polarity: pairPolarity, theme: pairPalette },
   };
 }
 
-function polarityFromBg(bg: string): ThemePolarity {
-  const vsWhite = contrastRatio(bg, "#ffffff");
-  const vsBlack = contrastRatio(bg, "#000000");
-  if (vsWhite === vsBlack) {
-    throw new Error("Unable to determine theme polarity from background");
+function assertOppositePairPolarity(
+  selectedPolarity: ThemePolarity,
+  pairPolarity: ThemePolarity,
+): void {
+  if (selectedPolarity === pairPolarity) {
+    throw new Error(CUSTOM_PAIR_OPPOSITE_POLARITY);
   }
-  return vsWhite < vsBlack ? "light" : "dark";
-}
-
-function oppositePolarity(polarity: ThemePolarity): ThemePolarity {
-  return polarity === "light" ? "dark" : "light";
 }
 
 function resolveRoleMap(roles: CustomRoleMap): ThemePalette {

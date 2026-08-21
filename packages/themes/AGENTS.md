@@ -6,8 +6,9 @@ Host-owned named theme catalog. This package is the **hex SSOT**. Data only: no 
 
 - Flavor records: `id`, `family`, `label`, `polarity` (`light` | `dark`), `pair`, `license`, `sourceUrl`, `swatches` (name → hex), `roles` (7 tokens → swatch id; `font` is Geist, not a color swatch)
 - `NAMED_THEME_IDS`, `ThemeId`, `ColorRef`, `ThemePalette`
-- `resolveColorRef` / `resolveTheme` (fail-closed; never fall back to `dark`)
-- `contrastRatio` (WCAG relative luminance), `listFamilies`
+- `parseHex` / `normalizeHex` / `isHexColor`
+- `resolveColorRef` / `resolveTheme` (fail-closed; never fall back to `dark`; unknown flavor/swatch may hint)
+- `contrastRatio` (WCAG relative luminance), `polarityFromHex`, `readableInk`, `paletteContrastReport`, `listFamilies`
 
 Resolved `ThemePalette` tokens: `bg`, `card`, `text`, `muted`, `accent`, `border`, `font`. `font` is always `Geist`.
 

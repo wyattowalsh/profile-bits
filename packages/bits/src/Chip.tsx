@@ -1,3 +1,4 @@
+import { readableInk } from "@profile-bits/themes";
 import type { ReactNode } from "react";
 import { useBitTheme } from "./Theme.js";
 
@@ -15,6 +16,7 @@ export function Chip({
   const theme = useBitTheme();
 
   if (typeof label === "string" && typeof message === "string") {
+    const fill = messageColor ?? theme.accent;
     return (
       <span
         tw="flex"
@@ -45,8 +47,8 @@ export function Chip({
         </span>
         <span
           style={{
-            color: "#ffffff",
-            backgroundColor: messageColor ?? theme.accent,
+            color: readableInk(fill),
+            backgroundColor: fill,
             fontFamily: theme.font,
             fontSize: 11,
             paddingLeft: 8,

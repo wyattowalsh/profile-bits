@@ -1,5 +1,5 @@
-import { DARK_FLAVOR, LIGHT_FLAVOR } from "../primer.js";
-import { THEME_FONT, type ThemeFlavor } from "../types.js";
+import { DARK_FLAVOR, LIGHT_FLAVOR } from "../primer.ts";
+import { THEME_FONT, type ThemeFlavor } from "../types.ts";
 
 const PRIMER_LICENSE = "MIT";
 const PRIMER_SOURCE_URL = "https://github.com/primer/primitives";

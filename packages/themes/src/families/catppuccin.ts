@@ -1,4 +1,4 @@
-import { THEME_FONT, type ThemeFlavor } from "../types.js";
+import { THEME_FONT, type ThemeFlavor } from "../types.ts";
 
 export const CATPPUCCIN_FLAVORS: readonly ThemeFlavor[] = [
   {

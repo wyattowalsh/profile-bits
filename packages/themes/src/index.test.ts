@@ -2,8 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   type CustomThemeInput,
   contrastRatio,
+  isHexColor,
   listFamilies,
   NAMED_THEME_IDS,
+  normalizeHex,
+  paletteContrastReport,
+  parseHex,
+  polarityFromHex,
+  readableInk,
   resolveColorRef,
   resolveTheme,
   THEME_FONT,
@@ -241,5 +247,18 @@ describe("listFamilies", () => {
 
   it("returns an empty list for an empty registry", () => {
     expect(listFamilies(EMPTY_REGISTRY)).toEqual([]);
+  });
+});
+
+describe("color-utils barrel", () => {
+  it("re-exports hex parsers and derived helpers", () => {
+    expect(isHexColor("#0d1117")).toBe(true);
+    expect(parseHex("#fff")).toMatchObject({ r: 255, g: 255, b: 255, a: 255 });
+    expect(normalizeHex("#0D1")).toBe("#00dd11");
+    expect(polarityFromHex("#1e1e2e")).toBe("dark");
+    expect(readableInk("#58a6ff")).toBe("#000000");
+    expect(
+      paletteContrastReport(resolveTheme("dark", THEME_REGISTRY)),
+    ).toHaveLength(8);
   });
 });
