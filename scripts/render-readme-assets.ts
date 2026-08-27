@@ -63,7 +63,11 @@ import { assertPng, dataPng, rasterPng } from "./readme-assets/raster.ts";
 import type { Composition, ThemeName } from "./readme-assets/types.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const OUT_DIR = join(ROOT, "docs/assets/readme");
+/** GitHub README stills. Not served by the Fumadocs app. */
+const OUT_DIR = join(ROOT, ".github/assets");
+/** Raster inputs (grain/mark) live with the generator, not the README stills. */
+const INPUT_DIR = join(ROOT, "scripts/readme-assets");
+const REL_OUT = ".github/assets";
 const CARD_WIDTH = 480;
 const CARD_HEIGHT = 160;
 
@@ -181,7 +185,7 @@ async function writeAsset(
   const path = join(OUT_DIR, name);
   await writeFile(path, bytes);
   const row: AssetRow = {
-    path: join("docs/assets/readme", name),
+    path: `${REL_OUT}/${name}`,
     width,
     height,
     bytes: bytes.byteLength,
@@ -202,7 +206,7 @@ function loadCodingPayload() {
 
 function optionalDataPng(name: string): string | undefined {
   try {
-    return dataPng(readFileSync(join(OUT_DIR, name)));
+    return dataPng(readFileSync(join(INPUT_DIR, name)));
   } catch {
     return undefined;
   }

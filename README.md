@@ -5,8 +5,8 @@
 GitHub profile README widgets as dense GitHub-native stats cards.
 
 <picture>
-  <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/hero-light.png">
-  <img src="docs/assets/readme/hero.png" alt="profile-bits hero: JSX to PNG GitHub profile widgets on a Primer-adjacent canvas" width="720">
+  <source media="(prefers-color-scheme: light)" srcset=".github/assets/hero-light.png">
+  <img src=".github/assets/hero.png" alt="profile-bits hero: JSX to PNG GitHub profile widgets on a Primer-adjacent canvas" width="720">
 </picture>
 
 </div>
@@ -50,8 +50,8 @@ README delivery is the **Action committing widget files**. Paste relative `![](.
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/how-it-works-light.png">
-    <img src="docs/assets/readme/how-it-works.png" alt="yaml SSOT to Takumi engine to committed files" width="720">
+    <source media="(prefers-color-scheme: light)" srcset=".github/assets/how-it-works-light.png">
+    <img src=".github/assets/how-it-works.png" alt="yaml SSOT to Takumi engine to committed files" width="720">
   </picture>
 </p>
 
@@ -60,28 +60,28 @@ README delivery is the **Action committing widget files**. Paste relative `![](.
 Fixture-rendered samples (octocat / WakaTime / RSS / HTTP fixtures — no live tokens). Click a card for Action usage.
 
 <p align="center">
-  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/github-stats-light.png"><img src="docs/assets/readme/github-stats.png" alt="GitHub stats widget, 480 by 160: followers, repos, stars, forks, gists" width="480"></picture></a>
+  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset=".github/assets/github-stats-light.png"><img src=".github/assets/github-stats.png" alt="GitHub stats widget, 480 by 160: followers, repos, stars, forks, gists" width="480"></picture></a>
 </p>
 <p align="center">
-  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/github-languages-light.png"><img src="docs/assets/readme/github-languages.png" alt="GitHub languages widget, 480 by 160" width="480"></picture></a>
+  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset=".github/assets/github-languages-light.png"><img src=".github/assets/github-languages.png" alt="GitHub languages widget, 480 by 160" width="480"></picture></a>
 </p>
 <p align="center">
-  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/github-demo-light.png"><img src="docs/assets/readme/github-demo.png" alt="GitHub demo widget, 480 by 160, opt-in" width="480"></picture></a>
+  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset=".github/assets/github-demo-light.png"><img src=".github/assets/github-demo.png" alt="GitHub demo widget, 480 by 160, opt-in" width="480"></picture></a>
 </p>
 <p align="center">
-  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/github-repo-light.png"><img src="docs/assets/readme/github-repo.png" alt="GitHub repo widget, 480 by 160, opt-in REST card" width="480"></picture></a>
+  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset=".github/assets/github-repo-light.png"><img src=".github/assets/github-repo.png" alt="GitHub repo widget, 480 by 160, opt-in REST card" width="480"></picture></a>
 </p>
 <p align="center">
-  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/wakatime-coding-light.png"><img src="docs/assets/readme/wakatime-coding.png" alt="WakaTime coding widget, 480 by 160" width="480"></picture></a>
+  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset=".github/assets/wakatime-coding-light.png"><img src=".github/assets/wakatime-coding.png" alt="WakaTime coding widget, 480 by 160" width="480"></picture></a>
 </p>
 <p align="center">
-  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/rss-feed-light.png"><img src="docs/assets/readme/rss-feed.png" alt="RSS feed widget, 480 by 160" width="480"></picture></a>
+  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset=".github/assets/rss-feed-light.png"><img src=".github/assets/rss-feed.png" alt="RSS feed widget, 480 by 160" width="480"></picture></a>
 </p>
 <p align="center">
-  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/http-json-light.png"><img src="docs/assets/readme/http-json.png" alt="HTTP json widget, 480 by 160" width="480"></picture></a>
+  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset=".github/assets/http-json-light.png"><img src=".github/assets/http-json.png" alt="HTTP json widget, 480 by 160" width="480"></picture></a>
 </p>
 <p align="center">
-  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/http-chips-light.png"><img src="docs/assets/readme/http-chips.png" alt="HTTP chips widget, 480 by 160" width="480"></picture></a>
+  <a href="#quick-start"><picture><source media="(prefers-color-scheme: light)" srcset=".github/assets/http-chips-light.png"><img src=".github/assets/http-chips.png" alt="HTTP chips widget, 480 by 160" width="480"></picture></a>
 </p>
 
 ## Quick start
@@ -229,15 +229,15 @@ Marketplace default `output_action` is **`commit`**.
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/locks-light.png">
-    <img src="docs/assets/readme/locks.png" alt="Locks: no embed API, yaml SSOT, never unauth GitHub, Action commits files" width="720">
+    <source media="(prefers-color-scheme: light)" srcset=".github/assets/locks-light.png">
+    <img src=".github/assets/locks.png" alt="Locks: no embed API, yaml SSOT, never unauth GitHub, Action commits files" width="720">
   </picture>
 </p>
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/formats-light.png">
-    <img src="docs/assets/readme/formats.png" alt="Output formats: svg png jpeg webp ico gif apng" width="720">
+    <source media="(prefers-color-scheme: light)" srcset=".github/assets/formats-light.png">
+    <img src=".github/assets/formats.png" alt="Output formats: svg png jpeg webp ico gif apng" width="720">
   </picture>
 </p>
 
@@ -247,8 +247,8 @@ Same engine as the Action (`packages/cli` wraps `runMain`). CLI default `output_
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/cli-vs-action-light.png">
-    <img src="docs/assets/readme/cli-vs-action.png" alt="CLI output_action none versus Marketplace commit" width="720">
+    <source media="(prefers-color-scheme: light)" srcset=".github/assets/cli-vs-action-light.png">
+    <img src=".github/assets/cli-vs-action.png" alt="CLI output_action none versus Marketplace commit" width="720">
   </picture>
 </p>
 
@@ -277,8 +277,8 @@ Live catalog: [`packages/core/src/types.ts`](packages/core/src/types.ts) (`FIRST
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/plugin-map-light.png">
-    <img src="docs/assets/readme/plugin-map.png" alt="First-party packs: github, wakatime, rss, http" width="720">
+    <source media="(prefers-color-scheme: light)" srcset=".github/assets/plugin-map-light.png">
+    <img src=".github/assets/plugin-map.png" alt="First-party packs: github, wakatime, rss, http" width="720">
   </picture>
 </p>
 
@@ -299,8 +299,8 @@ Yaml + thin Action inputs feed `packages/action`. Plugins consume cached integra
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/architecture-light.png">
-    <img src="docs/assets/readme/architecture.png" alt="yaml and thin Action inputs through Takumi to widget files" width="720">
+    <source media="(prefers-color-scheme: light)" srcset=".github/assets/architecture-light.png">
+    <img src=".github/assets/architecture.png" alt="yaml and thin Action inputs through Takumi to widget files" width="720">
   </picture>
 </p>
 

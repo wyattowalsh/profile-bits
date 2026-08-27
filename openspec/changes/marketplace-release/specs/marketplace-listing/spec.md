@@ -30,7 +30,7 @@ The Marketplace README body MUST be `action/README.md` (copied to `README.md` on
 - **THEN** the tree MUST include `action.yml`, `dist/**`, `LICENSE`, and `README.md` sourced from `action/README.md`
 
 ### Requirement: Listing screenshots are committed stills
-Marketplace screenshots MUST be committed stills under `docs/assets/readme/` (hero, stats, chips, architecture). Screenshots MUST NOT claim Camo sanitization, a public `POST /api/preview` embed, or first-party packs other than `github`, `wakatime`, `rss`, and `http`.
+Marketplace screenshots MUST be committed stills under `.github/assets/` (hero, stats, chips, architecture). Screenshots MUST NOT claim Camo sanitization, a public `POST /api/preview` embed, or first-party packs other than `github`, `wakatime`, `rss`, and `http`.
 
 #### Scenario: Listing does not advertise embed API
 - **WHEN** the Marketplace listing or Marketplace README describes delivery

@@ -16,7 +16,7 @@
 
 ## 4. Screenshots (skip-if-green)
 
-- [x] 4.1 Committed stills exist under `docs/assets/readme/` (hero, stats, chips, architecture) for listing screenshots.
+- [x] 4.1 Committed stills exist under `.github/assets/` (hero, stats, chips, architecture) for listing screenshots.
 - [ ] 4.2 Operator attaches those stills in the GitHub Marketplace listing UI (not in git). MUST NOT claim Camo, embed API, or extra first-party packs.
 
 ## 5. Marketplace listing publish (operator)

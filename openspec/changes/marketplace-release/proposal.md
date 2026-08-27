@@ -8,7 +8,7 @@ Thin `action.yml`, orphan `release/v1`, and the floating `@v1` tag are already s
 - Marketplace README remains `action/README.md` (slim tree on orphan `release/v1`). Root README stays the repo homepage, not the Marketplace body.
 - Pin MUST be `wyattowalsh/profile-bits@v1` (floating tag on the orphan tree only). Never pin `main`. Never tag `v1` at `main`.
 - Branding MUST stay `icon: layout`, `color: blue` (already in generated `action.yml`).
-- Screenshots MUST come from committed `docs/assets/readme/` stills; MUST NOT claim live Camo, a public embed API, or extra first-party packs.
+- Screenshots MUST come from committed `.github/assets/` stills; MUST NOT claim live Camo, a public embed API, or extra first-party packs.
 - Release workflow remains the only pusher of `release/v1` and floating `v1`. This change MUST NOT add a second publisher.
 - No **BREAKING** Action input changes. No flattened `plugin_*_*_*` Marketplace inputs.
 
@@ -25,7 +25,7 @@ Thin `action.yml`, orphan `release/v1`, and the floating `@v1` tag are already s
 ## Impact
 
 - Listing copy: `action/README.md` (orphan tree `README.md`), generated `action.yml` `name` / `description` / `branding`.
-- Screenshots: `docs/assets/readme/*.png` (hero, stats, chips, architecture).
+- Screenshots: `.github/assets/*.png` (hero, stats, chips, architecture).
 - Release: existing `.github/workflows/release.yml` + `scripts/publish-action-tree.sh` (verify-only; do not rewrite T410/T411).
 - Consumers pin `@v1`. Docs playground and local CLI stay out of the Marketplace listing as delivery.
 - Out of scope: extra first-party packs, flattened inputs, tagging `v1` at `main`, committing `dist/` on `main`, implementing apply in the same propose pass.

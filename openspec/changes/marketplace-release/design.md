@@ -8,7 +8,7 @@ See `proposal.md` Why. Thin inputs, node24, orphan `@v1`, and README-not-patched
 
 - One listing identity (name, description, branding) matching generated `action.yml`.
 - Consumer pin is `@v1` on the orphan tree.
-- Screenshots from existing `docs/assets/readme/` stills.
+- Screenshots from existing `.github/assets/` stills.
 - Marketplace README = `action/README.md`.
 
 **Non-Goals:**
