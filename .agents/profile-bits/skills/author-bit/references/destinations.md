@@ -65,6 +65,7 @@ Exactly six skills: `author`, `author-bit`, `author-palette`,
 | data source / new API | `author-integration` |
 | Shields.io README image row | sibling README tooling or `add-badges` |
 | card composition and pack-level `bitsUsed` | `author-widget` / `author-plugin` |
+| nested `packages/bits/AGENTS.md` | this skill, after mutating success (docs-closeout) |
 | data-backed badge pack | OpenSpec, then `author-integration` + `author-plugin` + `author-widget` |
 
 Do not write yaml theme or named-palette files from this skill. Do not create

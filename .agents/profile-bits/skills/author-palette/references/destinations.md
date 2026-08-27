@@ -79,6 +79,7 @@ color inputs.
 | yaml `theme`, flavors, tokens, named palettes | `author-palette` |
 | card-specific styling | `author-widget` |
 | pack registry | `author-plugin` |
+| nested `packages/themes/AGENTS.md` | this skill, after mutating catalog-rule success (docs-closeout) |
 | Shields.io README images | sibling README tooling |
 | bare `theme` | `author` gallery |
 

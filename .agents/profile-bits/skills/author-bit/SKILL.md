@@ -1,10 +1,9 @@
 ---
 name: author-bit
 description: >-
-  Completes or authors profile-bits shared UI bits such as Theme, Chip, Frame,
-  Stack, Row, Text, Muted, Stat, Bar, Avatar, and Divider under packages/bits.
-  Use for a named bit or an OpenSpec-approved 12th bit. NOT for yaml theme,
-  named palettes, plugin packs, widgets, MCP, or Shields.io README badges.
+  Completes shared UI bits under packages/bits. Use when authoring Theme, Chip,
+  or an OpenSpec-approved 12th bit. NOT for yaml themes, palettes, packs,
+  widgets, MCP, or Shields.io badges.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec author-plugin spec; packages/bits and packages/core/src/types.ts.
 metadata:
@@ -64,8 +63,11 @@ yaml keys. For any named frozen bit:
 
 1. Read `packages/bits/AGENTS.md`, the named source, `src/index.ts`, and related
    tests.
-2. If the source and export already exist, report complete-existing and stop.
-3. If work is incomplete, extend only the missing source, export, or tests.
+2. If the source and export already exist, report complete-existing and stop
+   (skip docs-closeout).
+3. If work is incomplete, extend only the missing source, export, or tests,
+   then load [docs-closeout](../../references/docs-closeout.md) and update
+   `packages/bits/AGENTS.md` when frozen-11 / Chip facts changed.
 4. Do not copy `Bit.template`; it is for an approved 12th name only.
 
 Never grow the frozen 11 silently.
@@ -102,6 +104,8 @@ before code.
    `packages/bits/src/<BitName>.tsx`; substitute `{{BitName}}`.
 6. Add one named export to `packages/bits/src/index.ts` and update
    `BIT_EXPORTS`. Add focused tests.
+7. Load [docs-closeout](../../references/docs-closeout.md) and update
+   `packages/bits/AGENTS.md`.
 
 Do not create one template per frozen bit and do not rewrite the barrel unless
 an approved new bit actually lands.
@@ -120,6 +124,22 @@ an approved new bit actually lands.
 - A proposed `Badge` primitive → this skill only after OpenSpec; never create
   `author-badge`.
 
+## Canonical terms
+
+- **Frozen 11:** Theme, Frame, Stack, Row, Text, Muted, Stat, Bar, Chip, Avatar, Divider.
+- **Handwritten:** `packages/bits/AGENTS.md` after mutating success.
+- **Generated:** none for bits (`just generate-docs` does not rewrite AGENTS.md).
+
+## Critical rules
+
+1. Empty `$ARGUMENTS` / help show the gallery and stop (no reads, no writes).
+2. Complete-existing stops without rewriting `packages/bits/AGENTS.md`.
+3. A 12th bit requires OpenSpec first; never silently grow the frozen 11.
+4. After mutating success, load docs-closeout and update `packages/bits/AGENTS.md`.
+5. Never copy into `DESIGN.md` or `apps/docs/**`.
+6. Never add MCP or flattened `plugin_*_*_*` inputs.
+7. Templates stay skill-local with no parent traversal.
+
 ## Locks
 
 - Templates are skill-local and contain no parent traversal.
@@ -136,9 +156,12 @@ an approved new bit actually lands.
 
 ## Reference index
 
+Do not load all at once.
+
 | File | Load when |
 | --- | --- |
 | [destinations](references/destinations.md) | Named bit or approved new-bit work, after empty args |
+| [docs-closeout](../../references/docs-closeout.md) | Mutating success only |
 
 ## Proof
 

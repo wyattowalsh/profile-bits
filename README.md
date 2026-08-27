@@ -351,13 +351,14 @@ just lint
 just test
 just docs
 just generate-action          # pass --check in CI
-just generate-docs            # pass --check in CI
+just generate-docs            # playground-fields snapshot; pass --check in CI
+just validate-agent-plugins   # author + consumer plugin gates
 just check
 just openspec <args>
 just render                   # local CLI (`profile-bits render`)
 ```
 
-Also: `just docs-dev`. Nested package instructions: `packages/*/AGENTS.md`, `apps/docs/AGENTS.md`. OpenSpec engine JSON is a **subcommand flag** (`just openspec status --change <id> --json`), never `openspec --json`.
+Also: `just docs-dev`. Nested package instructions: `packages/*/AGENTS.md`, `apps/docs/AGENTS.md`. OpenSpec engine JSON is a **subcommand flag** (`just openspec status --change <id> --json`), never `openspec --json`. `just generate-docs` does not rewrite `AGENTS.md` / `README.md` / `DESIGN.md`.
 
 ## License
 

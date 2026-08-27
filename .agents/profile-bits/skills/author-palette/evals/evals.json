@@ -80,6 +80,16 @@
         "Names author-palette",
         "Keeps exactly six skills"
       ]
+    },
+    {
+      "id": "docs-closeout-nested-agents",
+      "prompt": "After OpenSpec, add a new named palette family and keep themes AGENTS.md honest.",
+      "expected_output": "OpenSpec first. After mutating catalog-rule success, update packages/themes/AGENTS.md. just generate-docs refreshes playground-fields.json only and does not rewrite AGENTS.md.",
+      "assertions": [
+        "Requires OpenSpec before a new palette id",
+        "Updates packages/themes/AGENTS.md after mutating success",
+        "just generate-docs does not rewrite AGENTS.md"
+      ]
     }
   ]
 }

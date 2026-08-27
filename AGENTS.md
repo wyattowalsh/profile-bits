@@ -52,6 +52,8 @@ just lint
 just test
 just docs
 just generate-action          # pass --check in CI
+just generate-docs            # playground-fields snapshot; pass --check in CI
+just validate-agent-plugins   # both .agents/*/scripts/validate.sh
 just check
 just openspec <args>
 just render                   # local CLI (`profile-bits render`)
@@ -59,7 +61,9 @@ just render                   # local CLI (`profile-bits render`)
 
 `just render` / `pnpm render` run `@profile-bits/cli` around Action `runMain`. CLI default `output_action` is `none`; the Action Marketplace default remains `commit`.
 
-Also: `just docs-dev`, `just generate-docs`.
+`just generate-docs` refreshes `playground-fields.json` only. It does not rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`. `just check` also runs `just validate-agent-plugins`.
+
+Also: `just docs-dev`.
 
 ## Nested instructions
 
@@ -80,6 +84,8 @@ Agent Plugin skills follow live `packages/core/src/types.ts` `FIRST_PARTY_*`, no
 The authoring plugin ships exactly `author`, `author-bit`, `author-palette`,
 `author-integration`, `author-widget`, and `author-plugin`; read
 `.agents/profile-bits/AGENTS.md` before changing that tree.
+Mutating author skills follow `.agents/profile-bits/references/docs-closeout.md`
+(`just generate-docs` is the playground-fields snapshot only).
 
 Install is a documented human command, not an agent step in this repo.
 

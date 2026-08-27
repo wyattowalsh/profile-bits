@@ -85,7 +85,7 @@
     {
       "id": "bits-used-pack-union",
       "prompt": "Scaffold a pack, then union Stat into pack-level bitsUsed when a widget imports it.",
-      "expected_output": "Starter {{PLUGIN_ID_UPPER}}_BITS_USED stays Theme, Frame, Stack, Row, Text, Muted — do not stamp 11 names into the pack starter. When unioning bitsUsed, updates plugin.test.ts; does not leave a hardcoded Theme, Frame, Stack, Row, Text, Muted literal array. Keeps toEqual({{PLUGIN_ID_UPPER}}_BITS_USED). Does not set bitsUsed on a widget entry. Does not put bits in yaml.",
+      "expected_output": "Starter {{PLUGIN_ID_UPPER}}_BITS_USED stays Theme, Frame, Stack, Row, Text, Muted \u2014 do not stamp 11 names into the pack starter. When unioning bitsUsed, updates plugin.test.ts; does not leave a hardcoded Theme, Frame, Stack, Row, Text, Muted literal array. Keeps toEqual({{PLUGIN_ID_UPPER}}_BITS_USED). Does not set bitsUsed on a widget entry. Does not put bits in yaml.",
       "assertions": [
         "When unioning bitsUsed, updates plugin.test.ts; does not leave a hardcoded Theme, Frame, Stack, Row, Text, Muted literal array",
         "Does not stamp Stat, Bar, Chip, Avatar, Divider into the pack starter BITS_USED",
@@ -129,6 +129,17 @@
         "States dest is repo-root packages/plugins/src/<id>/",
         "States templates MUST NOT contain ../",
         "Does not copy templates to a ../ dest"
+      ]
+    },
+    {
+      "id": "generate-docs-is-snapshot-only",
+      "prompt": "Scaffold a new pack and run docs codegen.",
+      "expected_output": "Tell the user to run just generate-action and just generate-docs. just generate-docs refreshes playground-fields.json only. It does not rewrite AGENTS.md, README.md, or DESIGN.md. After mutating success, update packages/plugins/AGENTS.md.",
+      "assertions": [
+        "just generate-docs refreshes playground-fields.json only",
+        "Does not rewrite AGENTS.md, README.md, or DESIGN.md",
+        "Updates packages/plugins/AGENTS.md after mutating success",
+        "Mentions just generate-action and just generate-docs"
       ]
     }
   ]

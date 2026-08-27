@@ -1,19 +1,9 @@
 ---
 name: author-widget
 description: >-
-  Generates a profile-bits widget on an existing pack: option schema, fetch
-  that consumes a cached integration payload (no HTTP), optional source (prefer
-  omit; name widget.tsx|.md|.mdx|.html), bits-based Takumi-safe template,
-  formats allow-list, GFM-only Action widget.md, examples, and pack-level
-  bitsUsed unioned into the pack Plugin. Use when adding a card, languages yaml
-  option, CSS animation gif/apng, widget.mdx without source (later/authoring,
-  not Action ncc), Tailwind tw/className stylesheets, or swapping
-  md.families.code (refuse-or-defer for Action — not a profile-bits.yml field).
-  NOT for shared bits (author-bit), yaml themes or named palettes
-  (author-palette), new data sources (author-integration), new packs
-  (author-plugin), Action runtime, renderer internals, MCP, Marketplace,
-  flattened plugin_*_*_* inputs, mermaid/shiki/katex/pretty-code in the Action
-  bundle, or a second pack for an id already in types.ts.
+  Adds a card on an existing pack. Use when adding a widget, languages option,
+  gif/apng, or widget.mdx. NOT for bits, palettes, new packs, MCP, or flattened
+  Action inputs.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.
 metadata:
@@ -119,6 +109,7 @@ catalog after empty args is ruled out.
 8. Templates MUST NOT contain `../`. Dest is repo-root `packages/plugins/src/<pack>/widgets/<id>/`. Refuse dest `../` and `/generate/widgets`.
 9. Write modes (`add`, `option`, `animation`, `mdx`, `stylesheet`, `families`) without a pack id **and** a widget id → **stop**. Do not invent dest. Animation on a named one-widget pack uses the sole live widget id; do not invent a new card.
 10. New card + new API → `author-integration` first. Shared `Theme` / `Chip` → `author-bit`. yaml `theme` / named palette → `author-palette`. Refuse MCP / `mcp.json`.
+11. After mutating success, load docs-closeout and update `packages/plugins/AGENTS.md` when the widget list changed. `just generate-docs` refreshes playground-fields.json only. Never copy into `apps/docs/**`.
 
 ## Before generating
 
@@ -208,6 +199,12 @@ After public-API or docs-field work, tell the user:
 just generate-action
 just generate-docs
 ```
+
+`just generate-docs` refreshes `playground-fields.json` only. It does not
+rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`. After mutating success, load
+[docs-closeout](../../references/docs-closeout.md) and update
+`packages/plugins/AGENTS.md` when the widget list or pack-level `bitsUsed`
+changed.
 
 CI uses `just generate-action --check` and `just generate-docs --check`.
 `generate-action --check` **must** fail if a flattened
@@ -340,7 +337,8 @@ expanding `FIRST_PARTY_WIDGET_IDS` is public API:
 1. OpenSpec delta first (`widget-contract` and/or yaml schema).
 2. Then `packages/core/src/types.ts` to match.
 3. Then templates + pack-level `bitsUsed` union.
-4. Then `just generate-action` / `just generate-docs`.
+4. Then `just generate-action` / `just generate-docs` (`just generate-docs`
+   refreshes `playground-fields.json` only).
 
 Never add `plugin_github_languages_*` or any `plugin_<plugin>_<widget>_<option>`
 to `action.yml`. Widget options live in `.github/profile-bits.yml`. Yaml
@@ -381,6 +379,7 @@ Do not load all at once.
 | [generate](references/generate.md) | Mutating write modes only. Destinations, pack-level `bitsUsed` union, copy map |
 | [discover-source](references/discover-source.md) | `discoverSource` matrix |
 | [md-families](references/md-families.md) | Later renderer/md family catalog; Action is GFM only. Load on `families` refuse-or-defer / md/mdx authoring — do not write yaml `md.` |
+| [docs-closeout](../../references/docs-closeout.md) | Mutating success only |
 
 ## Proof
 

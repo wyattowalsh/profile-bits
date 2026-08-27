@@ -129,7 +129,10 @@ invent extra `plugin_<id>` pack bools.
 
 - Do not hand-edit generated `action.yml`.
 - After OpenSpec+types+pack registry: tell the user `just generate-action`
-  and `just generate-docs`.
+  and `just generate-docs`. `just generate-docs` refreshes
+  `playground-fields.json` only. It does not rewrite `AGENTS.md`, `README.md`,
+  or `DESIGN.md`. After mutating success, update `packages/plugins/AGENTS.md`
+  when the pack list changed.
 - `just generate-action --check` must fail on flattened names or stale
   `action.yml`. If it fails, regenerate — do not patch.
 

@@ -175,4 +175,12 @@ describe("author skill templates", () => {
     expect(source).toContain("Generate docs --check");
     expect(source).toContain("pnpm generate-docs --check");
   });
+
+  it("ci.yml runs both agent plugin validate.sh scripts", () => {
+    const source = readExisting(".github/workflows/ci.yml");
+    expect(source).toContain(".agents/profile-bits/scripts/validate.sh");
+    expect(source).toContain(
+      ".agents/profile-bits-readme/scripts/validate.sh",
+    );
+  });
 });

@@ -70,6 +70,24 @@ Integration dest is `packages/integrations/src/<id>/`. github **is** in
 (do not hardcode `/generate/<id>/`). `bitsUsed` is pack-level on
 `<id>Plugin`.
 
+## Exclusive files
+
+| Skill | Owns (mutating) | Nested AGENTS.md |
+| --- | --- | --- |
+| `author` | none (read-only) | — |
+| `author-bit` | `packages/bits/**` | `packages/bits/AGENTS.md` |
+| `author-palette` | `packages/themes/**` | `packages/themes/AGENTS.md` |
+| `author-integration` | `packages/integrations/src/<id>/` | `packages/integrations/AGENTS.md` |
+| `author-widget` | pack widget tree + pack-level `bitsUsed` | `packages/plugins/AGENTS.md` |
+| `author-plugin` | `packages/plugins/src/<id>/plugin.ts` | `packages/plugins/AGENTS.md` |
+
+After mutating success, load [references/docs-closeout.md](references/docs-closeout.md).
+`just generate-docs` refreshes `playground-fields.json` only. It does not
+rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`.
+
+`.agents/plugins/marketplace.json` is a Grok local projection (not skill SSOT).
+Agents MUST NOT run `skills add`.
+
 ## Contracts
 
 Read [references/contract.md](references/contract.md) before authoring.

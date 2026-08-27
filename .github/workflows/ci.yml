@@ -33,6 +33,10 @@ jobs:
         run: pnpm generate-action --check
       - name: Generate docs --check
         run: pnpm generate-docs --check
+      - name: Validate agent plugins
+        run: |
+          bash .agents/profile-bits/scripts/validate.sh
+          bash .agents/profile-bits-readme/scripts/validate.sh
 
   test:
     runs-on: ubuntu-latest

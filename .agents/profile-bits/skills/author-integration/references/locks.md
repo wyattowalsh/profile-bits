@@ -61,7 +61,7 @@ already listed does not expand the enum.
 
 1. Propose an OpenSpec change (engine JSON is a **subcommand** flag: `pnpm exec openspec status --change <id> --json` — never `openspec --json`).
 2. Apply / implement against that change.
-3. Tell the user to run `just generate-action` and `just generate-docs` when codegen or docs fields change.
+3. Tell the user to run `just generate-action` and `just generate-docs` when codegen or docs fields change. `just generate-docs` refreshes `playground-fields.json` only. It does not rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`. After mutating success, update `packages/integrations/AGENTS.md` when those facts changed.
 4. Fail closed on stale codegen. Do not silently expand `IntegrationIdSchema`.
 
 Existing `static` / `github` contracts live in `openspec/specs/integration-contract/spec.md`. Do not MODIFIED-delta that spec from this skill unless the user is executing a separate OpenSpec change.

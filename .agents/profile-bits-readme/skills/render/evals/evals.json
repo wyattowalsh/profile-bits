@@ -1,0 +1,96 @@
+{
+  "skill_name": "render",
+  "evals": [
+    {
+      "id": "empty-args",
+      "prompt": "/render",
+      "expected_output": "Show yaml + thin workflow + just render / pnpm render gallery and stop without implementing runMain or authoring packages/**.",
+      "assertions": [
+        "Shows empty-args gallery",
+        "Does not implement runMain",
+        "Does not author packages/**"
+      ]
+    },
+    {
+      "id": "yaml-and-workflow",
+      "prompt": "Write my profile-bits yaml and a thin GitHub Actions workflow.",
+      "expected_output": "Write .github/profile-bits.yml as SSOT and a thin workflow with thin with: keys only. Never flattened plugin_*_*_* inputs.",
+      "assertions": [
+        "Writes .github/profile-bits.yml",
+        "Thin workflow inputs only",
+        "Refuses flattened plugin_*_*_* inputs"
+      ]
+    },
+    {
+      "id": "relative-embeds",
+      "prompt": "Paste README images for the generated widgets.",
+      "expected_output": "Relative ![](./profile-bits/\u2026) embeds. Do not use gist as a CDN.",
+      "assertions": [
+        "Uses relative profile-bits/ embeds",
+        "Does not treat gist as a CDN"
+      ]
+    },
+    {
+      "id": "refuse-mcp",
+      "prompt": "Add mcp.json so agents can render widgets over MCP.",
+      "expected_output": "Refuse. No mcp.json. This skill shells out to just render.",
+      "assertions": [
+        "Refuses MCP",
+        "No mcp.json"
+      ]
+    },
+    {
+      "id": "refuse-flatten",
+      "prompt": "Add Action input plugin_github_stats_include.",
+      "expected_output": "Refuse flattened plugin_*_*_* inputs. Options live in yaml.",
+      "assertions": [
+        "Refuses flattened plugin_*_*_* inputs"
+      ]
+    },
+    {
+      "id": "refuse-embed-api",
+      "prompt": "Document POST /api/preview as our public embed API.",
+      "expected_output": "Refuse. POST /api/preview is layout preview, not a public embed API.",
+      "assertions": [
+        "Refuses documenting POST /api/preview as an embed API"
+      ]
+    },
+    {
+      "id": "refuse-packages-handoff",
+      "prompt": "Add a new github stats card in packages/plugins.",
+      "expected_output": "Stop. Point at sibling .agents/profile-bits skills author-widget / author-plugin. Do not author packages/** here.",
+      "assertions": [
+        "Does not author packages/**",
+        "Hands off to .agents/profile-bits"
+      ]
+    },
+    {
+      "id": "refuse-runMain",
+      "prompt": "Implement runMain in this skill so we do not need the CLI.",
+      "expected_output": "Refuse. Shell out to just render / pnpm render. Do not implement runMain.",
+      "assertions": [
+        "Refuses to implement runMain",
+        "Mentions just render or pnpm render"
+      ]
+    },
+    {
+      "id": "catalog-not-marketplace-four-packs",
+      "prompt": "Is /generate/catalog a plugin store? Which packs does it show?",
+      "expected_output": "First-party visual gallery of github, wakatime, rss, and http. Not a marketplace. repo is opt-in, not a github pack default. Not github widgets only.",
+      "assertions": [
+        "Names github, wakatime, rss, and http",
+        "Says catalog is not a marketplace",
+        "Does not say the catalog is currently github widgets only"
+      ]
+    },
+    {
+      "id": "tokens-not-in-yaml",
+      "prompt": "Put GITHUB_TOKEN in profile-bits.yml so render works.",
+      "expected_output": "Refuse. Tokens stay in env / workflow secrets, never yaml, README, or logs.",
+      "assertions": [
+        "Refuses tokens in yaml",
+        "Tokens stay in env"
+      ]
+    }
+  ]
+}

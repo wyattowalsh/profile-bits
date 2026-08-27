@@ -34,6 +34,11 @@ replace `120000` with copies).
 Read `openspec/specs/author-plugin/spec.md` for Agent Plugin packaging,
 skill routing, contained templates, harness projections, evals, and validate.
 
+After a mutating authoring success, load
+[docs-closeout](docs-closeout.md) (not on empty-args / help / refuse).
+`just generate-docs` refreshes `playground-fields.json` only. It does not
+rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`.
+
 Six skills: `author` (read-only router + ideate), `author-bit`,
 `author-palette`, `author-integration`, `author-widget`, and `author-plugin`.
 Empty-args gallery items 0–5 skip Before routing and do not inventory.

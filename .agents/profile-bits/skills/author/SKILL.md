@@ -1,13 +1,9 @@
 ---
 name: author
 description: >-
-  Routes profile-bits authoring across exactly six skills. Theme or Chip bit →
-  author-bit; yaml theme or named palette → author-palette; data source →
-  author-integration; card → author-widget; pack → author-plugin. Ideate ranks
-  the next bit, palette, integration, widget, or pack and stops. Use for
-  classify, ideate, next, brainstorm, or ambiguous theme/badge requests. This
-  router never mutates. NOT for Action runtime, CLI engine, MCP, Marketplace
-  flatten, or implementing `just render` / `pnpm render` / `runMain`.
+  Routes profile-bits authoring across six skills. Use when classifying,
+  ideating, or handling ambiguous theme/badge requests. NOT for Action
+  runtime, CLI/runMain, MCP, or Marketplace flatten.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.
 metadata:
@@ -40,7 +36,7 @@ inventory, rank, mutate, or copy templates.
 
 ## Dispatch
 
-| Signal | Route |
+| `$ARGUMENTS` | Route |
 | --- | --- |
 | *(empty)* / `help` / how do I author | Gallery 0–5; skip Before routing; stop |
 | `ideate` / `next` / `brainstorm` / what should I add | Load [next](references/next.md), rank, and stop |
@@ -156,15 +152,34 @@ Name the lock and stop:
 ## Handoff
 
 Name the kind, specialized skill, repo-root destination, and relevant locks.
-The specialized skill owns any templates and writes. `author` always stops
+The specialized skill owns any templates, writes, and
+[docs-closeout](../../references/docs-closeout.md). `author` always stops
 without mutation.
 
+## Canonical terms
+
+- **Generated:** `action.yml`, `playground-fields.json` — dest skill instructs, never hand-edits.
+- **Handwritten:** nested package `AGENTS.md` — dest skill updates after mutating success.
+- **docs-closeout:** destination skill’s job, not this router.
+
+## Critical rules
+
+1. Never write files or copy templates.
+2. Empty `$ARGUMENTS` / help show gallery 0–5 and stop (no inventory).
+3. Exactly six skills; never create `author-theme`, `author-badge`, or `render` here.
+4. Docs-closeout is the destination skill’s job; do not load it on empty-args.
+5. Do not implement `just render` / `pnpm render` / `runMain`.
+6. Never add MCP or flattened `plugin_*_*_*` inputs.
+
 ## Reference index
+
+Do not load all at once.
 
 | File | Load when |
 | --- | --- |
 | [locks](references/locks.md) | Mutating handoff only |
 | [next](references/next.md) | Ideate/next/brainstorm only |
+| [docs-closeout](../../references/docs-closeout.md) | Never from this router; name it on dest handoff |
 
 ## Proof
 

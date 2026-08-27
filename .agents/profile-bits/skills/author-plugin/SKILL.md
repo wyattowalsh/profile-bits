@@ -1,15 +1,9 @@
 ---
 name: author-plugin
 description: >-
-  Scaffolds a profile-bits plugin pack registry (named idPlugin with widgets,
-  derived integration union, pack-level bitsUsed, defaults, and docsPath) into
-  packages/plugins/src/{id}/. Completing an id already in FIRST_PARTY_PLUGIN_IDS
-  is allowed; a new id needs OpenSpec first. Use when adding a pack registry,
-  plugin.ts, docsPath, or pack defaults. NOT for a shared bit (author-bit),
-  yaml themes or named palettes (author-palette), a card on an existing pack
-  (author-widget), a new data source (author-integration), a second pack for
-  an existing id, silent FIRST_PARTY_* append, flattened plugin_*_*_* Action
-  inputs, MCP / mcp.json, or dest paths that use ../.
+  Scaffolds a pack registry under packages/plugins/src/{id}/. Use when adding a
+  pack or plugin.ts. NOT for bits, palettes, existing-pack cards, data sources,
+  MCP, or flattened Action inputs.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.
 metadata:
@@ -59,8 +53,10 @@ Do not write files. Do not inventory live packs or the next product add
    (six-name starter for new packs; union is add-only; update `plugin.test.ts` when unioning)
 6. `docsPath: "{{DOCS_PATH}}"` — do not hardcode `/generate/<id>/`
 7. After public API: tell the user to run `just generate-action` and
-   `just generate-docs`. Fail closed on stale codegen — never hand-edit
-   `action.yml`.
+   `just generate-docs`. `just generate-docs` refreshes
+   `playground-fields.json` only. It does not rewrite `AGENTS.md`,
+   `README.md`, or `DESIGN.md`. Fail closed on stale codegen — never
+   hand-edit `action.yml`.
 
 ## Dispatch
 
@@ -101,6 +97,7 @@ Direct “add MCP” / dest `../packages/plugins/...` → **refuse**.
 11. Complete-existing: inventory live files; extend rather than overwrite; keep any existing widget registry export; if a live pack has widget-entry `bitsUsed` and no pack-level `bitsUsed`, attach pack-level `{{PLUGIN_ID_UPPER}}_BITS_USED` as the unique union of that pack’s widget-entry arrays (do not copy the six-name starter over an existing pack); `openspec=no`; do not create alias skill directories; do not shrink any live pack-level `{{ID}}_BITS_USED`; copy templates only into empty or new directories.
 12. Empty args / help → gallery and **stop**. Do not inventory. Do not write.
 13. Shared bit sources route to `author-bit`; yaml themes and named palettes route to `author-palette`. Never create `author-theme` or `author-badge`.
+14. After mutating success, load docs-closeout and update `packages/plugins/AGENTS.md` when the pack list changed. `just generate-docs` refreshes playground-fields.json only. It does not rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`.
 
 ## Pack identity
 
@@ -228,6 +225,11 @@ just generate-action
 just generate-docs
 ```
 
+   `just generate-docs` refreshes `playground-fields.json` only. It does not
+   rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`. After mutating success,
+   load [docs-closeout](../../references/docs-closeout.md) and update
+   `packages/plugins/AGENTS.md` when the pack list changed.
+
    In CI / after edits that must match generated output:
    `just generate-action --check`. If `--check` fails, regenerate — do not
    patch yaml by hand.
@@ -257,7 +259,8 @@ just generate-docs
 - [ ] `integrations` is the derived union
 - [ ] Defaults omit `demo`
 - [ ] No flattened Action inputs; no hand-edited `action.yml`
-- [ ] User told to run `just generate-action` and `just generate-docs`
+- [ ] User told to run `just generate-action` and `just generate-docs` (snapshot-only generate-docs)
+- [ ] Docs-closeout: `packages/plugins/AGENTS.md` updated when pack facts changed
 
 ## Reference index
 
@@ -266,6 +269,7 @@ Do not load all at once.
 | File | Load when |
 | --- | --- |
 | [locks](references/locks.md) | Catalog, dest, bitsUsed, yaml, thin Action, template containment |
+| [docs-closeout](../../references/docs-closeout.md) | Mutating success only |
 
 ## Proof
 

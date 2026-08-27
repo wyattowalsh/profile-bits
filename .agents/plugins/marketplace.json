@@ -1,0 +1,36 @@
+{
+  "name": "profile-bits",
+  "interface": {
+    "displayName": "profile-bits"
+  },
+  "plugins": [
+    {
+      "name": "profile-bits",
+      "displayName": "profile-bits",
+      "source": {
+        "source": "local",
+        "path": "./.agents/profile-bits"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development & Workflow",
+      "description": "Author profile-bits bits, palettes, integrations, widgets, and plugin packs."
+    },
+    {
+      "name": "profile-bits-readme",
+      "displayName": "profile-bits-readme",
+      "source": {
+        "source": "local",
+        "path": "./.agents/profile-bits-readme"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development & Workflow",
+      "description": "Write profile-bits yaml and thin workflows, then run the local CLI."
+    }
+  ]
+}

@@ -117,6 +117,8 @@ on `{{PACK_ID}}Plugin`. Not a widget-entry field.
   flattened option input, stop.
 - After a public-API or docs-field change, tell the user to run
   `just generate-action` and `just generate-docs` when those recipes exist.
+  `just generate-docs` refreshes `playground-fields.json` only. It does not
+  rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`.
   CI: `just generate-action --check` and `just generate-docs --check`.
 - Read registries and `packages/core/src/types.ts`. Do not invent Action
   input names.

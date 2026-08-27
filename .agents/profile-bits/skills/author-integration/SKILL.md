@@ -1,16 +1,9 @@
 ---
 name: author-integration
 description: >-
-  Generates a profile-bits data-source integration (client, auth, scopes,
-  inputs, mocked HTTP) into packages/integrations/src/{id}/. Completing an
-  existing FIRST_PARTY_INTEGRATION_IDS id is allowed when dest is empty or new;
-  if dest client.ts exists, stop. A new id needs OpenSpec first. Use when
-  adding a WakaTime-class API, GitHub client, REST/GraphQL, auth, scopes, or
-  cache keys. NOT for shared bits (author-bit), yaml themes or named palettes
-  (author-palette), widgets (author-widget), packs (author-plugin), a second
-  pack for an existing plugin id, silent catalog append, live GitHub, REST
-  /languages, flattened plugin_*_*_* inputs, unauthenticated GitHub, MCP /
-  mcp.json, or dest paths that use ../.
+  Scaffolds a data-source integration under packages/integrations/src/{id}/.
+  Use when adding a WakaTime-class API. NOT for bits, palettes, widgets,
+  packs, MCP, or flattened Action inputs.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec plugin-contract, widget-contract, integration-contract, and author-plugin specs; packages/core/src/types.ts.
 metadata:
@@ -67,7 +60,7 @@ never invent `plugin_*_*_*`.
 ### Empty args
 
 When `$ARGUMENTS` is empty (or `help`), print this gallery and **stop**: modes
-above, overwrite gate (stop if dest `client.ts` exists), critical rules 1–13,
+above, overwrite gate (stop if dest `client.ts` exists), critical rules 1–14,
 reference index **names**. Do not copy templates, do not invent an integration
 id, do not mutate the repo, do not inventory the next product add (that is
 `author` ideate).
@@ -108,7 +101,8 @@ Use these exactly:
 10. GitHub crawl: REST `GET /users/{login}` + paginated `/users/{login}/repos?type=owner&per_page=100`. REST `{login}` path segments MUST use `encodeURIComponent(login)` — do not interpolate raw login. When `include_private` and `canPrivate` and probe login equals `user`, authenticated `GET /user/repos?type=owner&per_page=100` (no login segment). **Filter forks/archived then cap 500.** Stars and language bytes share that ordered id list. GraphQL `nodes(ids:)` batches of **100**.
 11. Never invent flattened `plugin_<plugin>_<widget>_<option>` Action inputs. Config SSOT is `.github/profile-bits.yml` (`additionalProperties: false`). Thin Action only — read `ActionInputsSchema` (optional `wakatime_token`, `http_token_env`).
 12. Tests: mocked HTTP only. No live GitHub, WakaTime, or network. Refuse MCP / `mcp.json`.
-13. Copy from `assets/templates/*.template` using the destination table and the four-file auth scheme→filename map (`auth.none.ts.template` / `auth.github-bearer.ts.template` / `auth.wakatime-basic.ts.template` / `auth.http-optional.ts.template`). There is no default `auth.ts.template`. If `id` is already in live `INTEGRATION_AUTH`, copy that scheme file; else OpenSpec names `{{scheme}}` in `{none, github-bearer, wakatime-basic, http-optional}` and copy that named file. Unknown **scheme** **stops**. Do not interpolate `auth.{{scheme}}.ts.template` as a path. Templates are for **new** ids; do not emit a parallel `auth.ts` onto any live dest from the catalog (any dest with `client.ts`). Do not add `index.ts.template`. Barrel re-exports in `packages/integrations/src/index.ts` are mention-only (github **is** already in that barrel). After public schema/codegen impact: tell the user to run `just generate-action` and `just generate-docs`.
+13. Copy from `assets/templates/*.template` using the destination table and the four-file auth scheme→filename map (`auth.none.ts.template` / `auth.github-bearer.ts.template` / `auth.wakatime-basic.ts.template` / `auth.http-optional.ts.template`). There is no default `auth.ts.template`. If `id` is already in live `INTEGRATION_AUTH`, copy that scheme file; else OpenSpec names `{{scheme}}` in `{none, github-bearer, wakatime-basic, http-optional}` and copy that named file. Unknown **scheme** **stops**. Do not interpolate `auth.{{scheme}}.ts.template` as a path. Templates are for **new** ids; do not emit a parallel `auth.ts` onto any live dest from the catalog (any dest with `client.ts`). Do not add `index.ts.template`. Barrel re-exports in `packages/integrations/src/index.ts` are mention-only (github **is** already in that barrel). After public schema/codegen impact: tell the user to run `just generate-action` and `just generate-docs`. `just generate-docs` refreshes `playground-fields.json` only. It does not rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`.
+14. After mutating success, load [docs-closeout](../../references/docs-closeout.md) and update `packages/integrations/AGENTS.md` when those facts changed. Skip docs-closeout on empty-args, help, refuse, route-away, and complete-existing stop.
 
 ## Workflow
 
@@ -120,7 +114,7 @@ Use these exactly:
 6. **Copy** templates to destinations below (strip `.template`) only after the overwrite gate. Auth: if `id` is already in live `INTEGRATION_AUTH`, copy that scheme file; else OpenSpec names `{{scheme}}` — look it up in the four-row scheme→filename table. Unknown **scheme** stops. A new id whose named scheme is one of the four copies that named file. Do not interpolate `auth.{{scheme}}.ts.template` as a path. Templates are for **new** ids — do not emit a parallel `auth.ts` onto any live dest from the catalog. Do not write live package source except at those destinations. Do not hand-edit a second skills tree.
 7. **Specialize.** `github` (new dest only): load [github-fetch](references/github-fetch.md). Other ids: keep cache/auth/shared-client; omit GitHub REST crawl and language `nodes(ids:)`; keep the REST `/languages` guard if the client might call GitHub.
 8. **Tests.** Fill `client.test.ts` with mocked `fetch`. Cover empty token, shared client, cache keys, and (github-class) filter-then-cap + batches of 100.
-9. **Stop at the integration boundary.** Do not add widgets, packs, or Action inputs. Point the user at `just generate-action` / `just generate-docs` when codegen is affected.
+9. **Stop at the integration boundary.** Do not add widgets, packs, or Action inputs. Point the user at `just generate-action` / `just generate-docs` when codegen is affected. `just generate-docs` refreshes `playground-fields.json` only. It does not rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`. After mutating success, load [docs-closeout](../../references/docs-closeout.md) and update `packages/integrations/AGENTS.md` when those facts changed.
 
 ## Destinations
 
@@ -176,6 +170,7 @@ Do not load all at once.
 | [locks](references/locks.md) | Catalog, yaml SSOT, OpenSpec, flattened-input ban, dest `../`, MCP |
 | [auth](references/auth.md) | Live `INTEGRATION_AUTH` (id→scheme snapshot of that map), token classes, per-widget options |
 | [github-fetch](references/github-fetch.md) | `fetch-policy` crawl, cache keys, skip/fail, `nodes(ids:)` — not the add-github scaffold |
+| [docs-closeout](../../references/docs-closeout.md) | Mutating success only |
 
 ## WakaTime-class (canonical)
 

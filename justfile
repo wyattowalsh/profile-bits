@@ -28,8 +28,14 @@ generate-action *args:
 generate-docs *args:
     pnpm generate-docs {{ args }}
 
+# Agent Plugins 1.0.0 gates for author + consumer plugin trees.
+validate-agent-plugins:
+    bash .agents/profile-bits/scripts/validate.sh
+    bash .agents/profile-bits-readme/scripts/validate.sh
+
 check:
     pnpm check
+    just validate-agent-plugins
 
 openspec *args:
     pnpm exec openspec {{ args }}

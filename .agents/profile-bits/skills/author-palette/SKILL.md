@@ -1,10 +1,9 @@
 ---
 name: author-palette
 description: >-
-  Completes or authors profile-bits named palettes, yaml theme values, flavor
-  families, swatches, and seven-token theme maps under packages/themes. Use
-  for palette and yaml theme work. NOT for the shared Theme bit, in-card Chip,
-  cards, packs, MCP, or plugin-owned hex.
+  Authors yaml themes and named palettes under packages/themes. Use when
+  editing flavors, swatches, or seven-token maps. NOT for the Theme bit,
+  in-card Chip, cards, packs, or MCP.
 license: MIT
 compatibility: Requires the profile-bits repo; OpenSpec author-plugin and theme-catalog specs; packages/themes and packages/core/src/types.ts.
 metadata:
@@ -77,6 +76,10 @@ id only (`theme: custom` as an Action input fails). Custom lives in yaml.
 
 ## Complete-existing workflow
 
+After mutating success, load [docs-closeout](../../references/docs-closeout.md)
+and update `packages/themes/AGENTS.md` when catalog **rules** changed. Complete-existing
+that only inventories a live flavor skips docs-closeout.
+
 1. Read `packages/themes/AGENTS.md`, the target family file,
    `packages/themes/src/registry.ts` (`NAMED_THEME_IDS`), and matching tests.
    For yaml `theme` shape, read `ThemeConfigSchema` in
@@ -120,6 +123,22 @@ Never create `packages/palettes/`.
 
 Do not create `author-theme` or `author-badge`.
 
+## Canonical terms
+
+- **Handwritten:** `packages/themes/AGENTS.md` after mutating catalog-rule changes.
+- **Generated:** none (`just generate-docs` does not rewrite AGENTS.md).
+- **Hex SSOT:** `packages/themes`; bits and plugins do not own flavor hex.
+
+## Critical rules
+
+1. Empty `$ARGUMENTS` / help show the gallery and stop.
+2. New named id or family requires OpenSpec first.
+3. After mutating success, load docs-closeout and update `packages/themes/AGENTS.md` when rules changed.
+4. Unknown flavor/swatch/role/hex fails closed; never fall back to `dark`.
+5. Never edit the Theme bit; that is `author-bit`.
+6. Never add MCP or flattened theme Action inputs.
+7. Templates stay skill-local with no parent traversal.
+
 ## Locks
 
 - Templates are skill-local and contain no parent traversal.
@@ -144,9 +163,12 @@ Do not create `author-theme` or `author-badge`.
 
 ## Reference index
 
+Do not load all at once.
+
 | File | Load when |
 | --- | --- |
 | [destinations](references/destinations.md) | Existing or approved new palette work, after empty args |
+| [docs-closeout](../../references/docs-closeout.md) | Mutating success only |
 
 ## Proof
 

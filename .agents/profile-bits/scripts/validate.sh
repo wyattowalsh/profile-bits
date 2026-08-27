@@ -9,6 +9,7 @@
 #    author-widget, author-plugin};
 #    any other id fails.
 # 5. If generate-action exists, run `just generate-action --check` (or `pnpm generate-action --check`).
+#    If generate-docs exists, run `just generate-docs --check` (or `pnpm generate-docs --check`).
 # 6. Fail if any template resolves outside the plugin root (Node fs.realpathSync +
 #    path.relative). Do not content-grep `../` (comments that say “do not use ../”
 #    must not false-fail). Walking up to the repo root at runtime is allowed.
@@ -363,6 +364,17 @@ run_generate_action_check() {
   fi
 }
 
+run_generate_docs_check() {
+  local repo_root=""
+  if ! repo_root="$(find_repo_root "$PLUGIN_ROOT")"; then
+    return 0
+  fi
+  if has_repo_task "$repo_root" "generate-docs"; then
+    printf 'running generate-docs --check\n'
+    run_just_or_pnpm "$repo_root" generate-docs --check
+  fi
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
@@ -375,5 +387,6 @@ validate_skills "$PLUGIN_ROOT"
 assert_templates_contained "$PLUGIN_ROOT" \
   || die "template path escapes plugin root (Agent Plugins containment)"
 run_generate_action_check
+run_generate_docs_check
 
 printf 'ok: %s\n' "$PLUGIN_ROOT"

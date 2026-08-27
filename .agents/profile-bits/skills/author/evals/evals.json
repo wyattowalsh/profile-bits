@@ -101,6 +101,17 @@
         "Does not implement runMain",
         "Does not route to author-integration, author-widget, or author-plugin to build a CLI"
       ]
+    },
+    {
+      "id": "docs-closeout-is-dest-job",
+      "prompt": "Classify adding a new bit and tell me who updates AGENTS.md.",
+      "expected_output": "Handoff to author-bit. author remains read-only. Docs-closeout is the destination skill\u2019s job. Do not write files.",
+      "assertions": [
+        "Routes to author-bit",
+        "Does not write files",
+        "Names docs-closeout as the destination skill\u2019s job",
+        "Does not implement runMain"
+      ]
     }
   ]
 }

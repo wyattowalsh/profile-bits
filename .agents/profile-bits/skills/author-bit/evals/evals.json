@@ -44,7 +44,7 @@
     {
       "id": "complete-chip-inventories-split-vs-children",
       "prompt": "Complete Chip.",
-      "expected_output": "Inventories Chip children-only (`<Chip>followers</Chip>` for stats/languages) and split `{ label, message, messageColor? }` (http chips; pill radius 999; missing color → theme accent; message ink via readableInk). Finds packages/bits/src/Chip.tsx and the barrel export, reports complete-existing, and does not route to Shields.io.",
+      "expected_output": "Inventories Chip children-only (`<Chip>followers</Chip>` for stats/languages) and split `{ label, message, messageColor? }` (http chips; pill radius 999; missing color \u2192 theme accent; message ink via readableInk). Finds packages/bits/src/Chip.tsx and the barrel export, reports complete-existing, and does not route to Shields.io.",
       "assertions": [
         "Inventories children-only vs split Chip APIs",
         "Reports complete-existing when source and export exist",
@@ -110,6 +110,17 @@
         "Does not create author-badge",
         "Names sibling README tooling or add-badges",
         "Keeps in-card Chip with author-bit"
+      ]
+    },
+    {
+      "id": "docs-closeout-nested-agents",
+      "prompt": "Add an OpenSpec-approved 12th bit called Badge and update the bits docs.",
+      "expected_output": "Requires OpenSpec first, copies Bit.template, then updates packages/bits/AGENTS.md via docs-closeout. Complete-existing frozen bits do not rewrite AGENTS.md. just generate-docs does not rewrite AGENTS.md.",
+      "assertions": [
+        "Requires OpenSpec before a 12th bit",
+        "Updates packages/bits/AGENTS.md after mutating success",
+        "Complete-existing does not rewrite AGENTS.md",
+        "just generate-docs does not rewrite AGENTS.md"
       ]
     }
   ]

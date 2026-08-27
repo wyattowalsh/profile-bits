@@ -37,6 +37,9 @@ skill `render` and MUST NOT implement `runMain`.
 | --- | --- |
 | `render` | Write yaml + thin workflow, run `just render` / `pnpm render`, paste relative `![](./profile-bits/…)` embeds. |
 
+Evals: `skills/render/evals/evals.json`. Proof: `bash scripts/validate.sh`.
+
 No MCP. No `mcp.json`. No `skills` array on `plugin.json`. Yaml SSOT is
 `.github/profile-bits.yml`. Thin Action inputs only — never flattened
-`plugin_*_*_*`.
+`plugin_*_*_*`. `/generate/catalog` is a first-party gallery of live packs
+`github`, `wakatime`, `rss`, and `http` — not github-only and not a marketplace.

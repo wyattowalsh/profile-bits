@@ -217,6 +217,10 @@ touches public API:
    `"{{DOCS_PATH}}"` (placeholder is new-pack only). Union `bitsUsed` into
    `{{PACK_ID_UPPER}}_BITS_USED` on `{{PACK_ID}}Plugin`.
 5. Tell the user to run `just generate-action` and `just generate-docs`.
+   `just generate-docs` refreshes `playground-fields.json` only. It does not
+   rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`. After mutating success,
+   update `packages/plugins/AGENTS.md` when the widget list changed
+   ([docs-closeout](../../../references/docs-closeout.md)).
 6. `just generate-action --check` must reject flattened
    `plugin_<plugin>_<widget>_<option>` inputs. CI also runs
    `just generate-docs --check`.

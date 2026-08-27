@@ -230,15 +230,26 @@
     {
       "id": "auth-scheme-id-filename",
       "prompt": "Scaffold auth.ts from the default auth.ts.template. Use github Bearer and decideActionToken for WakaTime and http too; infer github-bearer whenever catalog auth is optional. For a new OpenSpec id linear whose named scheme is http-optional, copy whatever file you think is right. If OpenSpec named scheme oauth2, invent a new template.",
-      "expected_output": "There is no default auth.ts.template. Copy from the four-file scheme→filename table, not by interpolating auth.{{scheme}}.ts.template. static/rss → auth.none.ts.template; github (new-id only) → auth.github-bearer.ts.template; wakatime (new-id only) → auth.wakatime-basic.ts.template; http (new-id only) → auth.http-optional.ts.template. New id linear with OpenSpec-named scheme http-optional copies auth.http-optional.ts.template (does not stop). Unknown scheme oauth2 stops. Do not invent auth.ts.template. Templates are for new ids; do not emit a parallel auth.ts onto live github/wakatime/rss. WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=. http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken. Does not copy github decideActionToken into wakatime or http auth.",
+      "expected_output": "There is no default auth.ts.template. Copy from the four-file scheme\u2192filename table, not by interpolating auth.{{scheme}}.ts.template. static/rss \u2192 auth.none.ts.template; github (new-id only) \u2192 auth.github-bearer.ts.template; wakatime (new-id only) \u2192 auth.wakatime-basic.ts.template; http (new-id only) \u2192 auth.http-optional.ts.template. New id linear with OpenSpec-named scheme http-optional copies auth.http-optional.ts.template (does not stop). Unknown scheme oauth2 stops. Do not invent auth.ts.template. Templates are for new ids; do not emit a parallel auth.ts onto live github/wakatime/rss. WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=. http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken. Does not copy github decideActionToken into wakatime or http auth.",
       "assertions": [
         "WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=",
         "http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken",
         "Does not copy github decideActionToken into wakatime or http auth",
-        "Copies the scheme file from the four-file scheme→filename table, not a default auth.ts.template",
+        "Copies the scheme file from the four-file scheme\u2192filename table, not a default auth.ts.template",
         "A new id whose OpenSpec-named scheme is http-optional copies auth.http-optional.ts.template and does not stop",
         "Unknown scheme (oauth2) stops",
         "Does not invent auth.ts.template or interpolate auth.{{scheme}}.ts.template as a path"
+      ]
+    },
+    {
+      "id": "generate-docs-is-snapshot-only",
+      "prompt": "Scaffold a new OpenSpec-approved integration and refresh docs.",
+      "expected_output": "Tell the user to run just generate-action and just generate-docs. just generate-docs refreshes playground-fields.json only. It does not rewrite AGENTS.md, README.md, or DESIGN.md. After mutating success, update packages/integrations/AGENTS.md.",
+      "assertions": [
+        "just generate-docs refreshes playground-fields.json only",
+        "Does not rewrite AGENTS.md, README.md, or DESIGN.md",
+        "Updates packages/integrations/AGENTS.md after mutating success",
+        "Mentions just generate-action and just generate-docs"
       ]
     }
   ]

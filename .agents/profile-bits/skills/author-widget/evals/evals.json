@@ -33,7 +33,7 @@
     {
       "id": "css-animation-gif-apng",
       "prompt": "Add CSS animation for gif and apng output on the existing wakatime coding widget.",
-      "expected_output": "Targets the existing wakatime pack coding widget (not github-only; sole live widget on that pack; does not invent a new card). Copies keyframes.css.template as animation.css because that optional file is missing in the non-empty coding dir. Does not overwrite complete existing schema.ts/fetch.ts/widget.*. Does not rewrite inventoried docsPath. Does not create a second wakatime pack. CSS @keyframes are authoring input to renderAnimation via @profile-bits/renderer (takumi-js 2.9.2). Formats allow-list includes gif and apng. APNG files are named .png. Default SVG remains a baked still with no <style>, @keyframes, SMIL, or foreignObject in renderSvg() output. Card 480×160.",
+      "expected_output": "Targets the existing wakatime pack coding widget (not github-only; sole live widget on that pack; does not invent a new card). Copies keyframes.css.template as animation.css because that optional file is missing in the non-empty coding dir. Does not overwrite complete existing schema.ts/fetch.ts/widget.*. Does not rewrite inventoried docsPath. Does not create a second wakatime pack. CSS @keyframes are authoring input to renderAnimation via @profile-bits/renderer (takumi-js 2.9.2). Formats allow-list includes gif and apng. APNG files are named .png. Default SVG remains a baked still with no <style>, @keyframes, SMIL, or foreignObject in renderSvg() output. Card 480\u00d7160.",
       "assertions": [
         "Does not assume github-only; targets the existing wakatime pack coding widget from the prompt",
         "Does not create a second wakatime pack or a new integration just to add animation",
@@ -46,18 +46,18 @@
         "Names APNG output with a .png extension",
         "Keeps default SVG as a baked still (no <style>, @keyframes, SMIL, or foreignObject in renderSvg output)",
         "Renders through @profile-bits/renderer only (no direct takumi-js / @takumi-rs/* import in the widget)",
-        "Uses card size 480×160 and root width/height 100%"
+        "Uses card size 480\u00d7160 and root width/height 100%"
       ]
     },
     {
       "id": "widget-mdx-no-source",
       "prompt": "Drop in a widget.mdx file with no source field for the existing rss feed widget.",
-      "expected_output": "Dest is the existing rss pack feed widget. Writes canonical widget.mdx as authoring and omits the source field so discoverSource maps .mdx → mdx. Does not also write widget.md or widget.tsx. Does not rewrite inventoried rss docsPath. Maps MDX components to the bits index (all 11 names available). Does not require JSX to render Avatar. Unions only composed names into pack-level BITS_USED (no Avatar when the MDX scaffold omits it). Does not put tw on bits. MDX scaffold uses numeric bit props (Bar pct={0}, Stat value={0}) and omits Avatar when there is no src. `<Theme>` with no `theme` prop. Does not require md.presets / md.families in .github/profile-bits.yml (not yaml fields). Does not claim Action ncc includes @mdx-js/mdx, mermaid, or shiki — MDX is later packages/renderer md; Action does not ship @mdx-js/mdx. Ambiguous dual canonical files without source would fail.",
+      "expected_output": "Dest is the existing rss pack feed widget. Writes canonical widget.mdx as authoring and omits the source field so discoverSource maps .mdx \u2192 mdx. Does not also write widget.md or widget.tsx. Does not rewrite inventoried rss docsPath. Maps MDX components to the bits index (all 11 names available). Does not require JSX to render Avatar. Unions only composed names into pack-level BITS_USED (no Avatar when the MDX scaffold omits it). Does not put tw on bits. MDX scaffold uses numeric bit props (Bar pct={0}, Stat value={0}) and omits Avatar when there is no src. `<Theme>` with no `theme` prop. Does not require md.presets / md.families in .github/profile-bits.yml (not yaml fields). Does not claim Action ncc includes @mdx-js/mdx, mermaid, or shiki \u2014 MDX is later packages/renderer md; Action does not ship @mdx-js/mdx. Ambiguous dual canonical files without source would fail.",
       "assertions": [
         "Targets the existing rss pack feed widget (does not invent dest or default to github)",
         "Copies assets/templates/widget.mdx.template as widget.mdx",
         "Omits the source field (prefer omit when the file is named correctly)",
-        "Relies on discoverSource extension .mdx → mdx (no explicit source override)",
+        "Relies on discoverSource extension .mdx \u2192 mdx (no explicit source override)",
         "Does not emit a second canonical widget.md or widget.tsx in the same dir",
         "Maps MDX components to the bits index (all 11 names available). Does not require JSX to render Avatar. Unions only composed names into pack-level BITS_USED (no Avatar when the MDX scaffold omits it). Does not put tw on bits.",
         "MDX scaffold uses numeric bit props (Bar pct={0}, Stat value={0}) and omits Avatar when there is no src",
@@ -70,18 +70,18 @@
     {
       "id": "tailwind-stylesheets",
       "prompt": "Make a Tailwind stylesheets widget for the existing http chips card.",
-      "expected_output": "Dest is the existing http pack chips widget (chips → http). Generates a bits-composed Takumi-safe template. `tw` / `className` only on native `div` / `span` / `img`. Bits use typed props (`gap`, `size`, `weight`, `pct`, `src`) and never take `tw`. Copies `stylesheet.css.template` as `styles.css` because that optional file is missing in the non-empty chips dir; does not overwrite complete existing widget.tsx. Unions bit names into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on `{{PACK_ID}}Plugin`, and updates `plugin.test.ts` so it does not assert a stale literal `bitsUsed` list. Does not rewrite inventoried http docsPath `/playground/http`. No react-dom, useEffect, portals, or Radix/shadcn DOM. Bits are not yaml keys. Takumi via `@profile-bits/renderer`. Card 480×160.",
+      "expected_output": "Dest is the existing http pack chips widget (chips \u2192 http). Generates a bits-composed Takumi-safe template. `tw` / `className` only on native `div` / `span` / `img`. Bits use typed props (`gap`, `size`, `weight`, `pct`, `src`) and never take `tw`. Copies `stylesheet.css.template` as `styles.css` because that optional file is missing in the non-empty chips dir; does not overwrite complete existing widget.tsx. Unions bit names into pack-level `{{PACK_ID_UPPER}}_BITS_USED` on `{{PACK_ID}}Plugin`, and updates `plugin.test.ts` so it does not assert a stale literal `bitsUsed` list. Does not rewrite inventoried http docsPath `/playground/http`. No react-dom, useEffect, portals, or Radix/shadcn DOM. Bits are not yaml keys. Takumi via `@profile-bits/renderer`. Card 480\u00d7160.",
       "assertions": [
         "Targets the existing http pack chips widget (does not invent dest or default to github)",
         "Copies assets/templates/stylesheet.css.template into the non-empty chips dir as styles.css only because styles.css is missing (no-clobber if it already exists)",
         "Does not overwrite complete existing chips widget.tsx",
         "Uses Takumi-safe tw and/or className only on div/span/img, never on bits",
         "Does not put tw, className, or style on Theme/Frame/Stack/Row/Text/Muted/Stat/Bar/Chip/Avatar/Divider",
-        "Updates plugin.test.ts when unioning bitsUsed; does not leave a hardcoded Theme…Muted six-name array",
+        "Updates plugin.test.ts when unioning bitsUsed; does not leave a hardcoded Theme\u2026Muted six-name array",
         "Unions bit names into pack-level {{PACK_ID_UPPER}}_BITS_USED on {{PACK_ID}}Plugin in plugin.ts, not a widget-entry field, not in .github/profile-bits.yml",
         "Does not import react-dom, useEffect, portals, @radix-ui/*, or shadcn DOM primitives",
         "Does not import takumi-js or @takumi-rs/* from the widget (renderer only)",
-        "Root node is width 100% height 100% at card 480×160",
+        "Root node is width 100% height 100% at card 480\u00d7160",
         "Treats compiled CSS as stylesheets[] passed to Takumi, not as <style> inside renderSvg()",
         "Does not create a new first-party pack for Tailwind"
       ]
@@ -213,13 +213,13 @@
     {
       "id": "discover-source",
       "prompt": "I dropped widget.md and widget.tsx in the same folder with no source field. What does discover do? Also a .md file with import/export JSX.",
-      "expected_output": "Ambiguous widget.md + widget.tsx without source fails. Prefer omit source when the canonical filename discovers correctly. .md with import/export/JSX promotes to mdx (promotedFrom: md). Explicit source must match bytes or fail. Order is extension → MIME → sniff.",
+      "expected_output": "Ambiguous widget.md + widget.tsx without source fails. Prefer omit source when the canonical filename discovers correctly. .md with import/export/JSX promotes to mdx (promotedFrom: md). Explicit source must match bytes or fail. Order is extension \u2192 MIME \u2192 sniff.",
       "assertions": [
         "Fails closed on ambiguous widget.md + widget.tsx without source",
         "Prefers omitting source when the canonical filename is correct",
         "Promotes .md with import/export/JSX to mdx",
         "Requires explicit source to match discovered bytes",
-        "Uses discoverSource order extension → MIME → sniff",
+        "Uses discoverSource order extension \u2192 MIME \u2192 sniff",
         "Does not fork a second heuristic"
       ]
     },
@@ -257,6 +257,17 @@
         "Does not copy author-widget templates or write packages/plugins",
         "Does not route yaml theme to author-bit",
         "Does not create author-theme"
+      ]
+    },
+    {
+      "id": "generate-docs-is-snapshot-only",
+      "prompt": "Add a new card on the existing rss pack and regenerate docs.",
+      "expected_output": "Tell the user to run just generate-action and just generate-docs. just generate-docs refreshes playground-fields.json only. It does not rewrite AGENTS.md, README.md, or DESIGN.md. Never copy into apps/docs/**. Update packages/plugins/AGENTS.md when the widget list changed.",
+      "assertions": [
+        "just generate-docs refreshes playground-fields.json only",
+        "Does not rewrite AGENTS.md, README.md, or DESIGN.md",
+        "Does not copy into apps/docs",
+        "Updates packages/plugins/AGENTS.md after mutating success"
       ]
     }
   ]

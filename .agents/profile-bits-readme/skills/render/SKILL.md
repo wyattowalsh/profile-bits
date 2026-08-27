@@ -1,7 +1,9 @@
 ---
 name: render
 description: >-
-  Consumer skill. Write/update `.github/profile-bits.yml` and thin workflow YAML, run `just render` or `pnpm render -- --json --no-input`, paste relative `![](./profile-bits/…)` README embeds. NOT for authoring packages/**, MCP, Marketplace flatten, plugin marketplace, local plugin loaders, GitHub App, VS Code, or documenting POST /api/preview as an embed API.
+  Writes profile-bits yaml and thin workflows, then runs just render. Use when
+  configuring README widgets or the local CLI. NOT for packages/**, MCP,
+  Marketplace flatten, or embed-API docs.
 license: MIT
 compatibility: Requires the profile-bits repo and the profile-bits CLI (`just render` / `pnpm render`); yaml SSOT `.github/profile-bits.yml`; thin Action inputs.
 metadata:
@@ -15,6 +17,18 @@ Consumer README helper. Write yaml and thin workflow YAML, run the **existing**
 local CLI, paste relative README embeds. Do **not** fetch, render, or invent a
 second engine. README delivery in production is the Action committing widget
 files; `just render` / `pnpm render` is the same engine locally.
+
+## Dispatch
+
+| `$ARGUMENTS` | Result |
+| --- | --- |
+| *(empty)* / `help` | Show Do this + gallery of yaml / workflow / render flags; stop without writes if the user only asked how |
+| yaml / `.github/profile-bits.yml` | Write config SSOT (`additionalProperties: false`) |
+| workflow / Action `with:` | Thin inputs only; never `plugin_*_*_*` |
+| `just render` / `pnpm render` | Shell out; default `output_action: none` |
+| README embeds | Relative `![](./profile-bits/…)` |
+| `packages/**` / author-bit / pack | Stop → sibling `.agents/profile-bits` |
+| MCP, flatten, embed API, `runMain` | Refuse |
 
 ## Do this
 
@@ -174,10 +188,10 @@ Empty / `""` / whitespace github token fails. Never unauthenticated GitHub.
 
 ## Catalog is not a marketplace
 
-`/generate/catalog` is a first-party visual gallery (currently github widgets
-`demo`, `stats`, and `languages`). `repo` is an opt-in yaml widget, not a
-catalog row. It is not a plugin marketplace or a store.
-Product yaml packs remain `github` / `wakatime` / `rss` / `http`.
+`/generate/catalog` is a first-party visual gallery of live packs `github`,
+`wakatime`, `rss`, and `http` (widgets `demo`, `stats`, `languages`, `repo`,
+`coding`, `feed`, `json`, `chips`). `repo` is an opt-in yaml widget, not a
+github pack default. It is not a plugin marketplace or a store.
 Customization is yaml plus first-party `http` / `rss` / `chips`, not a user
 plugin loader. Do not add the word `yaml` to the catalog page.
 
@@ -197,6 +211,32 @@ Do not use this skill to:
 - Treat gist as a CDN or the docs catalog as a store
 
 Redirect those requests. Do not implement them here.
+
+## Canonical terms
+
+- **Generated:** none from this skill (do not run `just generate-docs`).
+- **Handwritten:** `.github/profile-bits.yml`, thin workflow YAML, relative README embeds, this catalog-honesty paragraph.
+- **runMain:** Action engine; this skill shells out via `just render` / `pnpm render` and MUST NOT reimplement it.
+
+## Critical rules
+
+1. Empty `$ARGUMENTS` / help describe the flow and stop if the user only asked how.
+2. Yaml SSOT is `.github/profile-bits.yml`; never flattened `plugin_*_*_*` inputs.
+3. Paste relative `![](./profile-bits/…)` embeds; gist is not a CDN.
+4. Never put tokens in yaml, README, workflow literals, or logs.
+5. Never document `POST /api/preview` as a public embed API.
+6. Never implement `runMain` or author `packages/**`.
+7. Catalog copy names four live packs; it is not github-only and not a marketplace.
+
+## Reference index
+
+Do not load all at once.
+
+| File | Load when |
+| --- | --- |
+| [plugin schema](../../references/plugin.schema.json) | Validating `plugin.json` |
+| [docs-closeout](../../../profile-bits/references/docs-closeout.md) | Refreshing this skill’s catalog-honesty paragraph only |
+| Sibling `.agents/profile-bits` | Authoring `packages/**` (handoff) |
 
 ## Proof
 
