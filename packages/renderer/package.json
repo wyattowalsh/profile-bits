@@ -11,11 +11,11 @@
     "@takumi-rs/core": "catalog:",
     "@takumi-rs/helpers": "catalog:",
     "@takumi-rs/wasm": "catalog:",
-    "react": "19.2.8",
+    "react": "19.3.0",
     "takumi-js": "catalog:"
   },
   "devDependencies": {
-    "@types/react": "19.2.18",
+    "@types/react": "19.3.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
