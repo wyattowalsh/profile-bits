@@ -25,19 +25,35 @@ export {
   type CodingRange,
   CodingRangeSchema,
   dedupePreserveOrder,
+  EDITORS_FILENAME_DEFAULT,
+  type EditorsOptions,
+  EditorsOptionsSchema,
   isForbiddenApiDomain,
+  LANGS_FILENAME_DEFAULT,
+  type LangsOptions,
+  LangsOptionsSchema,
+  OS_FILENAME_DEFAULT,
+  type OsOptions,
+  OsOptionsSchema,
+  PROJECTS_FILENAME_DEFAULT,
+  type ProjectsOptions,
+  ProjectsOptionsSchema,
   type WakatimePluginConfig,
   WakatimePluginConfigSchema,
   type WakatimeWidgetsConfig,
   WakatimeWidgetsConfigSchema,
 } from "./wakatime-schema.ts";
 
-/** First-party plugin packs: github + wakatime + rss + http (post-v0). Do not add more plugin ids here. */
+/** First-party plugin packs. Live catalog SSOT; pack agents consume these ids. */
 export const FIRST_PARTY_PLUGIN_IDS = [
   "github",
   "wakatime",
   "rss",
   "http",
+  "spotify",
+  "leetcode",
+  "chess",
+  "steam",
 ] as const;
 export const PluginIdSchema = z.enum(FIRST_PARTY_PLUGIN_IDS);
 export type PluginId = z.infer<typeof PluginIdSchema>;
@@ -51,6 +67,21 @@ export const FIRST_PARTY_WIDGET_IDS = [
   "feed",
   "json",
   "chips",
+  "top-repos",
+  "contributions",
+  "editors",
+  "projects",
+  "os",
+  "langs",
+  "latest",
+  "now-playing",
+  "top",
+  "solved",
+  "heatmap",
+  "ratings",
+  "game",
+  "player",
+  "recent",
 ] as const;
 export const WidgetIdSchema = z.enum(FIRST_PARTY_WIDGET_IDS);
 export type WidgetId = z.infer<typeof WidgetIdSchema>;
@@ -61,6 +92,11 @@ export const FIRST_PARTY_INTEGRATION_IDS = [
   "wakatime",
   "rss",
   "http",
+  "spotify",
+  "leetcode",
+  "chesscom",
+  "lichess",
+  "steam",
 ] as const;
 export const IntegrationIdSchema = z.enum(FIRST_PARTY_INTEGRATION_IDS);
 export type IntegrationId = z.infer<typeof IntegrationIdSchema>;
@@ -75,6 +111,11 @@ export const INTEGRATION_AUTH = {
   wakatime: "required",
   rss: "none",
   http: "optional",
+  spotify: "required",
+  leetcode: "none",
+  chesscom: "none",
+  lichess: "none",
+  steam: "required",
 } as const satisfies Record<IntegrationId, AuthRequirement>;
 
 export const WIDGET_INTEGRATIONS = {
@@ -86,6 +127,21 @@ export const WIDGET_INTEGRATIONS = {
   feed: ["rss"],
   json: ["http"],
   chips: ["http"],
+  "top-repos": ["github"],
+  contributions: ["github"],
+  editors: ["wakatime"],
+  projects: ["wakatime"],
+  os: ["wakatime"],
+  langs: ["wakatime"],
+  latest: ["rss"],
+  "now-playing": ["spotify"],
+  top: ["spotify"],
+  solved: ["leetcode"],
+  heatmap: ["leetcode"],
+  ratings: ["chesscom", "lichess"],
+  game: ["chesscom", "lichess"],
+  player: ["steam"],
+  recent: ["steam"],
 } as const satisfies Record<WidgetId, readonly IntegrationId[]>;
 
 /** Pack defaults when github is on with no widget list. `demo` is opt-in. */
@@ -97,6 +153,26 @@ export const GITHUB_PACK_DEFAULT_WIDGETS = [
 /** Pack defaults when wakatime is on with no widget list. */
 export const WAKATIME_PACK_DEFAULT_WIDGETS = [
   "coding",
+] as const satisfies readonly WidgetId[];
+
+/** Pack defaults when spotify is on with no widget list. */
+export const SPOTIFY_PACK_DEFAULT_WIDGETS = [
+  "now-playing",
+] as const satisfies readonly WidgetId[];
+
+/** Pack defaults when leetcode is on with no widget list. */
+export const LEETCODE_PACK_DEFAULT_WIDGETS = [
+  "solved",
+] as const satisfies readonly WidgetId[];
+
+/** Pack defaults when chess is on with no widget list. */
+export const CHESS_PACK_DEFAULT_WIDGETS = [
+  "ratings",
+] as const satisfies readonly WidgetId[];
+
+/** Pack defaults when steam is on with no widget list. */
+export const STEAM_PACK_DEFAULT_WIDGETS = [
+  "player",
 ] as const satisfies readonly WidgetId[];
 
 export const OUTPUT_FORMATS = [
@@ -319,6 +395,51 @@ export const CHIPS_TYPES_MIN = 1;
 export const CHIPS_WORKFLOW_DEFAULT = "ci.yml";
 export const CHIPS_ANIMATE_DEFAULT = false;
 
+export const TOP_REPOS_FILENAME_DEFAULT = "top-repos";
+export const TOP_REPOS_LIMIT_MIN = 1;
+export const TOP_REPOS_LIMIT_MAX = 16;
+export const TOP_REPOS_LIMIT_DEFAULT = 8;
+export const TOP_REPOS_ANIMATE_DEFAULT = false;
+
+export const CONTRIBUTIONS_FILENAME_DEFAULT = "contributions";
+export const CONTRIBUTIONS_ANIMATE_DEFAULT = false;
+
+export const LATEST_FILENAME_DEFAULT = "latest";
+export const LATEST_LIMIT_MIN = 1;
+export const LATEST_LIMIT_MAX = 8;
+export const LATEST_LIMIT_DEFAULT = 1;
+export const LATEST_ANIMATE_DEFAULT = false;
+
+export const NOW_PLAYING_FILENAME_DEFAULT = "now-playing";
+export const NOW_PLAYING_ANIMATE_DEFAULT = false;
+
+export const TOP_FILENAME_DEFAULT = "top";
+export const TOP_LIMIT_MIN = 1;
+export const TOP_LIMIT_MAX = 16;
+export const TOP_LIMIT_DEFAULT = 5;
+export const TOP_ANIMATE_DEFAULT = false;
+
+export const SOLVED_FILENAME_DEFAULT = "solved";
+export const SOLVED_ANIMATE_DEFAULT = false;
+
+export const HEATMAP_FILENAME_DEFAULT = "heatmap";
+export const HEATMAP_ANIMATE_DEFAULT = false;
+
+export const RATINGS_FILENAME_DEFAULT = "ratings";
+export const RATINGS_ANIMATE_DEFAULT = false;
+
+export const GAME_FILENAME_DEFAULT = "game";
+export const GAME_ANIMATE_DEFAULT = false;
+
+export const PLAYER_FILENAME_DEFAULT = "player";
+export const PLAYER_ANIMATE_DEFAULT = false;
+
+export const RECENT_FILENAME_DEFAULT = "recent";
+export const RECENT_LIMIT_MIN = 1;
+export const RECENT_LIMIT_MAX = 16;
+export const RECENT_LIMIT_DEFAULT = 5;
+export const RECENT_ANIMATE_DEFAULT = false;
+
 const FORBIDDEN_HTTP_HEADER_NAMES = new Set([
   "authorization",
   "cookie",
@@ -350,6 +471,32 @@ export const ACTION_OUTPUT_ACTION_DEFAULT =
 export const ACTION_ALLOW_SKIPPED_DEFAULT = false;
 export const ACTION_USER_DEFAULT = "github.repository_owner";
 export const ACTION_OMITTED_TOKEN_DEFAULT = "$" + "{{ github.token }}";
+
+/**
+ * Yaml `token_env` (http pattern): process env **name**, not a token value.
+ * POSIX-ish `[A-Za-z_][A-Za-z0-9_]*`. Not `INPUT_*`. No default.
+ */
+export const TOKEN_ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+export const TokenEnvSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .regex(
+    TOKEN_ENV_NAME_PATTERN,
+    "token_env must be an environment variable name",
+  )
+  .refine((value) => !value.toUpperCase().startsWith("INPUT_"), {
+    message: "token_env must not be an INPUT_* name",
+  });
+export type TokenEnv = z.infer<typeof TokenEnvSchema>;
+
+/**
+ * Thin Action secret (wakatime_token pattern). Optional; no default.
+ * Empty / whitespace is missing at auth policy, not a schema default.
+ */
+export const OptionalActionTokenSchema = z.string().optional();
+export type OptionalActionToken = z.infer<typeof OptionalActionTokenSchema>;
 
 export const StatsIncludeTokenSchema = z.enum(STATS_INCLUDE_TOKENS);
 export type StatsIncludeToken = z.infer<typeof StatsIncludeTokenSchema>;
@@ -496,11 +643,111 @@ export const ChipsOptionsSchema = z.strictObject({
 });
 export type ChipsOptions = z.infer<typeof ChipsOptionsSchema>;
 
+export const TopReposOptionsSchema = z.strictObject({
+  filename: z.string().default(TOP_REPOS_FILENAME_DEFAULT),
+  limit: z
+    .int()
+    .min(TOP_REPOS_LIMIT_MIN)
+    .max(TOP_REPOS_LIMIT_MAX)
+    .default(TOP_REPOS_LIMIT_DEFAULT),
+  animate: z.boolean().default(TOP_REPOS_ANIMATE_DEFAULT),
+});
+export type TopReposOptions = z.infer<typeof TopReposOptionsSchema>;
+
+export const ContributionsOptionsSchema = z.strictObject({
+  filename: z.string().default(CONTRIBUTIONS_FILENAME_DEFAULT),
+  animate: z.boolean().default(CONTRIBUTIONS_ANIMATE_DEFAULT),
+});
+export type ContributionsOptions = z.infer<typeof ContributionsOptionsSchema>;
+
+export const LatestOptionsSchema = z
+  .strictObject({
+    filename: z.string().default(LATEST_FILENAME_DEFAULT),
+    url: z.url({ protocol: /^https$/ }),
+    limit: z
+      .int()
+      .min(LATEST_LIMIT_MIN)
+      .max(LATEST_LIMIT_MAX)
+      .default(LATEST_LIMIT_DEFAULT),
+    animate: z.boolean().default(LATEST_ANIMATE_DEFAULT),
+  })
+  .superRefine((value, ctx) => {
+    const parsed = new URL(value.url);
+    if (parsed.username !== "" || parsed.password !== "") {
+      ctx.addIssue({
+        code: "custom",
+        message: "url must not include username or password",
+        path: ["url"],
+      });
+    }
+  });
+export type LatestOptions = z.infer<typeof LatestOptionsSchema>;
+
+export const NowPlayingOptionsSchema = z.strictObject({
+  filename: z.string().default(NOW_PLAYING_FILENAME_DEFAULT),
+  animate: z.boolean().default(NOW_PLAYING_ANIMATE_DEFAULT),
+});
+export type NowPlayingOptions = z.infer<typeof NowPlayingOptionsSchema>;
+
+export const TopOptionsSchema = z.strictObject({
+  filename: z.string().default(TOP_FILENAME_DEFAULT),
+  limit: z
+    .int()
+    .min(TOP_LIMIT_MIN)
+    .max(TOP_LIMIT_MAX)
+    .default(TOP_LIMIT_DEFAULT),
+  animate: z.boolean().default(TOP_ANIMATE_DEFAULT),
+});
+export type TopOptions = z.infer<typeof TopOptionsSchema>;
+
+export const SolvedOptionsSchema = z.strictObject({
+  filename: z.string().default(SOLVED_FILENAME_DEFAULT),
+  animate: z.boolean().default(SOLVED_ANIMATE_DEFAULT),
+});
+export type SolvedOptions = z.infer<typeof SolvedOptionsSchema>;
+
+export const HeatmapOptionsSchema = z.strictObject({
+  filename: z.string().default(HEATMAP_FILENAME_DEFAULT),
+  animate: z.boolean().default(HEATMAP_ANIMATE_DEFAULT),
+});
+export type HeatmapOptions = z.infer<typeof HeatmapOptionsSchema>;
+
+export const RatingsOptionsSchema = z.strictObject({
+  filename: z.string().default(RATINGS_FILENAME_DEFAULT),
+  animate: z.boolean().default(RATINGS_ANIMATE_DEFAULT),
+});
+export type RatingsOptions = z.infer<typeof RatingsOptionsSchema>;
+
+export const GameOptionsSchema = z.strictObject({
+  filename: z.string().default(GAME_FILENAME_DEFAULT),
+  animate: z.boolean().default(GAME_ANIMATE_DEFAULT),
+});
+export type GameOptions = z.infer<typeof GameOptionsSchema>;
+
+export const PlayerOptionsSchema = z.strictObject({
+  filename: z.string().default(PLAYER_FILENAME_DEFAULT),
+  animate: z.boolean().default(PLAYER_ANIMATE_DEFAULT),
+});
+export type PlayerOptions = z.infer<typeof PlayerOptionsSchema>;
+
+export const RecentOptionsSchema = z.strictObject({
+  filename: z.string().default(RECENT_FILENAME_DEFAULT),
+  limit: z
+    .int()
+    .min(RECENT_LIMIT_MIN)
+    .max(RECENT_LIMIT_MAX)
+    .default(RECENT_LIMIT_DEFAULT),
+  animate: z.boolean().default(RECENT_ANIMATE_DEFAULT),
+});
+export type RecentOptions = z.infer<typeof RecentOptionsSchema>;
+
 export const GithubWidgetsConfigSchema = z.strictObject({
   demo: DemoOptionsSchema.optional(),
   stats: StatsOptionsSchema.optional(),
   languages: LanguagesOptionsSchema.optional(),
   repo: RepoOptionsSchema.optional(),
+  "top-repos": TopReposOptionsSchema.optional(),
+  contributions: ContributionsOptionsSchema.optional(),
 });
 export type GithubWidgetsConfig = z.infer<typeof GithubWidgetsConfigSchema>;
 
@@ -511,6 +758,7 @@ export type GithubPluginConfig = z.infer<typeof GithubPluginConfigSchema>;
 
 export const RssWidgetsConfigSchema = z.strictObject({
   feed: FeedOptionsSchema,
+  latest: LatestOptionsSchema.optional(),
 });
 export type RssWidgetsConfig = z.infer<typeof RssWidgetsConfigSchema>;
 
@@ -526,15 +774,69 @@ export const HttpWidgetsConfigSchema = z.strictObject({
 export type HttpWidgetsConfig = z.infer<typeof HttpWidgetsConfigSchema>;
 
 export const HttpPluginConfigSchema = z.strictObject({
+  token_env: TokenEnvSchema.optional(),
   widgets: HttpWidgetsConfigSchema.optional(),
 });
 export type HttpPluginConfig = z.infer<typeof HttpPluginConfigSchema>;
+
+export const SpotifyWidgetsConfigSchema = z.strictObject({
+  "now-playing": NowPlayingOptionsSchema.optional(),
+  top: TopOptionsSchema.optional(),
+});
+export type SpotifyWidgetsConfig = z.infer<typeof SpotifyWidgetsConfigSchema>;
+
+export const SpotifyPluginConfigSchema = z.strictObject({
+  token_env: TokenEnvSchema.optional(),
+  widgets: SpotifyWidgetsConfigSchema.optional(),
+});
+export type SpotifyPluginConfig = z.infer<typeof SpotifyPluginConfigSchema>;
+
+export const LeetcodeWidgetsConfigSchema = z.strictObject({
+  solved: SolvedOptionsSchema.optional(),
+  heatmap: HeatmapOptionsSchema.optional(),
+});
+export type LeetcodeWidgetsConfig = z.infer<typeof LeetcodeWidgetsConfigSchema>;
+
+export const LeetcodePluginConfigSchema = z.strictObject({
+  user: z.string().min(1).optional(),
+  widgets: LeetcodeWidgetsConfigSchema.optional(),
+});
+export type LeetcodePluginConfig = z.infer<typeof LeetcodePluginConfigSchema>;
+
+export const ChessWidgetsConfigSchema = z.strictObject({
+  ratings: RatingsOptionsSchema.optional(),
+  game: GameOptionsSchema.optional(),
+});
+export type ChessWidgetsConfig = z.infer<typeof ChessWidgetsConfigSchema>;
+
+export const ChessPluginConfigSchema = z.strictObject({
+  user: z.string().min(1).optional(),
+  widgets: ChessWidgetsConfigSchema.optional(),
+});
+export type ChessPluginConfig = z.infer<typeof ChessPluginConfigSchema>;
+
+export const SteamWidgetsConfigSchema = z.strictObject({
+  player: PlayerOptionsSchema.optional(),
+  recent: RecentOptionsSchema.optional(),
+});
+export type SteamWidgetsConfig = z.infer<typeof SteamWidgetsConfigSchema>;
+
+export const SteamPluginConfigSchema = z.strictObject({
+  token_env: TokenEnvSchema.optional(),
+  user: z.string().min(1).optional(),
+  widgets: SteamWidgetsConfigSchema.optional(),
+});
+export type SteamPluginConfig = z.infer<typeof SteamPluginConfigSchema>;
 
 export const PluginsConfigSchema = z.strictObject({
   github: GithubPluginConfigSchema.optional(),
   wakatime: WakatimePluginConfigSchema.optional(),
   rss: RssPluginConfigSchema.optional(),
   http: HttpPluginConfigSchema.optional(),
+  spotify: SpotifyPluginConfigSchema.optional(),
+  leetcode: LeetcodePluginConfigSchema.optional(),
+  chess: ChessPluginConfigSchema.optional(),
+  steam: SteamPluginConfigSchema.optional(),
 });
 export type PluginsConfig = z.infer<typeof PluginsConfigSchema>;
 
@@ -556,8 +858,10 @@ export const ActionInputsSchema = z.strictObject({
   committer_token: z.string().optional(),
   config: z.string().default(ACTION_CONFIG_PATH_DEFAULT),
   plugin_github: z.boolean().optional(),
-  wakatime_token: z.string().optional(),
+  wakatime_token: OptionalActionTokenSchema,
   http_token_env: z.string().optional(),
+  spotify_token: OptionalActionTokenSchema,
+  steam_token: OptionalActionTokenSchema,
   format: OutputFormatSchema.optional(),
   theme: ThemeSchema.optional(),
   output_pair: z.boolean().optional(),

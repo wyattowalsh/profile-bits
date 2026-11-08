@@ -25,9 +25,10 @@ OpenSpec first. Do not create a second pack for an id already in
 `FIRST_PARTY_PLUGIN_IDS`. WakaTime-class **architecture** (client, auth, scopes,
 inputs, mocked HTTP) still applies to **new** data sources. Read live
 `FIRST_PARTY_*` from `types.ts`; never invent names. Today’s packs
-(`github`, `wakatime`, `rss`, `http`) are a snapshot — not a frozen four-id
-table to bump when packs are added. Thin Action names: read
-`ActionInputsSchema` (includes optional `wakatime_token`, `http_token_env`);
+(`github`, `wakatime`, `rss`, `http`, `spotify`, `leetcode`, `chess`, `steam`)
+are a snapshot of live `FIRST_PARTY_PLUGIN_IDS` — not a frozen id table to
+bump by hand. Thin Action names: read `ActionInputsSchema` (includes optional
+`wakatime_token`, `http_token_env`, `spotify_token`, `steam_token`);
 never invent `plugin_*_*_*`.
 
 ## Dispatch
@@ -101,7 +102,7 @@ Use these exactly:
 10. GitHub crawl: REST `GET /users/{login}` + paginated `/users/{login}/repos?type=owner&per_page=100`. REST `{login}` path segments MUST use `encodeURIComponent(login)` — do not interpolate raw login. When `include_private` and `canPrivate` and probe login equals `user`, authenticated `GET /user/repos?type=owner&per_page=100` (no login segment). **Filter forks/archived then cap 500.** Stars and language bytes share that ordered id list. GraphQL `nodes(ids:)` batches of **100**.
 11. Never invent flattened `plugin_<plugin>_<widget>_<option>` Action inputs. Config SSOT is `.github/profile-bits.yml` (`additionalProperties: false`). Thin Action only — read `ActionInputsSchema` (optional `wakatime_token`, `http_token_env`).
 12. Tests: mocked HTTP only. No live GitHub, WakaTime, or network. Refuse MCP / `mcp.json`.
-13. Copy from `assets/templates/*.template` using the destination table and the four-file auth scheme→filename map (`auth.none.ts.template` / `auth.github-bearer.ts.template` / `auth.wakatime-basic.ts.template` / `auth.http-optional.ts.template`). There is no default `auth.ts.template`. If `id` is already in live `INTEGRATION_AUTH`, copy that scheme file; else OpenSpec names `{{scheme}}` in `{none, github-bearer, wakatime-basic, http-optional}` and copy that named file. Unknown **scheme** **stops**. Do not interpolate `auth.{{scheme}}.ts.template` as a path. Templates are for **new** ids; do not emit a parallel `auth.ts` onto any live dest from the catalog (any dest with `client.ts`). Do not add `index.ts.template`. Barrel re-exports in `packages/integrations/src/index.ts` are mention-only (github **is** already in that barrel). After public schema/codegen impact: tell the user to run `just generate-action` and `just generate-docs`. `just generate-docs` refreshes `playground-fields.json` only. It does not rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`.
+13. Copy from `assets/templates/*.template` using the destination table and the six-file auth scheme→filename map (`auth.none.ts.template` / `auth.github-bearer.ts.template` / `auth.wakatime-basic.ts.template` / `auth.http-optional.ts.template` / `auth.query-key.ts.template` / `auth.oauth-refresh.ts.template`). There is no default `auth.ts.template`. If `id` is already in live `INTEGRATION_AUTH`, copy that scheme file; else OpenSpec names `{{scheme}}` in `{none, github-bearer, wakatime-basic, http-optional, query-key, oauth-refresh}` and copy that named file. Unknown **scheme** (including `oauth2`) **stops**. Do not interpolate `auth.{{scheme}}.ts.template` as a path. Do not invent `auth.oauth2.ts.template`. Templates are for **new** ids; do not emit a parallel `auth.ts` onto any live dest from the catalog (any dest with `client.ts`). Do not add `index.ts.template`. Barrel re-exports in `packages/integrations/src/index.ts` are mention-only (github **is** already in that barrel). After public schema/codegen impact: tell the user to run `just generate-action` and `just generate-docs`. `just generate-docs` refreshes `playground-fields.json` only. It does not rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`.
 14. After mutating success, load [docs-closeout](../../references/docs-closeout.md) and update `packages/integrations/AGENTS.md` when those facts changed. Skip docs-closeout on empty-args, help, refuse, route-away, and complete-existing stop.
 
 ## Workflow
@@ -110,8 +111,8 @@ Use these exactly:
 2. **OpenSpec gate.** New id, yaml keys, or Action surface → propose/apply an OpenSpec change first. Completing an existing `FIRST_PARTY_INTEGRATION_IDS` id does not append the enum. Existing `static` / `github` implementation follows `openspec/specs/integration-contract/spec.md`.
 3. **Read first (mutating add/scaffold only).** Skip for empty-args, help, `fetch-policy`, refuse, and route-away. Then read `openspec/specs/integration-contract/spec.md`, `packages/core/src/types.ts` (`FIRST_PARTY_INTEGRATION_IDS`, `INTEGRATION_AUTH`, `TOKEN_CLASSES`), `packages/integrations/AGENTS.md`. Reuse core `auth-policy` — do not fork a second skip/fail matrix.
 4. **Overwrite gate.** If dest `packages/integrations/src/<id>/client.ts` exists, **STOP** (complete-existing; do not clobber any live dest). Copy templates only into empty or new directories. Do not weaken this stop on mutating paths.
-5. **Substitute placeholders** in templates: `{{id}}` kebab, `{{Id}}` Pascal, `{{ID}}` CONSTANT, `{{auth}}` = catalog `none` \| `optional` \| `required`, `{{scheme}}` = `none` \| `github-bearer` \| `wakatime-basic` \| `http-optional` (header/fail policy; OpenSpec names it for a new id). Do not interpolate `{{scheme}}` into filenames. After substitute, ids `^[a-z][a-z0-9-]*$` (no `..`, no `/`).
-6. **Copy** templates to destinations below (strip `.template`) only after the overwrite gate. Auth: if `id` is already in live `INTEGRATION_AUTH`, copy that scheme file; else OpenSpec names `{{scheme}}` — look it up in the four-row scheme→filename table. Unknown **scheme** stops. A new id whose named scheme is one of the four copies that named file. Do not interpolate `auth.{{scheme}}.ts.template` as a path. Templates are for **new** ids — do not emit a parallel `auth.ts` onto any live dest from the catalog. Do not write live package source except at those destinations. Do not hand-edit a second skills tree.
+5. **Substitute placeholders** in templates: `{{id}}` kebab, `{{Id}}` Pascal, `{{ID}}` CONSTANT, `{{auth}}` = catalog `none` \| `optional` \| `required`, `{{scheme}}` = `none` \| `github-bearer` \| `wakatime-basic` \| `http-optional` \| `query-key` \| `oauth-refresh` (header/fail policy; OpenSpec names it for a new id). Do not interpolate `{{scheme}}` into filenames. `oauth2` is not a scheme. After substitute, ids `^[a-z][a-z0-9-]*$` (no `..`, no `/`).
+6. **Copy** templates to destinations below (strip `.template`) only after the overwrite gate. Auth: if `id` is already in live `INTEGRATION_AUTH`, copy that scheme file; else OpenSpec names `{{scheme}}` — look it up in the six-row scheme→filename table. Unknown **scheme** (including `oauth2`) stops. A new id whose named scheme is one of the six copies that named file. Do not interpolate `auth.{{scheme}}.ts.template` as a path. Templates are for **new** ids — do not emit a parallel `auth.ts` onto any live dest from the catalog. Do not write live package source except at those destinations. Do not hand-edit a second skills tree.
 7. **Specialize.** `github` (new dest only): load [github-fetch](references/github-fetch.md). Other ids: keep cache/auth/shared-client; omit GitHub REST crawl and language `nodes(ids:)`; keep the REST `/languages` guard if the client might call GitHub.
 8. **Tests.** Fill `client.test.ts` with mocked `fetch`. Cover empty token, shared client, cache keys, and (github-class) filter-then-cap + batches of 100.
 9. **Stop at the integration boundary.** Do not add widgets, packs, or Action inputs. Point the user at `just generate-action` / `just generate-docs` when codegen is affected. `just generate-docs` refreshes `playground-fields.json` only. It does not rewrite `AGENTS.md`, `README.md`, or `DESIGN.md`. After mutating success, load [docs-closeout](../../references/docs-closeout.md) and update `packages/integrations/AGENTS.md` when those facts changed.
@@ -133,7 +134,7 @@ There is **no** default `auth.ts.template`. Skills are a static 1:1 copy table p
 
 Copy **one** scheme file onto `packages/integrations/src/<id>/auth.ts` only when dest is empty or new. If dest `client.ts` exists, **stop**. Completing a live first-party id MUST NOT emit a parallel `auth.ts` onto any live dest from the catalog. Do not infer `github-bearer` from catalog `optional` (github and http are both `optional`).
 
-If `id` is already in live `INTEGRATION_AUTH`, copy that scheme file (see the live id→scheme snapshot in [auth](references/auth.md)). Else OpenSpec names `{{scheme}}` in `{none, github-bearer, wakatime-basic, http-optional}`; copy that named file from the four-file list. Unknown **scheme** **stops**. A new id with a named allowed scheme does **not** stop.
+If `id` is already in live `INTEGRATION_AUTH`, copy that scheme file (see the live id→scheme snapshot in [auth](references/auth.md)). Else OpenSpec names `{{scheme}}` in `{none, github-bearer, wakatime-basic, http-optional, query-key, oauth-refresh}`; copy that named file from the six-file list. Unknown **scheme** (including `oauth2`) **stops**. A new id with a named allowed scheme does **not** stop. Do not invent `auth.oauth2.ts.template`.
 
 Scheme lookup (new ids after OpenSpec names `{{scheme}}`):
 
@@ -143,7 +144,9 @@ Scheme lookup (new ids after OpenSpec names `{{scheme}}`):
 | `github-bearer` | `assets/templates/auth.github-bearer.ts.template` |
 | `wakatime-basic` | `assets/templates/auth.wakatime-basic.ts.template` |
 | `http-optional` | `assets/templates/auth.http-optional.ts.template` |
-| any other **scheme** | **stop** |
+| `query-key` | `assets/templates/auth.query-key.ts.template` |
+| `oauth-refresh` | `assets/templates/auth.oauth-refresh.ts.template` |
+| any other **scheme** (including `oauth2`) | **stop** |
 
 Shared export names (behavior is per scheme; see [auth](references/auth.md)): `{{ID}}_AUTH`, `is{{Id}}TokenMissing`, `assert{{Id}}ActionToken`, `{{id}}AuthorizationHeader`, `{{id}}RequiresAuthorization`. Header functions return `{}` for none-kind — never `{ Authorization: "" }`.
 
@@ -157,7 +160,7 @@ Do not emit `plugin.json`, `mcp.json`, widgets, packs, `action.yml`, `index.ts`,
 | `{{Id}}` | `WakaTime` |
 | `{{ID}}` | `WAKATIME` |
 | `{{auth}}` | Catalog `none` \| `optional` \| `required` from live `INTEGRATION_AUTH`. Example: `required`. Today’s snapshot: `none` = static/rss; github and http are both `optional`. |
-| `{{scheme}}` | Header/fail policy: `none` \| `github-bearer` \| `wakatime-basic` \| `http-optional`. Example: `wakatime-basic`. **Not** 1:1 with `{{auth}}`. If `id` is already in live `INTEGRATION_AUTH`, copy that scheme file; else OpenSpec names this. Substitute in-file only (client tests). Look up the named scheme in the four-row scheme→filename table. Do not interpolate `auth.{{scheme}}.ts.template` as a path. Unknown scheme stops. |
+| `{{scheme}}` | Header/fail policy: `none` \| `github-bearer` \| `wakatime-basic` \| `http-optional` \| `query-key` \| `oauth-refresh`. Example: `wakatime-basic`. **Not** 1:1 with `{{auth}}`. If `id` is already in live `INTEGRATION_AUTH`, copy that scheme file; else OpenSpec names this. Substitute in-file only (client tests). Look up the named scheme in the six-row scheme→filename table. Do not interpolate `auth.{{scheme}}.ts.template` as a path. Unknown scheme (including `oauth2`) stops. |
 
 After copy, set `{{ID}}_GRAPHQL_URL` (exported from `client.ts`) to the provider endpoint (`https://api.github.com/graphql` for github).
 
@@ -179,7 +182,7 @@ Prompt like "add a WakaTime integration":
 - Integration id `wakatime` is already in `FIRST_PARTY_INTEGRATION_IDS`. Overwrite gate: any dest with `client.ts` **stops** (including `packages/integrations/src/wakatime/client.ts`). Do not overwrite complete existing sources. Do not create a second pack or a second integration directory. Do not emit a parallel `auth.ts` onto any live dest from the catalog.
 - Auth `required` (API key as run secret — not a flattened Action input). Thin Action already has optional `wakatime_token`. `{{scheme}}` is `wakatime-basic`: RFC Basic `base64(api_key + ":")`. Never Bearer. Never `?api_key=`. Do not copy github `decideActionToken` into wakatime auth.
 - Mocked HTTP tests stay in the live `packages/integrations/src/wakatime/client.test.ts` — do not overwrite them from templates when `client.ts` exists.
-- OpenSpec first only before adding an id that is **not** already in the enum. A new id still needs OpenSpec to name `{{scheme}}`. Unknown **scheme** stops. A new id whose named scheme is one of `{none, github-bearer, wakatime-basic, http-optional}` copies that named file from the four-file list.
+- OpenSpec first only before adding an id that is **not** already in the enum. A new id still needs OpenSpec to name `{{scheme}}`. Unknown **scheme** (including `oauth2`) stops. A new id whose named scheme is one of `{none, github-bearer, wakatime-basic, http-optional, query-key, oauth-refresh}` copies that named file from the six-file list. Do not invent `auth.oauth2.ts.template`.
 - **Do not** create a second `packages/plugins/src/wakatime` pack. **Do not** silently append `FIRST_PARTY_PLUGIN_IDS`. **Do not** invent `plugin_wakatime_*` inputs.
 
 New data sources that are not yet in `FIRST_PARTY_INTEGRATION_IDS` still use this client/auth/scopes/inputs/mocked-HTTP shape after OpenSpec, and only when dest `client.ts` does not exist.

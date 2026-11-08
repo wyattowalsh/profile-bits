@@ -3,8 +3,6 @@ import {
   ChipsExpandError,
   expandChipsRequest,
   type HttpClient,
-  type NormalizedBadge,
-  normalizeBadgeJson,
 } from "@profile-bits/integrations";
 
 export class ChipsWidgetError extends Error {
@@ -32,11 +30,12 @@ export function toChipsWidgetError(error: unknown): ChipsWidgetError {
   return new ChipsWidgetError(message, { cause: error });
 }
 
+/** Cached raw badge JSON. Normalize stays a widget reader, not fetch. */
 export async function loadChipsPayloads(
   client: HttpClient,
   options: ChipsOptions,
   ctx: { user: string },
-): Promise<NormalizedBadge[]> {
+): Promise<unknown[]> {
   try {
     const requests = options.types.map((type) =>
       expandChipsRequest({
@@ -48,7 +47,7 @@ export async function loadChipsPayloads(
         workflow: options.workflow,
       }),
     );
-    const payloads = await Promise.all(
+    return await Promise.all(
       requests.map(({ url }) =>
         client.fetchJson({
           url: url.href,
@@ -57,7 +56,6 @@ export async function loadChipsPayloads(
         }),
       ),
     );
-    return payloads.map((payload) => normalizeBadgeJson(payload));
   } catch (error: unknown) {
     throw toChipsWidgetError(error);
   }

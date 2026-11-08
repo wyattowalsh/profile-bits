@@ -1,0 +1,37 @@
+{
+  "data": {
+    "nodes": [
+      {
+        "id": "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
+        "languages": {
+          "edges": [
+            {
+              "size": 1000,
+              "node": {
+                "name": "TypeScript",
+                "color": "#3178c6",
+                "id": "MDg6TGFuZ3VhZ2Ux"
+              }
+            },
+            {
+              "size": 400,
+              "node": {
+                "name": "Python",
+                "color": "#3572A5",
+                "id": "MDg6TGFuZ3VhZ2Uy"
+              }
+            }
+          ],
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": "Y3Vyc29yOnYyOpHO"
+          }
+        }
+      }
+    ],
+    "rateLimit": {
+      "cost": 1,
+      "remaining": 5000
+    }
+  }
+}

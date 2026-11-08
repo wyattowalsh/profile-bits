@@ -1,4 +1,3 @@
-import type { RssFeedItem } from "@profile-bits/integrations";
 import { container, type Node, percentage, text } from "@profile-bits/renderer";
 import {
   resolveTheme,
@@ -8,7 +7,20 @@ import {
 
 export const NO_FEED_ITEMS = "No feed items";
 
-export type FeedItem = RssFeedItem;
+/** Leftover `{ title, url, published_at }` is the feed widget reader. */
+export type FeedItem = {
+  readonly title: string;
+  readonly url: string;
+  readonly published_at: string | null;
+};
+
+export function readFeedItem(item: FeedItem): FeedItem {
+  return Object.freeze({
+    title: item.title,
+    url: item.url,
+    published_at: item.published_at,
+  });
+}
 
 export function feedLines(items: readonly FeedItem[]): readonly string[] {
   if (items.length === 0) {

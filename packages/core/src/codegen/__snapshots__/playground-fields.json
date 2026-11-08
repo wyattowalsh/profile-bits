@@ -285,5 +285,210 @@
     "type": "boolean",
     "default": false,
     "group": "repo"
+  },
+  {
+    "path": "coding.filename",
+    "label": "Filename",
+    "type": "string",
+    "default": "wakatime",
+    "group": "coding"
+  },
+  {
+    "path": "coding.range",
+    "label": "Range",
+    "type": "string",
+    "default": "last_7_days",
+    "enum": [
+      "last_7_days",
+      "last_30_days",
+      "last_6_months",
+      "last_year"
+    ],
+    "group": "coding"
+  },
+  {
+    "path": "coding.include",
+    "label": "Include",
+    "type": "array",
+    "default": [
+      "languages",
+      "editors"
+    ],
+    "enum": [
+      "languages",
+      "editors",
+      "projects",
+      "os"
+    ],
+    "group": "coding"
+  },
+  {
+    "path": "coding.limit",
+    "label": "Limit",
+    "type": "integer",
+    "default": 8,
+    "min": 1,
+    "max": 16,
+    "group": "coding"
+  },
+  {
+    "path": "coding.api_domain",
+    "label": "Api Domain",
+    "type": "string",
+    "default": "wakatime.com",
+    "group": "coding"
+  },
+  {
+    "path": "coding.animate",
+    "label": "Animate",
+    "type": "boolean",
+    "default": false,
+    "group": "coding"
+  },
+  {
+    "path": "feed.filename",
+    "label": "Filename",
+    "type": "string",
+    "default": "feed",
+    "group": "feed"
+  },
+  {
+    "path": "feed.url",
+    "label": "Url",
+    "type": "string",
+    "group": "feed"
+  },
+  {
+    "path": "feed.limit",
+    "label": "Limit",
+    "type": "integer",
+    "default": 5,
+    "min": 1,
+    "max": 8,
+    "group": "feed"
+  },
+  {
+    "path": "feed.animate",
+    "label": "Animate",
+    "type": "boolean",
+    "default": false,
+    "group": "feed"
+  },
+  {
+    "path": "json.filename",
+    "label": "Filename",
+    "type": "string",
+    "default": "json",
+    "group": "json"
+  },
+  {
+    "path": "json.url",
+    "label": "Url",
+    "type": "string",
+    "group": "json"
+  },
+  {
+    "path": "json.headers",
+    "label": "Headers",
+    "type": "object",
+    "group": "json"
+  },
+  {
+    "path": "json.jmespath",
+    "label": "Jmespath",
+    "type": "string",
+    "default": "@",
+    "group": "json"
+  },
+  {
+    "path": "json.timeout_ms",
+    "label": "Timeout Ms",
+    "type": "integer",
+    "default": 10000,
+    "min": 1,
+    "max": 20000,
+    "group": "json"
+  },
+  {
+    "path": "json.method",
+    "label": "Method",
+    "type": "string",
+    "default": "GET",
+    "group": "json"
+  },
+  {
+    "path": "json.animate",
+    "label": "Animate",
+    "type": "boolean",
+    "default": false,
+    "group": "json"
+  },
+  {
+    "path": "chips.filename",
+    "label": "Filename",
+    "type": "string",
+    "default": "chips",
+    "group": "chips"
+  },
+  {
+    "path": "chips.preset",
+    "label": "Preset",
+    "type": "string",
+    "enum": [
+      "shieldcn",
+      "shields"
+    ],
+    "group": "chips"
+  },
+  {
+    "path": "chips.types",
+    "label": "Types",
+    "type": "array",
+    "enum": [
+      "npm",
+      "stars",
+      "forks",
+      "license",
+      "release",
+      "issues",
+      "prs",
+      "ci"
+    ],
+    "group": "chips"
+  },
+  {
+    "path": "chips.package",
+    "label": "Package",
+    "type": "string",
+    "group": "chips"
+  },
+  {
+    "path": "chips.repo",
+    "label": "Repo",
+    "type": "string",
+    "group": "chips"
+  },
+  {
+    "path": "chips.workflow",
+    "label": "Workflow",
+    "type": "string",
+    "default": "ci.yml",
+    "group": "chips"
+  },
+  {
+    "path": "chips.timeout_ms",
+    "label": "Timeout Ms",
+    "type": "integer",
+    "default": 10000,
+    "min": 1,
+    "max": 20000,
+    "group": "chips"
+  },
+  {
+    "path": "chips.animate",
+    "label": "Animate",
+    "type": "boolean",
+    "default": false,
+    "group": "chips"
   }
 ]

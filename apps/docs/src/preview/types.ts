@@ -1,28 +1,79 @@
 /**
  * Docs preview POST body, permalink state, and response.
  * Named themes come from `@profile-bits/themes`. Never include token fields.
- * Catalog pack is github; playground also lists http.
+ * Catalog and playground list all first-party packs.
  */
 
+import {
+  CODING_INCLUDE_TOKENS,
+  CODING_RANGE_TOKENS,
+  HTTP_CHIP_PRESETS,
+  HTTP_CHIP_TYPES,
+} from "@profile-bits/core";
 import { NAMED_THEME_IDS, type ThemeId } from "@profile-bits/themes";
 
 export const PREVIEW_SCOPES = ["plugin", "widget", "bit"] as const;
 export type PreviewScope = (typeof PREVIEW_SCOPES)[number];
 
 /**
- * Docs preview packs. Index 0 is the github catalog.
- * Http is the fixtures-only `/playground/http` explorer. Do not add more plugin ids.
+ * Docs preview packs. Index 0 is the github catalog landing.
+ * Widget ids stay per pack — do not dump http/rss/wakatime ids into github.
  */
-export const PREVIEW_PLUGIN_IDS = ["github", "http"] as const;
+export const PREVIEW_PLUGIN_IDS = [
+  "github",
+  "wakatime",
+  "rss",
+  "http",
+] as const;
 export type PreviewPluginId = (typeof PREVIEW_PLUGIN_IDS)[number];
 
-export const PREVIEW_WIDGET_IDS = [
+export const PREVIEW_GITHUB_WIDGET_IDS = [
   "demo",
   "stats",
   "languages",
   "repo",
 ] as const;
+export type PreviewGithubWidgetId = (typeof PREVIEW_GITHUB_WIDGET_IDS)[number];
+
+export const PREVIEW_WAKATIME_WIDGET_IDS = ["coding"] as const;
+export type PreviewWakatimeWidgetId =
+  (typeof PREVIEW_WAKATIME_WIDGET_IDS)[number];
+
+export const PREVIEW_RSS_WIDGET_IDS = ["feed"] as const;
+export type PreviewRssWidgetId = (typeof PREVIEW_RSS_WIDGET_IDS)[number];
+
+export const PREVIEW_HTTP_WIDGET_IDS = ["json", "chips"] as const;
+export type PreviewHttpWidgetId = (typeof PREVIEW_HTTP_WIDGET_IDS)[number];
+
+/** POST `/api/preview` `widget` union. Github routes use PREVIEW_GITHUB_WIDGET_IDS. */
+export const PREVIEW_WIDGET_IDS = [
+  ...PREVIEW_GITHUB_WIDGET_IDS,
+  ...PREVIEW_WAKATIME_WIDGET_IDS,
+  ...PREVIEW_RSS_WIDGET_IDS,
+  ...PREVIEW_HTTP_WIDGET_IDS,
+] as const;
 export type PreviewWidgetId = (typeof PREVIEW_WIDGET_IDS)[number];
+
+export const PREVIEW_WIDGETS_BY_PLUGIN = {
+  github: PREVIEW_GITHUB_WIDGET_IDS,
+  wakatime: PREVIEW_WAKATIME_WIDGET_IDS,
+  rss: PREVIEW_RSS_WIDGET_IDS,
+  http: PREVIEW_HTTP_WIDGET_IDS,
+} as const satisfies Record<PreviewPluginId, readonly PreviewWidgetId[]>;
+
+/** Plugin-scope github still omits opt-in `repo`. */
+export const PREVIEW_GITHUB_PLUGIN_SCOPE_WIDGETS = [
+  "demo",
+  "stats",
+  "languages",
+] as const satisfies readonly PreviewGithubWidgetId[];
+
+export const PREVIEW_DEFAULT_WIDGETS_BY_PLUGIN = {
+  github: ["demo"],
+  wakatime: ["coding"],
+  rss: ["feed"],
+  http: ["chips"],
+} as const satisfies Record<PreviewPluginId, readonly PreviewWidgetId[]>;
 
 /** Bits export names. Do not import packages/bits. Unknown names stay string. */
 export const PREVIEW_BIT_IDS = [
@@ -37,6 +88,13 @@ export const PREVIEW_BIT_IDS = [
   "Chip",
   "Avatar",
   "Divider",
+  "Image",
+  "Heatmap",
+  "Board",
+  "Icon",
+  "Grid",
+  "List",
+  "Time",
 ] as const;
 export type PreviewBitName = (typeof PREVIEW_BIT_IDS)[number] | (string & {});
 
@@ -89,6 +147,19 @@ export const PREVIEW_REPO_INCLUDE_TOKENS = [
 ] as const;
 export type PreviewRepoIncludeToken =
   (typeof PREVIEW_REPO_INCLUDE_TOKENS)[number];
+
+export const PREVIEW_CODING_INCLUDE_TOKENS = CODING_INCLUDE_TOKENS;
+export type PreviewCodingIncludeToken =
+  (typeof PREVIEW_CODING_INCLUDE_TOKENS)[number];
+
+export const PREVIEW_CODING_RANGE_TOKENS = CODING_RANGE_TOKENS;
+export type PreviewCodingRange = (typeof PREVIEW_CODING_RANGE_TOKENS)[number];
+
+export const PREVIEW_CHIP_PRESETS = HTTP_CHIP_PRESETS;
+export type PreviewChipPreset = (typeof PREVIEW_CHIP_PRESETS)[number];
+
+export const PREVIEW_CHIP_TYPES = HTTP_CHIP_TYPES;
+export type PreviewChipType = (typeof PREVIEW_CHIP_TYPES)[number];
 
 export const PREVIEW_PROVENANCES = ["fixture", "live", "rate_limited"] as const;
 export type PreviewProvenance = (typeof PREVIEW_PROVENANCES)[number];
@@ -154,6 +225,41 @@ export type PreviewRepoOptions = {
   repo?: string;
 };
 
+export type PreviewCodingOptions = {
+  filename?: string;
+  range?: PreviewCodingRange;
+  include?: readonly PreviewCodingIncludeToken[];
+  limit?: number;
+  api_domain?: string;
+  animate?: boolean;
+};
+
+export type PreviewFeedOptions = {
+  filename?: string;
+  url?: string;
+  limit?: number;
+  animate?: boolean;
+};
+
+export type PreviewJsonOptions = {
+  filename?: string;
+  url?: string;
+  jmespath?: string;
+  timeout_ms?: number;
+  animate?: boolean;
+};
+
+export type PreviewChipsOptions = {
+  filename?: string;
+  preset?: PreviewChipPreset;
+  types?: readonly PreviewChipType[];
+  package?: string;
+  repo?: string;
+  workflow?: string;
+  timeout_ms?: number;
+  animate?: boolean;
+};
+
 /**
  * Yaml-shaped widget options from the core Zod shapes, plus optional globals.
  * No token fields.
@@ -163,6 +269,10 @@ export type PreviewOptions = {
   stats?: PreviewStatsOptions;
   languages?: PreviewLanguagesOptions;
   repo?: PreviewRepoOptions;
+  coding?: PreviewCodingOptions;
+  feed?: PreviewFeedOptions;
+  json?: PreviewJsonOptions;
+  chips?: PreviewChipsOptions;
   format?: PreviewOutputFormat;
   theme?: PreviewTheme;
   output_pair?: boolean;
@@ -241,6 +351,67 @@ export function isPreviewWidgetId(value: string): value is PreviewWidgetId {
   return (PREVIEW_WIDGET_IDS as readonly string[]).includes(value);
 }
 
+export function isPreviewGithubWidgetId(
+  value: string,
+): value is PreviewGithubWidgetId {
+  return (PREVIEW_GITHUB_WIDGET_IDS as readonly string[]).includes(value);
+}
+
+export function isPreviewWakatimeWidgetId(
+  value: string,
+): value is PreviewWakatimeWidgetId {
+  return (PREVIEW_WAKATIME_WIDGET_IDS as readonly string[]).includes(value);
+}
+
+export function isPreviewRssWidgetId(
+  value: string,
+): value is PreviewRssWidgetId {
+  return (PREVIEW_RSS_WIDGET_IDS as readonly string[]).includes(value);
+}
+
+export function isPreviewHttpWidgetId(
+  value: string,
+): value is PreviewHttpWidgetId {
+  return (PREVIEW_HTTP_WIDGET_IDS as readonly string[]).includes(value);
+}
+
+export function widgetsForPlugin(
+  plugin: PreviewPluginId,
+): readonly PreviewWidgetId[] {
+  return PREVIEW_WIDGETS_BY_PLUGIN[plugin];
+}
+
+export function isWidgetIdForPlugin(
+  plugin: PreviewPluginId,
+  value: string,
+): value is PreviewWidgetId {
+  return (widgetsForPlugin(plugin) as readonly string[]).includes(value);
+}
+
+export function pluginForWidget(widget: PreviewWidgetId): PreviewPluginId {
+  for (const plugin of PREVIEW_PLUGIN_IDS) {
+    if (isWidgetIdForPlugin(plugin, widget)) {
+      return plugin;
+    }
+  }
+  return "github";
+}
+
+export function defaultWidgetsForPlugin(
+  plugin: PreviewPluginId,
+): readonly PreviewWidgetId[] {
+  return PREVIEW_DEFAULT_WIDGETS_BY_PLUGIN[plugin];
+}
+
+export function pluginScopeWidgets(
+  plugin: PreviewPluginId,
+): readonly PreviewWidgetId[] {
+  if (plugin === "github") {
+    return PREVIEW_GITHUB_PLUGIN_SCOPE_WIDGETS;
+  }
+  return widgetsForPlugin(plugin);
+}
+
 export function isPreviewBitName(
   value: string,
 ): value is (typeof PREVIEW_BIT_IDS)[number] {
@@ -301,6 +472,26 @@ export function isPreviewRepoIncludeToken(
   value: string,
 ): value is PreviewRepoIncludeToken {
   return (PREVIEW_REPO_INCLUDE_TOKENS as readonly string[]).includes(value);
+}
+
+export function isPreviewCodingIncludeToken(
+  value: string,
+): value is PreviewCodingIncludeToken {
+  return (PREVIEW_CODING_INCLUDE_TOKENS as readonly string[]).includes(value);
+}
+
+export function isPreviewCodingRange(
+  value: string,
+): value is PreviewCodingRange {
+  return (PREVIEW_CODING_RANGE_TOKENS as readonly string[]).includes(value);
+}
+
+export function isPreviewChipPreset(value: string): value is PreviewChipPreset {
+  return (PREVIEW_CHIP_PRESETS as readonly string[]).includes(value);
+}
+
+export function isPreviewChipType(value: string): value is PreviewChipType {
+  return (PREVIEW_CHIP_TYPES as readonly string[]).includes(value);
 }
 
 export function isTokenQueryKey(key: string): boolean {

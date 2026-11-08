@@ -14,6 +14,7 @@ import {
   isPreviewTheme,
   isPreviewWidgetId,
   isTokenQueryKey,
+  isWidgetIdForPlugin,
   type PluginPreviewRequest,
   PREVIEW_RESPONSE_HEADERS,
   type PreviewPluginId,
@@ -25,13 +26,25 @@ import {
 
 export const runtime = "nodejs";
 
-/** POST is github layout preview; http/chips/json never render here. */
-function isPreviewPostPluginId(value: string): value is PreviewPluginId {
-  return value !== "http" && isPreviewPluginId(value);
+/** POST is layout preview for first-party packs. Not an embed API. */
+function parsePreviewPlugin(value: unknown): PreviewPluginId | undefined {
+  if (typeof value !== "string" || !isPreviewPluginId(value)) {
+    return undefined;
+  }
+  return value;
 }
 
-function isPreviewPostWidgetId(value: string): value is PreviewWidgetId {
-  return value !== "chips" && value !== "json" && isPreviewWidgetId(value);
+function parsePreviewWidget(
+  value: unknown,
+  plugin: PreviewPluginId | undefined,
+): PreviewWidgetId | undefined {
+  if (typeof value !== "string" || !isPreviewWidgetId(value)) {
+    return undefined;
+  }
+  if (plugin !== undefined && !isWidgetIdForPlugin(plugin, value)) {
+    return undefined;
+  }
+  return value;
 }
 
 function parsePreviewRequest(value: unknown): PreviewRequest | undefined {
@@ -62,13 +75,19 @@ function parsePreviewRequest(value: unknown): PreviewRequest | undefined {
   if (typeof user !== "string" || user.trim() === "") {
     return undefined;
   }
+
+  let plugin: PreviewPluginId | undefined;
   if (rec.plugin !== undefined) {
-    if (typeof rec.plugin !== "string" || !isPreviewPostPluginId(rec.plugin)) {
+    plugin = parsePreviewPlugin(rec.plugin);
+    if (plugin === undefined) {
       return undefined;
     }
   }
+
+  let widget: PreviewWidgetId | undefined;
   if (rec.widget !== undefined) {
-    if (typeof rec.widget !== "string" || !isPreviewPostWidgetId(rec.widget)) {
+    widget = parsePreviewWidget(rec.widget, plugin);
+    if (widget === undefined) {
       return undefined;
     }
   }
@@ -86,31 +105,31 @@ function parsePreviewRequest(value: unknown): PreviewRequest | undefined {
   const globals = { options, format, theme, output_pair, user };
 
   if (scope === "plugin") {
-    if (typeof rec.plugin !== "string" || !isPreviewPostPluginId(rec.plugin)) {
+    if (plugin === undefined) {
       return undefined;
     }
     const request: PluginPreviewRequest = {
       ...globals,
       scope,
-      plugin: rec.plugin,
+      plugin,
     };
-    if (typeof rec.widget === "string" && isPreviewPostWidgetId(rec.widget)) {
-      request.widget = rec.widget;
+    if (widget !== undefined) {
+      request.widget = widget;
     }
     return request;
   }
 
   if (scope === "widget") {
-    if (typeof rec.widget !== "string" || !isPreviewPostWidgetId(rec.widget)) {
+    if (widget === undefined) {
       return undefined;
     }
     const request: WidgetPreviewRequest = {
       ...globals,
       scope,
-      widget: rec.widget,
+      widget,
     };
-    if (typeof rec.plugin === "string" && isPreviewPostPluginId(rec.plugin)) {
-      request.plugin = rec.plugin;
+    if (plugin !== undefined) {
+      request.plugin = plugin;
     }
     return request;
   }
@@ -123,11 +142,11 @@ function parsePreviewRequest(value: unknown): PreviewRequest | undefined {
     scope: "bit",
     bit: rec.bit,
   };
-  if (typeof rec.plugin === "string" && isPreviewPostPluginId(rec.plugin)) {
-    request.plugin = rec.plugin;
+  if (plugin !== undefined) {
+    request.plugin = plugin;
   }
-  if (typeof rec.widget === "string" && isPreviewPostWidgetId(rec.widget)) {
-    request.widget = rec.widget;
+  if (widget !== undefined) {
+    request.widget = widget;
   }
   return request;
 }

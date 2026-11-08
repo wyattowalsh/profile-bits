@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Profile Bits RSS2 Fixture</title>
     <link>https://example.com/</link>
@@ -9,48 +9,64 @@
       <link>https://example.com/rss/1</link>
       <pubDate>Sun, 16 Aug 2026 11:00:00 GMT</pubDate>
       <guid>https://example.com/rss/1</guid>
+      <description>RSS summary 1</description>
+      <content:encoded>&lt;p&gt;RSS content 1&lt;/p&gt;</content:encoded>
     </item>
     <item>
       <title>RSS Item 2</title>
       <link>https://example.com/rss/2</link>
       <pubDate>Sun, 16 Aug 2026 10:00:00 GMT</pubDate>
       <guid>https://example.com/rss/2</guid>
+      <description>RSS summary 2</description>
+      <content:encoded>&lt;p&gt;RSS content 2&lt;/p&gt;</content:encoded>
     </item>
     <item>
       <title>RSS Item 3</title>
       <link>https://example.com/rss/3</link>
       <pubDate>Sun, 16 Aug 2026 09:00:00 GMT</pubDate>
       <guid>https://example.com/rss/3</guid>
+      <description>RSS summary 3</description>
+      <content:encoded>&lt;p&gt;RSS content 3&lt;/p&gt;</content:encoded>
     </item>
     <item>
       <title>RSS Item 4</title>
       <link>https://example.com/rss/4</link>
       <pubDate>Sun, 16 Aug 2026 08:00:00 GMT</pubDate>
       <guid>https://example.com/rss/4</guid>
+      <description>RSS summary 4</description>
+      <content:encoded>&lt;p&gt;RSS content 4&lt;/p&gt;</content:encoded>
     </item>
     <item>
       <title>RSS Item 5</title>
       <link>https://example.com/rss/5</link>
       <pubDate>Sun, 16 Aug 2026 07:00:00 GMT</pubDate>
       <guid>https://example.com/rss/5</guid>
+      <description>RSS summary 5</description>
+      <content:encoded>&lt;p&gt;RSS content 5&lt;/p&gt;</content:encoded>
     </item>
     <item>
       <title>RSS Item 6</title>
       <link>https://example.com/rss/6</link>
       <pubDate>Sun, 16 Aug 2026 06:00:00 GMT</pubDate>
       <guid>https://example.com/rss/6</guid>
+      <description>RSS summary 6</description>
+      <content:encoded>&lt;p&gt;RSS content 6&lt;/p&gt;</content:encoded>
     </item>
     <item>
       <title>RSS Item 7</title>
       <link>https://example.com/rss/7</link>
       <pubDate>Sun, 16 Aug 2026 07:00:00 GMT</pubDate>
       <guid>https://example.com/rss/7</guid>
+      <description>RSS summary 7</description>
+      <content:encoded>&lt;p&gt;RSS content 7&lt;/p&gt;</content:encoded>
     </item>
     <item>
       <title>RSS Item 8</title>
       <link>https://example.com/rss/8</link>
       <pubDate>Sun, 16 Aug 2026 04:00:00 GMT</pubDate>
       <guid>https://example.com/rss/8</guid>
+      <description>RSS summary 8</description>
+      <content:encoded>&lt;p&gt;RSS content 8&lt;/p&gt;</content:encoded>
     </item>
   </channel>
 </rss>

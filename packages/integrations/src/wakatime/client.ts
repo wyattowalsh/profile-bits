@@ -23,6 +23,14 @@ import {
 } from "../http/ssrf.js";
 import { resolveStatsUrl, UnsafeApiDomainError } from "./api-domain.js";
 import { WakatimeRequestCache } from "./cache.js";
+import type { ExtraGetResult } from "./extra.js";
+import {
+  classifyWakatimeExtraHttp,
+  isWakatimeCloud,
+  loadCloudExtras,
+  mergeWakatimeDump,
+} from "./extra.js";
+import type { WakatimeDump } from "./extra-payload.js";
 import {
   classifyWakatimeHttp,
   sleep as defaultSleep,
@@ -31,8 +39,6 @@ import {
   WAKATIME_MAX_ATTEMPTS,
 } from "./http.js";
 import {
-  type CodingPayload,
-  selectCodingPayload,
   type WakatimeStatsEnvelope,
   WakatimeStatsEnvelopeSchema,
 } from "./payload.js";
@@ -154,7 +160,7 @@ export type WakatimeClient = {
     range: CodingRange;
     include: readonly CodingIncludeToken[];
     limit: number;
-  }) => Promise<CodingPayload>;
+  }) => Promise<WakatimeDump>;
 };
 
 type WakatimeResponse = {
@@ -179,9 +185,44 @@ export function createWakatimeClient(
   const sleep = input.sleep ?? defaultSleep;
   const logger = input.logger;
   const auth = encodeBasicAuthorization(token);
+  let resolved:
+    | {
+        hostname: string;
+        addresses: readonly HttpLookupAddress[];
+      }
+    | undefined;
+
+  async function addressesFor(
+    hostname: string,
+  ): Promise<readonly HttpLookupAddress[]> {
+    if (resolved?.hostname === hostname) {
+      return resolved.addresses;
+    }
+    const addresses = await assertPublicResolvedAddresses(hostname, lookup);
+    resolved = { hostname, addresses };
+    return addresses;
+  }
+
+  async function extraGet(
+    url: URL,
+    params: Readonly<Record<string, string>>,
+  ): Promise<ExtraGetResult> {
+    return cache.rest({ method: "GET", url: url.href, params }, async () => {
+      const addresses = await addressesFor(url.hostname);
+      return fetchExtraUncached({
+        url,
+        addresses,
+        token,
+        auth,
+        fetchImpl,
+        sleep,
+        logger,
+      });
+    });
+  }
 
   return {
-    async fetchStats({ range, include, limit }) {
+    async fetchStats({ range }) {
       let url: URL;
       try {
         url = resolveStatsUrl(input.apiDomain, range);
@@ -197,10 +238,7 @@ export function createWakatimeClient(
       const envelope = await cache.rest(
         { method: "GET", url: url.href, params: {} },
         async () => {
-          const addresses = await assertPublicResolvedAddresses(
-            url.hostname,
-            lookup,
-          );
+          const addresses = await addressesFor(url.hostname);
           return fetchStatsUncached({
             url,
             addresses,
@@ -212,7 +250,15 @@ export function createWakatimeClient(
           });
         },
       );
-      return selectCodingPayload(envelope.data, include, limit);
+      if (!isWakatimeCloud(input.apiDomain)) {
+        return envelope.data;
+      }
+      const extras = await loadCloudExtras({
+        stats: envelope.data,
+        range,
+        get: extraGet,
+      });
+      return mergeWakatimeDump(envelope.data, extras);
     },
   };
 }
@@ -374,6 +420,126 @@ async function fetchStatsUncached(input: {
     `WakaTime stats request failed (${lastStatus ?? "unknown"})`,
     lastStatus,
   );
+}
+
+async function fetchExtraUncached(input: {
+  url: URL;
+  addresses: readonly HttpLookupAddress[];
+  token: string;
+  auth: string;
+  fetchImpl: typeof fetch | undefined;
+  sleep: (ms: number) => Promise<void>;
+  logger: RunLogSink | undefined;
+}): Promise<ExtraGetResult> {
+  const secrets = [input.token, input.auth] as const;
+  for (let attempt = 1; attempt <= WAKATIME_MAX_ATTEMPTS; attempt += 1) {
+    const started = performance.now();
+    let status = 0;
+    let body: unknown;
+    try {
+      const signal = AbortSignal.timeout(WAKATIME_TIMEOUT_MS);
+      const response = await performGet(input.url, {
+        fetch: input.fetchImpl,
+        addresses: input.addresses,
+        signal,
+        auth: input.auth,
+      });
+      status = response.status;
+      body = parseJsonText(await readCappedBody(response));
+    } catch (error) {
+      const durationMs = elapsedMs(started);
+      if (error instanceof WakatimeClientError) {
+        if (error.outcome === "fail_run" || error.status === 401) {
+          emitWakatimeCall(input.logger, {
+            url: input.url,
+            durationMs,
+            status: error.status ?? (status === 0 ? undefined : status),
+            outcome: error.outcome,
+            message: error.message,
+            secrets,
+          });
+          throw error;
+        }
+        emitWakatimeCall(input.logger, {
+          url: input.url,
+          durationMs,
+          status: error.status ?? (status === 0 ? undefined : status),
+          outcome: "fail_widget",
+          message: error.message,
+          secrets,
+        });
+        return { kind: "omit" };
+      }
+      if (isRedirectFetchError(error)) {
+        status = 302;
+        body = undefined;
+      } else {
+        const raw =
+          error instanceof Error
+            ? error.message
+            : "WakaTime extra request failed";
+        const message = redactSecrets(raw, secrets);
+        emitWakatimeCall(input.logger, {
+          url: input.url,
+          durationMs,
+          outcome: "fail_widget",
+          message,
+          secrets,
+        });
+        return { kind: "omit" };
+      }
+    }
+    const durationMs = elapsedMs(started);
+    const outcome = classifyWakatimeExtraHttp(status);
+    if (outcome === "include") {
+      emitWakatimeCall(input.logger, {
+        url: input.url,
+        durationMs,
+        status,
+        outcome: "ok",
+        secrets,
+      });
+      return { kind: "ok", body };
+    }
+    if (outcome === "fail_run") {
+      emitWakatimeCall(input.logger, {
+        url: input.url,
+        durationMs,
+        status,
+        outcome: "fail_run",
+        message: `WakaTime extra request failed (${status})`,
+        secrets,
+      });
+      throw new WakatimeClientError(
+        "fail_run",
+        `WakaTime extra request failed (${status})`,
+        status,
+      );
+    }
+    if (outcome === "omit") {
+      emitWakatimeCall(input.logger, {
+        url: input.url,
+        durationMs,
+        status,
+        secrets,
+      });
+      return { kind: "omit" };
+    }
+    emitWakatimeCall(input.logger, {
+      url: input.url,
+      durationMs,
+      status,
+      outcome: "fail_after_backoff",
+      message: `WakaTime extra request failed (${status})`,
+      secrets,
+    });
+    if (attempt === WAKATIME_MAX_ATTEMPTS) {
+      return { kind: "omit" };
+    }
+    const delay = WAKATIME_BACKOFF_MS[attempt - 1] ?? 800;
+    await input.sleep(delay);
+  }
+  return { kind: "omit" };
 }
 
 function elapsedMs(started: number): number {

@@ -65,6 +65,16 @@ export const THIN_ACTION_INPUTS: readonly ActionInputSpec[] = [
       "Name of the environment variable holding an optional HTTP Bearer token. Unset sends no Authorization.",
   },
   {
+    name: "spotify_token",
+    description:
+      "Spotify refresh token. Required when the spotify pack is enabled. Empty or whitespace fails the job.",
+  },
+  {
+    name: "steam_token",
+    description:
+      "Steam Web API key. Required when the steam pack is enabled. Empty or whitespace fails the job. Sent as ?key=, never Bearer.",
+  },
+  {
     name: "format",
     description:
       "Optional output format override (svg, png, jpeg, webp, ico, gif, apng).",

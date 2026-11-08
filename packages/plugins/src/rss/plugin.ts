@@ -7,13 +7,14 @@ export const RSS_BITS_USED = [
   "Row",
   "Text",
   "Muted",
+  "Time",
 ] as const;
 
 export const rssPlugin = {
   id: "rss",
   title: "RSS",
   docsPath: "rss",
-  widgets: ["feed"],
+  widgets: ["feed", "latest"],
   integrations: ["rss"],
   defaults: { widgets: ["feed"] },
   bitsUsed: RSS_BITS_USED,

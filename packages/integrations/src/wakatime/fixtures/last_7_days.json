@@ -2,25 +2,72 @@
   "data": {
     "total_seconds": 12345.67,
     "human_readable_total": "3 hrs 25 mins",
+    "total_seconds_including_other_language": 13000,
+    "human_readable_total_including_other_language": "3 hrs 36 mins",
+    "daily_average": 1763.67,
+    "daily_average_including_other_language": 1857.14,
+    "human_readable_daily_average": "29 mins",
+    "human_readable_daily_average_including_other_language": "30 mins",
     "is_up_to_date": true,
+    "best_day": {
+      "date": "2026-08-20",
+      "text": "2 hrs 10 mins",
+      "total_seconds": 7800
+    },
+    "range": "last_7_days",
+    "human_readable_range": "Last 7 Days",
+    "start": "2026-08-20T00:00:00Z",
+    "end": "2026-08-26T23:59:59Z",
+    "timezone": "America/Los_Angeles",
+    "categories": [
+      {
+        "name": "Coding",
+        "total_seconds": 12000.0,
+        "percent": 97.2,
+        "text": "3 hrs 20 mins",
+        "digital": "3:20:00"
+      }
+    ],
+    "machines": [
+      {
+        "name": "studio",
+        "machine_name_id": "machine-1",
+        "total_seconds": 12345.67,
+        "percent": 100,
+        "text": "3 hrs 25 mins",
+        "digital": "3:25:45"
+      }
+    ],
+    "dependencies": [
+      {
+        "name": "zod",
+        "total_seconds": 400.0,
+        "percent": 3.2,
+        "text": "6 mins",
+        "digital": "0:06:40"
+      }
+    ],
     "languages": [
       {
         "name": "TypeScript",
         "total_seconds": 8000.0,
         "percent": 64.8,
-        "text": "2 hrs 13 mins"
+        "text": "2 hrs 13 mins",
+        "digital": "2:13:20"
       },
       {
         "name": "Python",
         "total_seconds": 3000.0,
         "percent": 24.3,
-        "text": "50 mins"
+        "text": "50 mins",
+        "digital": "0:50:00"
       },
       {
         "name": "Go",
         "total_seconds": 1345.67,
         "percent": 10.9,
-        "text": "22 mins"
+        "text": "22 mins",
+        "digital": "0:22:26"
       }
     ],
     "editors": [
@@ -28,13 +75,15 @@
         "name": "VS Code",
         "total_seconds": 10000.0,
         "percent": 81.0,
-        "text": "2 hrs 46 mins"
+        "text": "2 hrs 46 mins",
+        "digital": "2:46:40"
       },
       {
         "name": "Neovim",
         "total_seconds": 2345.67,
         "percent": 19.0,
-        "text": "39 mins"
+        "text": "39 mins",
+        "digital": "0:39:06"
       }
     ],
     "projects": [
@@ -42,13 +91,15 @@
         "name": "profile-bits",
         "total_seconds": 9000.0,
         "percent": 72.9,
-        "text": "2 hrs 30 mins"
+        "text": "2 hrs 30 mins",
+        "digital": "2:30:00"
       },
       {
         "name": "other",
         "total_seconds": 3345.67,
         "percent": 27.1,
-        "text": "55 mins"
+        "text": "55 mins",
+        "digital": "0:55:46"
       }
     ],
     "operating_systems": [
@@ -56,13 +107,15 @@
         "name": "Mac",
         "total_seconds": 11000.0,
         "percent": 89.1,
-        "text": "3 hrs 3 mins"
+        "text": "3 hrs 3 mins",
+        "digital": "3:03:20"
       },
       {
         "name": "Linux",
         "total_seconds": 1345.67,
         "percent": 10.9,
-        "text": "22 mins"
+        "text": "22 mins",
+        "digital": "0:22:26"
       }
     ]
   }

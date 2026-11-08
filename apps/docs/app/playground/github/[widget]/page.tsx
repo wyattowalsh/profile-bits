@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { PLAYGROUND_PLUGIN } from "@/src/codegen/constants";
 import {
-  isPreviewWidgetId,
-  PREVIEW_WIDGET_IDS,
-  type PreviewWidgetId,
+  isPreviewGithubWidgetId,
+  PREVIEW_GITHUB_WIDGET_IDS,
+  type PreviewGithubWidgetId,
 } from "@/src/preview/types";
 
 export const dynamicParams = false;
@@ -18,9 +18,11 @@ type GithubWidgetPageProps = {
 
 export const PRIMARY_CTA = "Copy";
 
-/** v0 github widgets only. Do not add plugin packs. */
-export function generateStaticParams(): Array<{ widget: PreviewWidgetId }> {
-  return PREVIEW_WIDGET_IDS.map((widget) => ({ widget }));
+/** Github widgets only. Do not dump the eight-id POST union onto this route. */
+export function generateStaticParams(): Array<{
+  widget: PreviewGithubWidgetId;
+}> {
+  return PREVIEW_GITHUB_WIDGET_IDS.map((widget) => ({ widget }));
 }
 
 /**
@@ -31,7 +33,7 @@ export default async function GithubWidgetPlaygroundPage({
   params,
 }: GithubWidgetPageProps) {
   const { widget } = await params;
-  if (!isPreviewWidgetId(widget)) {
+  if (!isPreviewGithubWidgetId(widget)) {
     notFound();
   }
 

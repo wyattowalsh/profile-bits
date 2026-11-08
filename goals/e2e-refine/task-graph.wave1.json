@@ -1,0 +1,131 @@
+{
+  "wave": 1,
+  "nodes": [
+    {
+      "id": "W1-D-01",
+      "wave": 1,
+      "rank": "0",
+      "deps": [],
+      "files": "packages/core/src/codegen/docs-fields.ts"
+    },
+    {
+      "id": "W1-D-02",
+      "wave": 1,
+      "rank": "0",
+      "deps": [],
+      "files": "apps/docs/src/preview/types.ts"
+    },
+    {
+      "id": "W1-S-01",
+      "wave": 1,
+      "rank": "0",
+      "deps": [],
+      "files": "packages/integrations/src/html-scrape/"
+    },
+    {
+      "id": "W1-R-01",
+      "wave": 1,
+      "rank": "0",
+      "deps": [],
+      "files": "README.md"
+    },
+    {
+      "id": "W1-A-01",
+      "wave": 1,
+      "rank": "0",
+      "deps": [],
+      "files": "openspec/changes/add-github-repo-widget"
+    },
+    {
+      "id": "W1-M-01",
+      "wave": 1,
+      "rank": "0",
+      "deps": [],
+      "files": "operator"
+    },
+    {
+      "id": "W1-D-03",
+      "wave": 1,
+      "rank": "1",
+      "deps": ["W1-D-01", "W1-D-02"],
+      "files": "apps/docs/src/codegen/shell.tsx"
+    },
+    {
+      "id": "W1-D-06",
+      "wave": 1,
+      "rank": "1",
+      "deps": ["W1-D-02"],
+      "files": "apps/docs/src/preview/server/render-preview.ts"
+    },
+    {
+      "id": "W1-D-08",
+      "wave": 1,
+      "rank": "1",
+      "deps": ["W1-D-02"],
+      "files": "apps/docs/app/generate/catalog"
+    },
+    {
+      "id": "W1-D-10",
+      "wave": 1,
+      "rank": "1",
+      "deps": ["W1-D-02"],
+      "files": "apps/docs/app/generate/bits"
+    },
+    {
+      "id": "W1-D-11",
+      "wave": 1,
+      "rank": "1",
+      "deps": ["W1-D-02"],
+      "files": "apps/docs/app/generate/themes"
+    },
+    {
+      "id": "W1-D-04",
+      "wave": 1,
+      "rank": "2",
+      "deps": ["W1-D-03"],
+      "files": "apps/docs/app/playground/wakatime"
+    },
+    {
+      "id": "W1-D-05",
+      "wave": 1,
+      "rank": "2",
+      "deps": ["W1-D-03"],
+      "files": "apps/docs/app/playground/http"
+    },
+    {
+      "id": "W1-D-07",
+      "wave": 1,
+      "rank": "2",
+      "deps": ["W1-D-06", "W1-S-01"],
+      "files": "render-preview live"
+    },
+    {
+      "id": "W1-D-09",
+      "wave": 1,
+      "rank": "2",
+      "deps": ["W1-D-08"],
+      "files": "apps/docs/app/generate/{wakatime,rss,http}"
+    },
+    {
+      "id": "W1-D-12",
+      "wave": 1,
+      "rank": "2",
+      "deps": ["W1-D-04", "W1-D-05", "W1-D-08"],
+      "files": "DESIGN.md"
+    },
+    {
+      "id": "W1-D-13",
+      "wave": 1,
+      "rank": "3",
+      "deps": ["W1-D-04", "W1-D-05", "W1-D-07", "W1-D-09", "W1-D-12"],
+      "files": "ci"
+    },
+    {
+      "id": "W1-V",
+      "wave": 1,
+      "rank": "3",
+      "deps": ["W1-D-13"],
+      "files": "read-only"
+    }
+  ]
+}

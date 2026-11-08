@@ -1,4 +1,10 @@
 import type { RepoIncludeToken, RepoOptions } from "@profile-bits/core";
+import {
+  asDumpRecord,
+  dumpRepository,
+  numberOrUndef,
+  stringField,
+} from "../select-dump.js";
 import type { RepoChip } from "./widget.js";
 
 const LABELS: Record<RepoIncludeToken, string> = {
@@ -22,8 +28,7 @@ export function repoViewModel(
   options: Partial<RepoOptions> = {},
 ): RepoViewModel {
   const include = options.include ?? ["stars", "forks", "issues", "license"];
-  const record = asRecord(payload);
-  const repository = asRecord(record?.repository);
+  const repository = dumpRepository(payload);
   if (repository == null) {
     return { fullName: "", chips: [], empty: true };
   }
@@ -94,7 +99,7 @@ function valueForToken(
 function avatarFromRepository(
   repository: Record<string, unknown>,
 ): string | undefined {
-  const owner = asRecord(repository.owner);
+  const owner = asDumpRecord(repository.owner);
   const src =
     stringField(repository.avatarUrl) ||
     stringField(repository.avatar_url) ||
@@ -129,23 +134,6 @@ function firstNumber(
   return undefined;
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value != null && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  return null;
-}
-
-function stringField(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
 function stringOrUndef(value: unknown): string | undefined {
   return typeof value === "string" && value !== "" ? value : undefined;
-}
-
-function numberOrUndef(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : undefined;
 }

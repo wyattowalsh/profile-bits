@@ -1,40 +1,67 @@
-import { githubWidgetRegistry } from "@profile-bits/plugins";
+import {
+  bitsUsedForWidget,
+  HTTP_BITS_USED,
+  RSS_BITS_USED,
+  WAKATIME_BITS_USED,
+} from "@profile-bits/plugins";
 import type { Metadata } from "next";
 import { GENERATE_PATH_PREFIX } from "@/src/preview/permalink";
 import {
+  isPreviewGithubWidgetId,
   PREVIEW_PLUGIN_IDS,
-  PREVIEW_WIDGET_IDS,
+  PREVIEW_WIDGETS_BY_PLUGIN,
   type PreviewPluginId,
   type PreviewWidgetId,
 } from "@/src/preview/types";
 
-/** v0 github pack. `bitsUsed` comes from T210 `githubWidgetRegistry`. */
-export const WIDGETS_PLUGIN_ID: PreviewPluginId = PREVIEW_PLUGIN_IDS[0];
+/** First-party packs listed on `/generate/widgets`. */
+export const WIDGETS_PLUGIN_IDS = PREVIEW_PLUGIN_IDS;
 
 export const WIDGETS_HREF = `${GENERATE_PATH_PREFIX}/widgets`;
 
 export type WidgetCatalogRow = {
   id: PreviewWidgetId;
+  plugin: PreviewPluginId;
   href: string;
   bitsUsed: readonly string[];
 };
 
+function bitsUsedForCatalogWidget(
+  plugin: PreviewPluginId,
+  id: PreviewWidgetId,
+): readonly string[] {
+  switch (plugin) {
+    case "github":
+      return isPreviewGithubWidgetId(id) ? bitsUsedForWidget(id) : [];
+    case "wakatime":
+      return WAKATIME_BITS_USED;
+    case "rss":
+      return RSS_BITS_USED;
+    case "http":
+      return HTTP_BITS_USED;
+  }
+}
+
 /**
  * Widget index for `/generate/widgets`.
- * `bitsUsed` is the per-widget export-name list from T210.
+ * Github rows use `bitsUsedForWidget` (githubWidgetRegistry). Other packs use
+ * pack-level `bitsUsed` — never index githubWidgetRegistry for coding/feed/json/chips.
  */
 export function widgetCatalogRows(): WidgetCatalogRow[] {
-  return PREVIEW_WIDGET_IDS.map((id) => ({
-    id,
-    href: `${GENERATE_PATH_PREFIX}/${WIDGETS_PLUGIN_ID}/${id}`,
-    bitsUsed: githubWidgetRegistry[id].bitsUsed,
-  }));
+  return WIDGETS_PLUGIN_IDS.flatMap((plugin) =>
+    PREVIEW_WIDGETS_BY_PLUGIN[plugin].map((id) => ({
+      id,
+      plugin,
+      href: `${GENERATE_PATH_PREFIX}/${plugin}/${id}`,
+      bitsUsed: bitsUsedForCatalogWidget(plugin, id),
+    })),
+  );
 }
 
 export const metadata: Metadata = {
   title: "Widgets",
   description:
-    "v0 github widgets (demo, stats, languages) and the bits they compose.",
+    "First-party widgets (demo, stats, languages, repo, coding, feed, json, chips) and the bits they compose.",
 };
 
 const WIDGETS_CSS = `
@@ -80,14 +107,14 @@ const WIDGETS_CSS = `
 }
 `;
 
-/** `/generate/widgets` — v0 github widgets plus bitsUsed names. */
+/** `/generate/widgets` — eight first-party widgets plus pack bitsUsed names. */
 export default function GenerateWidgetsPage() {
   const rows = widgetCatalogRows();
 
   return (
     <nav
       data-slot="generate-widgets"
-      data-plugin={WIDGETS_PLUGIN_ID}
+      data-plugins={WIDGETS_PLUGIN_IDS.join(" ")}
       data-href={WIDGETS_HREF}
       aria-labelledby="generate-widgets-heading"
     >
@@ -98,12 +125,19 @@ export default function GenerateWidgetsPage() {
         Widgets
       </h2>
       <p data-slot="generate-widgets-lede">
-        v0 <code>{WIDGETS_PLUGIN_ID}</code> widgets. Card size is 480×160.{" "}
-        <code>bitsUsed</code> names are the v0 bits exports.
+        First-party widgets across{" "}
+        {WIDGETS_PLUGIN_IDS.map((id) => (
+          <code key={id}>{id}</code>
+        ))}
+        . Card size is 480×160. <code>bitsUsed</code> names come from each pack.
       </p>
       <ul data-slot="generate-widgets-list">
         {rows.map((row) => (
-          <li key={row.id} data-widget={row.id}>
+          <li
+            key={`${row.plugin}-${row.id}`}
+            data-widget={row.id}
+            data-plugin={row.plugin}
+          >
             <a data-slot="generate-widgets-link" href={row.href}>
               {row.id}
             </a>

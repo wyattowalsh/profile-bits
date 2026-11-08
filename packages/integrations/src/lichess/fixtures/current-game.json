@@ -1,0 +1,21 @@
+{
+  "id": "abcd1234",
+  "rated": true,
+  "variant": "standard",
+  "speed": "blitz",
+  "perf": "blitz",
+  "createdAt": 1755400000000,
+  "lastMoveAt": 1755400060000,
+  "status": "started",
+  "players": {
+    "white": {
+      "user": { "name": "DrNykterstein", "title": "GM" },
+      "rating": 3100
+    },
+    "black": { "user": { "name": "Opponent" }, "rating": 3000 }
+  },
+  "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+  "lastFen": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+  "pgn": "[Event \"Rated Blitz game\"]\n[FEN \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\"]\n\n1. e4 e5 2. Nf3 Nc6",
+  "extra_current_key": "keep-lichess-current"
+}

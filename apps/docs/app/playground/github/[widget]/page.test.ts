@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PREVIEW_WIDGET_IDS } from "@/src/preview/types";
+import { PREVIEW_GITHUB_WIDGET_IDS } from "@/src/preview/types";
 
 const mocks = vi.hoisted(() => ({
   notFound: vi.fn(() => {
@@ -32,8 +32,10 @@ describe("GET /playground/github/[widget]", () => {
     expect(source).toContain("generateStaticParams");
     expect(source).toContain("dynamicParams");
     expect(source).toContain("notFound");
-    expect(source).toContain("isPreviewWidgetId");
-    expect(source).toContain("PREVIEW_WIDGET_IDS");
+    expect(source).toContain("isPreviewGithubWidgetId");
+    expect(source).toContain("PREVIEW_GITHUB_WIDGET_IDS");
+    expect(source).not.toContain("isPreviewWidgetId");
+    expect(source).not.toContain("PREVIEW_WIDGET_IDS");
     expect(source).not.toContain("<PlaygroundShell");
     expect(source).not.toContain("wakatime");
     expect(source).not.toContain("rss");
@@ -50,14 +52,17 @@ describe("GET /playground/github/[widget]", () => {
       { widget: "repo" },
     ]);
     expect(generateStaticParams().map((row) => row.widget)).toEqual([
-      ...PREVIEW_WIDGET_IDS,
+      ...PREVIEW_GITHUB_WIDGET_IDS,
     ]);
+    expect(generateStaticParams().map((row) => row.widget)).not.toContain(
+      "chips",
+    );
   });
 
   it("renders a widget section as layout children without a nested shell", async () => {
     expect(PRIMARY_CTA).toBe("Copy");
 
-    for (const widget of PREVIEW_WIDGET_IDS) {
+    for (const widget of PREVIEW_GITHUB_WIDGET_IDS) {
       const element = await GithubWidgetPlaygroundPage({
         params: Promise.resolve({ widget }),
       });
@@ -76,7 +81,7 @@ describe("GET /playground/github/[widget]", () => {
   });
 
   it("calls notFound for unknown widget ids", async () => {
-    for (const widget of ["nope", "coding", "feed", "http"]) {
+    for (const widget of ["nope", "coding", "feed", "json", "chips", "http"]) {
       mocks.notFound.mockClear();
       await expect(
         GithubWidgetPlaygroundPage({

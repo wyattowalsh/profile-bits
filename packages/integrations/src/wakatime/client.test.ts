@@ -319,8 +319,15 @@ describe("createWakatimeClient", () => {
     });
     expect(payload.languages).toBeDefined();
     expect(payload.editors).toBeDefined();
-    expect(payload).not.toHaveProperty("projects");
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(payload.projects).toBeDefined();
+    expect(payload.operating_systems).toBeDefined();
+    expect(payload.languages?.[0]).toMatchObject({
+      name: "TypeScript",
+      percent: 64.8,
+      text: "2 hrs 13 mins",
+    });
+    expect(payload).not.toHaveProperty("os");
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
     const [url, init] = fetchImpl.mock.calls[0] ?? [];
     expect(requestUrl(url as RequestInfo | URL)).toBe(CLOUD_STATS);
     expect(requestUrl(url as RequestInfo | URL)).not.toContain("api_key");
@@ -332,6 +339,19 @@ describe("createWakatimeClient", () => {
         Accept: "application/json",
       },
     });
+    for (const call of fetchImpl.mock.calls) {
+      const href = requestUrl(call[0] as RequestInfo | URL);
+      expect(href).not.toContain("api_key");
+      expect(href).not.toContain("heartbeats");
+      expect(href).not.toContain("durations");
+      expect(call[1]).toMatchObject({
+        method: "GET",
+        headers: {
+          Authorization: encodeBasicAuthorization(TOKEN),
+          Accept: "application/json",
+        },
+      });
+    }
     expect(loggedHaystack(spies)).not.toContain(TOKEN);
     expect(encodeBasicAuthorization(TOKEN)).toBe(
       `Basic ${Buffer.from(`${TOKEN}:`, "utf8").toString("base64")}`,
@@ -352,6 +372,11 @@ describe("createWakatimeClient", () => {
       limit: 8,
     });
     expect(payload.languages).toBeDefined();
+    expect(payload).not.toHaveProperty("all_time_since_today");
+    expect(payload).not.toHaveProperty("summaries");
+    expect(payload).not.toHaveProperty("statusbar_today");
+    expect(payload).not.toHaveProperty("goals");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [url] = fetchImpl.mock.calls[0] ?? [];
     expect(requestUrl(url as RequestInfo | URL)).toBe(WAKAPI_STATS);
   });
@@ -567,21 +592,30 @@ describe("createWakatimeClient", () => {
       limit: 8,
     });
     expect(payload.languages).toBeDefined();
-    expect(httpsRequestMock).toHaveBeenCalledTimes(1);
+    expect(httpsRequestMock).toHaveBeenCalledTimes(5);
+    const firstUrl = httpsRequestMock.mock.calls[0]?.[0] as URL;
+    expect(firstUrl).toBeInstanceOf(URL);
+    expect(firstUrl.href).toBe(CLOUD_STATS);
     expect(timeout).toHaveBeenCalledWith(10_000);
     expect(timeout).toHaveBeenCalledWith(WAKATIME_TIMEOUT_MS);
+    for (const call of httpsRequestMock.mock.calls) {
+      const url = call[0] as URL;
+      const options = call[1] as RequestOptions;
+      expect(url.hostname).toBe("wakatime.com");
+      expect(url.href).not.toContain("1.1.1.1");
+      expect(url.href).not.toContain("heartbeats");
+      expect(url.href).not.toContain("durations");
+      expect(url.href).not.toContain("api_key");
+      expect(options.servername).toBe("wakatime.com");
+      const host = headerValue(options.headers, "Host") ?? url.host;
+      expect(host).toBe("wakatime.com");
+      expect(headerValue(options.headers, "Authorization")).toBe(
+        encodeBasicAuthorization(TOKEN),
+      );
+    }
     expect(captured.url).toBeInstanceOf(URL);
     expect(captured.url?.hostname).toBe("wakatime.com");
-    expect(captured.url?.href).toBe(CLOUD_STATS);
     expect(captured.url?.href).not.toContain("1.1.1.1");
-    expect(captured.options?.servername).toBe("wakatime.com");
-    const host =
-      headerValue(captured.options?.headers, "Host") ?? captured.url?.host;
-    expect(host).toBe("wakatime.com");
-    expect(host).not.toBe("1.1.1.1");
-    expect(headerValue(captured.options?.headers, "Authorization")).toBe(
-      encodeBasicAuthorization(TOKEN),
-    );
   }, 8_000);
 
   it("reuses the REST cache on a same-run hit", async () => {
@@ -604,11 +638,11 @@ describe("createWakatimeClient", () => {
       limit: 8,
     });
     expect(second).toEqual(first);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
     expect(lookup).toHaveBeenCalledTimes(1);
   });
 
-  it("caches the unsliced envelope so a later include set can slice independently", async () => {
+  it("returns the unsliced dump so include and limit do not drop cache fields", async () => {
     const fetchImpl = vi.fn(async () => jsonResponse(200, last7Days));
     const client = createWakatimeClient({
       token: TOKEN,
@@ -619,16 +653,122 @@ describe("createWakatimeClient", () => {
     const first = await client.fetchStats({
       range: "last_7_days",
       include: ["languages"],
-      limit: 8,
+      limit: 1,
     });
     const second = await client.fetchStats({
       range: "last_7_days",
       include: ["languages", "editors"],
       limit: 8,
     });
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    expect(second.editors).toBeDefined();
-    expect(first).not.toHaveProperty("editors");
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
+    expect(first.editors).toBeDefined();
+    expect(first.projects).toBeDefined();
+    expect(first.operating_systems).toBeDefined();
+    expect(first.languages).toHaveLength(3);
+    expect(second).toEqual(first);
+  });
+
+  it("parses best_day, categories, machines, dependencies, range, and digital", async () => {
+    const body = {
+      data: {
+        total_seconds: 100,
+        human_readable_total: "1 min 40 secs",
+        is_up_to_date: true,
+        daily_average: 14.28,
+        human_readable_daily_average: "14 secs",
+        best_day: {
+          date: "2026-08-21",
+          text: "1 min 40 secs",
+          total_seconds: 100,
+        },
+        range: "last_7_days",
+        human_readable_range: "Last 7 Days",
+        start: "2026-08-20T00:00:00Z",
+        end: "2026-08-26T23:59:59Z",
+        timezone: "UTC",
+        categories: [
+          {
+            name: "Coding",
+            total_seconds: 100,
+            percent: 100,
+            text: "1 min 40 secs",
+            digital: "0:01:40",
+          },
+        ],
+        machines: [
+          {
+            name: "studio",
+            machine_name_id: "machine-1",
+            total_seconds: 100,
+            percent: 100,
+            text: "1 min 40 secs",
+            digital: "0:01:40",
+          },
+        ],
+        dependencies: [
+          {
+            name: "zod",
+            total_seconds: 20,
+            percent: 20,
+            text: "20 secs",
+            digital: "0:00:20",
+          },
+        ],
+        languages: [
+          {
+            name: "TypeScript",
+            total_seconds: 80,
+            percent: 80,
+            text: "1 min 20 secs",
+            digital: "0:01:20",
+          },
+          {
+            name: "Go",
+            total_seconds: 20,
+            percent: 20,
+            text: "20 secs",
+            digital: "0:00:20",
+          },
+        ],
+        editors: [
+          {
+            name: "Neovim",
+            total_seconds: 100,
+            percent: 100,
+            text: "1 min 40 secs",
+            digital: "0:01:40",
+          },
+        ],
+      },
+    };
+    const fetchImpl = vi.fn(async () => jsonResponse(200, body));
+    const client = createWakatimeClient({
+      token: TOKEN,
+      apiDomain: "wakatime.com",
+      fetch: fetchImpl,
+      lookup: publicLookup,
+    });
+    const payload = await client.fetchStats({
+      range: "last_7_days",
+      include: ["languages"],
+      limit: 1,
+    });
+    expect(payload.best_day).toEqual({
+      date: "2026-08-21",
+      text: "1 min 40 secs",
+      total_seconds: 100,
+    });
+    expect(payload.categories?.[0]?.digital).toBe("0:01:40");
+    expect(payload.machines?.[0]?.machine_name_id).toBe("machine-1");
+    expect(payload.dependencies?.[0]?.name).toBe("zod");
+    expect(payload.range).toBe("last_7_days");
+    expect(payload.languages).toHaveLength(2);
+    expect(payload.editors).toBeDefined();
+    expect(payload.languages?.[0]).toMatchObject({
+      percent: 80,
+      text: "1 min 20 secs",
+      digital: "0:01:20",
+    });
   });
 
   it("wraps invalid 200 JSON as fail_widget without throwing ZodError", async () => {
@@ -862,8 +1002,11 @@ describe("createWakatimeClient", () => {
       include: ["languages"],
       limit: 8,
     });
-    expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({
+    const statsEvents = events.filter(
+      (event) => event.path === "/api/v1/users/current/stats/last_7_days",
+    );
+    expect(statsEvents).toHaveLength(1);
+    expect(statsEvents[0]).toMatchObject({
       v: 1,
       src: "profile-bits",
       kind: "call",
@@ -874,8 +1017,8 @@ describe("createWakatimeClient", () => {
       host: "wakatime.com",
       path: "/api/v1/users/current/stats/last_7_days",
     });
-    expect(events[0]?.duration_ms).toEqual(expect.any(Number));
-    expect(events[0]?.duration_ms).toBeGreaterThanOrEqual(0);
+    expect(statsEvents[0]?.duration_ms).toEqual(expect.any(Number));
+    expect(statsEvents[0]?.duration_ms).toBeGreaterThanOrEqual(0);
     const haystack = JSON.stringify(events);
     expect(haystack).not.toContain(TOKEN);
     expect(haystack).not.toContain("api_key");

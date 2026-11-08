@@ -5,10 +5,10 @@ import {
   GENERATE_PLUGIN_ID,
 } from "@/src/generate/constants";
 import {
-  isPreviewWidgetId,
-  PREVIEW_WIDGET_IDS,
+  isPreviewGithubWidgetId,
+  PREVIEW_GITHUB_WIDGET_IDS,
+  type PreviewGithubWidgetId,
   type PreviewRequest,
-  type PreviewWidgetId,
 } from "@/src/preview/types";
 
 export const dynamicParams = false;
@@ -17,11 +17,13 @@ type GenerateGithubWidgetPageProps = {
   params: Promise<{ widget: string }>;
 };
 
-export function generateStaticParams(): { widget: PreviewWidgetId }[] {
-  return PREVIEW_WIDGET_IDS.map((widget) => ({ widget }));
+export function generateStaticParams(): { widget: PreviewGithubWidgetId }[] {
+  return PREVIEW_GITHUB_WIDGET_IDS.map((widget) => ({ widget }));
 }
 
-export function githubWidgetRequest(widget: PreviewWidgetId): PreviewRequest {
+export function githubWidgetRequest(
+  widget: PreviewGithubWidgetId,
+): PreviewRequest {
   return {
     ...DEFAULT_GENERATE_REQUEST,
     scope: "widget",
@@ -34,7 +36,7 @@ export async function generateMetadata({
   params,
 }: GenerateGithubWidgetPageProps): Promise<Metadata> {
   const { widget } = await params;
-  if (!isPreviewWidgetId(widget)) {
+  if (!isPreviewGithubWidgetId(widget)) {
     return { title: "Generate" };
   }
   return {
@@ -48,7 +50,7 @@ export default async function GenerateGithubWidgetPage({
   params,
 }: GenerateGithubWidgetPageProps) {
   const { widget } = await params;
-  if (!isPreviewWidgetId(widget)) {
+  if (!isPreviewGithubWidgetId(widget)) {
     notFound();
   }
 

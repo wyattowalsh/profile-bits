@@ -1,15 +1,42 @@
 import {
+  CHIPS_OPTION_DEFAULTS,
+  CODING_LIMIT_MAX,
+  CODING_LIMIT_MIN,
+  CODING_OPTION_DEFAULTS,
+  FEED_ANIMATE_DEFAULT,
+  FEED_FILENAME_DEFAULT,
+  FEED_LIMIT_DEFAULT,
+  FEED_LIMIT_MAX,
+  FEED_LIMIT_MIN,
+  isForbiddenApiDomain,
+  JSON_OPTION_DEFAULTS,
+  JSON_TIMEOUT_MS_MAX,
+  JSON_TIMEOUT_MS_MIN,
+} from "@profile-bits/core";
+import {
+  isPreviewChipPreset,
+  isPreviewChipType,
+  isPreviewCodingIncludeToken,
+  isPreviewCodingRange,
+  isPreviewPluginId,
   isPreviewRepoIncludeToken,
   isPreviewStatsIncludeToken,
+  type PreviewChipsOptions,
+  type PreviewCodingOptions,
   type PreviewDemoOptions,
+  type PreviewFeedOptions,
+  type PreviewJsonOptions,
   type PreviewLanguagesOptions,
   type PreviewOptions,
   type PreviewOutputFormat,
+  type PreviewPluginId,
+  type PreviewRepoIncludeToken,
   type PreviewRepoOptions,
   type PreviewStatsIncludeToken,
   type PreviewStatsOptions,
   type PreviewTheme,
   type PreviewWidgetId,
+  widgetsForPlugin,
 } from "../preview/types";
 
 /** Consumer pin. `@v1` is the floating tag on orphan `release/v1`, not `main`. */
@@ -39,19 +66,19 @@ export const EXPORT_THIN_WITH_KEYS = [
 ] as const;
 export type ExportThinWithKey = (typeof EXPORT_THIN_WITH_KEYS)[number];
 
-/** Github widgets the emitter may write. `repo` is opt-in like `demo`. */
-const EXPORT_GITHUB_WIDGET_IDS = [
-  "demo",
-  "stats",
-  "languages",
-  "repo",
-] as const;
-type ExportGithubWidgetId = (typeof EXPORT_GITHUB_WIDGET_IDS)[number];
-
-const PACK_DEFAULT_WIDGETS = [
+const GITHUB_PACK_DEFAULT_WIDGETS = [
   "stats",
   "languages",
 ] as const satisfies readonly PreviewWidgetId[];
+
+/** Playground sample https URLs so rss/json rails parse without visitor input. */
+export const EXPORT_FEED_SAMPLE_URL = "https://example.com/feed.xml";
+export const EXPORT_JSON_SAMPLE_URL = "https://example.com/api.json";
+
+const CHIPS_PRESET_DEFAULT = "shieldcn";
+const CHIPS_TYPES_DEFAULT = ["npm"] as const satisfies readonly NonNullable<
+  PreviewChipsOptions["types"]
+>[number][];
 
 const CONFIG_VERSION = 1;
 const CONFIG_FORMAT_DEFAULT: PreviewOutputFormat = "svg";
@@ -127,11 +154,15 @@ export type ExportWorkflowWidgets = {
   stats?: PreviewStatsOptions;
   languages?: PreviewLanguagesOptions;
   repo?: PreviewRepoOptions;
+  coding?: PreviewCodingOptions;
+  feed?: PreviewFeedOptions;
+  json?: PreviewJsonOptions;
+  chips?: PreviewChipsOptions;
 };
 
 /**
  * Playground tuner state. Extra enumerable keys (tokens, zip, unknown plugins)
- * are ignored.
+ * are ignored. `plugin` selects the yaml rail `plugins.<pack>`.
  */
 export type ExportWorkflowState = {
   user: string;
@@ -143,8 +174,10 @@ export type ExportWorkflowState = {
   dry_run?: boolean;
   timezone?: string;
   output_dir?: string;
+  /** Route/selector pack. Omitted → github. */
+  plugin?: PreviewPluginId;
   /** Checkbox list. Omitted → keys present on widgets/options, else pack defaults. */
-  enabled?: readonly ExportGithubWidgetId[];
+  enabled?: readonly PreviewWidgetId[];
   widgets?: ExportWorkflowWidgets;
   /** PreviewRequest.options alias when `widgets` is omitted. */
   options?: PreviewOptions;
@@ -239,8 +272,9 @@ function renderThemeYaml(theme: PreviewTheme): string {
 }
 
 function renderConfigYml(state: ExportWorkflowState): string {
+  const plugin = resolvePlugin(state.plugin);
   const widgets = resolveWidgets(state);
-  const widgetIds = EXPORT_GITHUB_WIDGET_IDS.filter(
+  const widgetIds = widgetsForPlugin(plugin).filter(
     (id) => widgets[id] !== undefined,
   );
 
@@ -258,24 +292,58 @@ function renderConfigYml(state: ExportWorkflowState): string {
     return `${[...globals, "plugins: {}"].join("\n")}\n`;
   }
 
-  const lines = [...globals, "plugins:", "  github:", "    widgets:"];
-
-  for (const id of widgetIds) {
-    if (id === "demo" && widgets.demo !== undefined) {
-      lines.push(...renderDemoBlock(widgets.demo));
-    }
-    if (id === "stats" && widgets.stats !== undefined) {
-      lines.push(...renderStatsBlock(widgets.stats));
-    }
-    if (id === "languages" && widgets.languages !== undefined) {
-      lines.push(...renderLanguagesBlock(widgets.languages));
-    }
-    if (id === "repo" && widgets.repo !== undefined) {
-      lines.push(...renderRepoBlock(widgets.repo));
-    }
-  }
+  const lines = [
+    ...globals,
+    "plugins:",
+    `  ${plugin}:`,
+    "    widgets:",
+    ...renderWidgetBlocks(plugin, widgets, widgetIds),
+  ];
 
   return `${lines.join("\n")}\n`;
+}
+
+function renderWidgetBlocks(
+  plugin: PreviewPluginId,
+  widgets: ExportWorkflowWidgets,
+  widgetIds: readonly PreviewWidgetId[],
+): string[] {
+  const lines: string[] = [];
+  for (const id of widgetIds) {
+    if (plugin === "github" && id === "demo" && widgets.demo !== undefined) {
+      lines.push(...renderDemoBlock(widgets.demo));
+    }
+    if (plugin === "github" && id === "stats" && widgets.stats !== undefined) {
+      lines.push(...renderStatsBlock(widgets.stats));
+    }
+    if (
+      plugin === "github" &&
+      id === "languages" &&
+      widgets.languages !== undefined
+    ) {
+      lines.push(...renderLanguagesBlock(widgets.languages));
+    }
+    if (plugin === "github" && id === "repo" && widgets.repo !== undefined) {
+      lines.push(...renderRepoBlock(widgets.repo));
+    }
+    if (
+      plugin === "wakatime" &&
+      id === "coding" &&
+      widgets.coding !== undefined
+    ) {
+      lines.push(...renderCodingBlock(widgets.coding));
+    }
+    if (plugin === "rss" && id === "feed" && widgets.feed !== undefined) {
+      lines.push(...renderFeedBlock(widgets.feed));
+    }
+    if (plugin === "http" && id === "json" && widgets.json !== undefined) {
+      lines.push(...renderJsonBlock(widgets.json));
+    }
+    if (plugin === "http" && id === "chips" && widgets.chips !== undefined) {
+      lines.push(...renderChipsBlock(widgets.chips));
+    }
+  }
+  return lines;
 }
 
 function resolveUser(user: string): string {
@@ -298,7 +366,28 @@ function resolveOutputAction(
   return OUTPUT_ACTION_DEFAULT;
 }
 
+function resolvePlugin(plugin: PreviewPluginId | undefined): PreviewPluginId {
+  return plugin !== undefined && isPreviewPluginId(plugin) ? plugin : "github";
+}
+
+function defaultEnabledForPlugin(
+  plugin: PreviewPluginId,
+): readonly PreviewWidgetId[] {
+  if (plugin === "github") {
+    return GITHUB_PACK_DEFAULT_WIDGETS;
+  }
+  if (plugin === "wakatime") {
+    return ["coding"];
+  }
+  if (plugin === "rss") {
+    return ["feed"];
+  }
+  return ["chips"];
+}
+
 function resolveWidgets(state: ExportWorkflowState): ExportWorkflowWidgets {
+  const plugin = resolvePlugin(state.plugin);
+  const allowed = widgetsForPlugin(plugin);
   const source: ExportWorkflowWidgets = {
     ...(state.options?.demo !== undefined ? { demo: state.options.demo } : {}),
     ...(state.options?.stats !== undefined
@@ -308,14 +397,24 @@ function resolveWidgets(state: ExportWorkflowState): ExportWorkflowWidgets {
       ? { languages: state.options.languages }
       : {}),
     ...(state.options?.repo !== undefined ? { repo: state.options.repo } : {}),
+    ...(state.options?.coding !== undefined
+      ? { coding: state.options.coding }
+      : {}),
+    ...(state.options?.feed !== undefined ? { feed: state.options.feed } : {}),
+    ...(state.options?.json !== undefined ? { json: state.options.json } : {}),
+    ...(state.options?.chips !== undefined
+      ? { chips: state.options.chips }
+      : {}),
     ...state.widgets,
   };
 
-  const present = EXPORT_GITHUB_WIDGET_IDS.filter(
-    (id) => source[id] !== undefined,
+  const present = allowed.filter((id) => source[id] !== undefined);
+  const requested =
+    state.enabled ??
+    (present.length > 0 ? present : defaultEnabledForPlugin(plugin));
+  const enabled = requested.filter((id) =>
+    (allowed as readonly string[]).includes(id),
   );
-  const enabled =
-    state.enabled ?? (present.length > 0 ? present : PACK_DEFAULT_WIDGETS);
 
   const out: ExportWorkflowWidgets = {};
   for (const id of enabled) {
@@ -330,6 +429,20 @@ function resolveWidgets(state: ExportWorkflowState): ExportWorkflowWidgets {
       if (repo !== undefined) {
         out.repo = repo;
       }
+    } else if (id === "coding") {
+      out.coding = mergeCoding(source.coding);
+    } else if (id === "feed") {
+      const feed = mergeFeed(source.feed);
+      if (feed !== undefined) {
+        out.feed = feed;
+      }
+    } else if (id === "json") {
+      const json = mergeJson(source.json);
+      if (json !== undefined) {
+        out.json = json;
+      }
+    } else if (id === "chips") {
+      out.chips = mergeChips(source.chips);
     }
   }
   return out;
@@ -413,6 +526,124 @@ function mergeRepo(
   };
 }
 
+function clampInt(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, Math.trunc(value)));
+}
+
+function isSafeHttpsUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return (
+      parsed.protocol === "https:" &&
+      parsed.username === "" &&
+      parsed.password === ""
+    );
+  } catch {
+    return false;
+  }
+}
+
+function mergeCoding(
+  options: PreviewCodingOptions | undefined,
+): PreviewCodingOptions {
+  const include = options?.include
+    ? options.include.filter(isPreviewCodingIncludeToken)
+    : [...CODING_OPTION_DEFAULTS.include];
+  const range =
+    options?.range !== undefined && isPreviewCodingRange(options.range)
+      ? options.range
+      : CODING_OPTION_DEFAULTS.range;
+  const domain = options?.api_domain?.trim() ?? "";
+  const api_domain =
+    domain !== "" && !isForbiddenApiDomain(domain)
+      ? domain
+      : CODING_OPTION_DEFAULTS.api_domain;
+  return {
+    filename: options?.filename ?? CODING_OPTION_DEFAULTS.filename,
+    range,
+    include: include.length > 0 ? include : [...CODING_OPTION_DEFAULTS.include],
+    limit: clampInt(
+      options?.limit ?? CODING_OPTION_DEFAULTS.limit,
+      CODING_LIMIT_MIN,
+      CODING_LIMIT_MAX,
+    ),
+    api_domain,
+    animate: options?.animate ?? CODING_OPTION_DEFAULTS.animate,
+  };
+}
+
+function mergeFeed(
+  options: PreviewFeedOptions | undefined,
+): PreviewFeedOptions | undefined {
+  const raw = options?.url?.trim() ?? "";
+  const url = isSafeHttpsUrl(raw) ? raw : EXPORT_FEED_SAMPLE_URL;
+  if (!isSafeHttpsUrl(url)) {
+    return undefined;
+  }
+  return {
+    filename: options?.filename ?? FEED_FILENAME_DEFAULT,
+    url,
+    limit: clampInt(
+      options?.limit ?? FEED_LIMIT_DEFAULT,
+      FEED_LIMIT_MIN,
+      FEED_LIMIT_MAX,
+    ),
+    animate: options?.animate ?? FEED_ANIMATE_DEFAULT,
+  };
+}
+
+function mergeJson(
+  options: PreviewJsonOptions | undefined,
+): PreviewJsonOptions | undefined {
+  const raw = options?.url?.trim() ?? "";
+  const url = isSafeHttpsUrl(raw) ? raw : EXPORT_JSON_SAMPLE_URL;
+  if (!isSafeHttpsUrl(url)) {
+    return undefined;
+  }
+  return {
+    filename: options?.filename ?? JSON_OPTION_DEFAULTS.filename,
+    url,
+    jmespath: options?.jmespath ?? JSON_OPTION_DEFAULTS.jmespath,
+    timeout_ms: clampInt(
+      options?.timeout_ms ?? JSON_OPTION_DEFAULTS.timeout_ms,
+      JSON_TIMEOUT_MS_MIN,
+      JSON_TIMEOUT_MS_MAX,
+    ),
+    animate: options?.animate ?? JSON_OPTION_DEFAULTS.animate,
+  };
+}
+
+function mergeChips(
+  options: PreviewChipsOptions | undefined,
+): PreviewChipsOptions {
+  const types = options?.types
+    ? options.types.filter(isPreviewChipType)
+    : [...CHIPS_TYPES_DEFAULT];
+  const preset =
+    options?.preset !== undefined && isPreviewChipPreset(options.preset)
+      ? options.preset
+      : CHIPS_PRESET_DEFAULT;
+  const out: PreviewChipsOptions = {
+    filename: options?.filename ?? CHIPS_OPTION_DEFAULTS.filename,
+    preset,
+    types: types.length > 0 ? types : [...CHIPS_TYPES_DEFAULT],
+    workflow: options?.workflow ?? CHIPS_OPTION_DEFAULTS.workflow,
+    timeout_ms: clampInt(
+      options?.timeout_ms ?? CHIPS_OPTION_DEFAULTS.timeout_ms,
+      JSON_TIMEOUT_MS_MIN,
+      JSON_TIMEOUT_MS_MAX,
+    ),
+    animate: options?.animate ?? CHIPS_OPTION_DEFAULTS.animate,
+  };
+  if (options?.package !== undefined) {
+    out.package = options.package;
+  }
+  if (options?.repo !== undefined) {
+    out.repo = options.repo;
+  }
+  return out;
+}
+
 function renderDemoBlock(options: PreviewDemoOptions): string[] {
   const lines = [
     "      demo:",
@@ -467,6 +698,62 @@ function renderRepoBlock(options: PreviewRepoOptions): string[] {
     `        avatar: ${options.avatar ?? REPO_OPTION_DEFAULTS.avatar}`,
     `        animate: ${options.animate ?? REPO_OPTION_DEFAULTS.animate}`,
   ];
+}
+
+function renderCodingBlock(options: PreviewCodingOptions): string[] {
+  const include = options.include ?? CODING_OPTION_DEFAULTS.include;
+  return [
+    "      coding:",
+    `        filename: ${yamlScalar(options.filename ?? CODING_OPTION_DEFAULTS.filename)}`,
+    `        range: ${options.range ?? CODING_OPTION_DEFAULTS.range}`,
+    `        include: ${yamlFlowSeq(include)}`,
+    `        limit: ${options.limit ?? CODING_OPTION_DEFAULTS.limit}`,
+    `        api_domain: ${yamlScalar(options.api_domain ?? CODING_OPTION_DEFAULTS.api_domain)}`,
+    `        animate: ${options.animate ?? CODING_OPTION_DEFAULTS.animate}`,
+  ];
+}
+
+function renderFeedBlock(options: PreviewFeedOptions): string[] {
+  return [
+    "      feed:",
+    `        filename: ${yamlScalar(options.filename ?? FEED_FILENAME_DEFAULT)}`,
+    `        url: ${yamlScalar(options.url ?? EXPORT_FEED_SAMPLE_URL)}`,
+    `        limit: ${options.limit ?? FEED_LIMIT_DEFAULT}`,
+    `        animate: ${options.animate ?? FEED_ANIMATE_DEFAULT}`,
+  ];
+}
+
+function renderJsonBlock(options: PreviewJsonOptions): string[] {
+  return [
+    "      json:",
+    `        filename: ${yamlScalar(options.filename ?? JSON_OPTION_DEFAULTS.filename)}`,
+    `        url: ${yamlScalar(options.url ?? EXPORT_JSON_SAMPLE_URL)}`,
+    `        jmespath: ${yamlScalar(options.jmespath ?? JSON_OPTION_DEFAULTS.jmespath)}`,
+    `        timeout_ms: ${options.timeout_ms ?? JSON_OPTION_DEFAULTS.timeout_ms}`,
+    `        animate: ${options.animate ?? JSON_OPTION_DEFAULTS.animate}`,
+  ];
+}
+
+function renderChipsBlock(options: PreviewChipsOptions): string[] {
+  const types = options.types ?? CHIPS_TYPES_DEFAULT;
+  const lines = [
+    "      chips:",
+    `        filename: ${yamlScalar(options.filename ?? CHIPS_OPTION_DEFAULTS.filename)}`,
+    `        preset: ${options.preset ?? CHIPS_PRESET_DEFAULT}`,
+    `        types: ${yamlFlowSeq(types)}`,
+  ];
+  if (options.package !== undefined) {
+    lines.push(`        package: ${yamlScalar(options.package)}`);
+  }
+  if (options.repo !== undefined) {
+    lines.push(`        repo: ${yamlScalar(options.repo)}`);
+  }
+  lines.push(
+    `        workflow: ${yamlScalar(options.workflow ?? CHIPS_OPTION_DEFAULTS.workflow)}`,
+    `        timeout_ms: ${options.timeout_ms ?? CHIPS_OPTION_DEFAULTS.timeout_ms}`,
+    `        animate: ${options.animate ?? CHIPS_OPTION_DEFAULTS.animate}`,
+  );
+  return lines;
 }
 
 function yamlFlowSeq(items: readonly string[]): string {

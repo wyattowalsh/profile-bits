@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { githubDumpFromFixtures } from "../github-dump.fixture.js";
 import { renderRepoSvg } from "./render.js";
 import { repoViewModel } from "./view-model.js";
 import { NO_REPO_DATA } from "./widget.js";
@@ -133,6 +134,14 @@ describe("repo widget", () => {
     const svg = await renderRepoSvg({ payload: {} });
     expect(svg).toMatch(/<svg\b/);
     expect(NO_REPO_DATA).toBe("No repo data");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it("renders a dump with extra htmlUrl/topics keys without HTTP", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const svg = await renderRepoSvg({ payload: githubDumpFromFixtures() });
+    expect(svg).toMatch(/<svg\b/);
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseRawBadgeJson, type RawBadgeJson } from "../../payload.js";
 
 export const CHIP_FIXTURE_PRESETS = ["shieldcn", "shields"] as const;
 export const CHIP_FIXTURE_TYPES = [
@@ -31,10 +32,12 @@ function chipFixturePath(
 function loadChipFixture(
   preset: ChipFixturePreset,
   type: ChipFixtureType,
-): unknown {
+): RawBadgeJson {
   const path = chipFixturePath(preset, type);
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as unknown;
+    const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+    // Cached dump: keep `link`/`value` (and shields `name`/`value`). Do not map value→message.
+    return parseRawBadgeJson(parsed);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(`failed to load chip fixture ${preset}/${type}: ${detail}`);
@@ -43,20 +46,20 @@ function loadChipFixture(
 
 const CHIP_FIXTURES: Record<
   ChipFixturePreset,
-  Record<ChipFixtureType, unknown>
+  Record<ChipFixtureType, RawBadgeJson>
 > = {
   shieldcn: Object.fromEntries(
     CHIP_FIXTURE_TYPES.map((type) => [type, loadChipFixture("shieldcn", type)]),
-  ) as Record<ChipFixtureType, unknown>,
+  ) as Record<ChipFixtureType, RawBadgeJson>,
   shields: Object.fromEntries(
     CHIP_FIXTURE_TYPES.map((type) => [type, loadChipFixture("shields", type)]),
-  ) as Record<ChipFixtureType, unknown>,
+  ) as Record<ChipFixtureType, RawBadgeJson>,
 };
 
 export function chipFixture(
   preset: ChipFixturePreset,
   type: ChipFixtureType,
-): unknown {
+): RawBadgeJson {
   if (!PRESET_SET.has(preset) || !TYPE_SET.has(type)) {
     throw new Error(
       `unknown chip fixture combo: ${String(preset)}/${String(type)}`,

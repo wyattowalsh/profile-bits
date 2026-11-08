@@ -11,6 +11,8 @@
     <id>https://example.com/atom/1</id>
     <published>2026-08-16T11:00:00Z</published>
     <updated>2026-08-16T11:00:00Z</updated>
+    <summary>Atom summary 1</summary>
+    <content type="html">&lt;p&gt;Atom content 1&lt;/p&gt;</content>
   </entry>
   <entry>
     <title>Atom Item 2</title>
@@ -18,6 +20,8 @@
     <id>https://example.com/atom/2</id>
     <published>2026-08-16T10:00:00Z</published>
     <updated>2026-08-16T10:00:00Z</updated>
+    <summary>Atom summary 2</summary>
+    <content type="html">&lt;p&gt;Atom content 2&lt;/p&gt;</content>
   </entry>
   <entry>
     <title>Atom Item 3</title>
@@ -25,6 +29,8 @@
     <id>https://example.com/atom/3</id>
     <published>2026-08-16T09:00:00Z</published>
     <updated>2026-08-16T09:00:00Z</updated>
+    <summary>Atom summary 3</summary>
+    <content type="html">&lt;p&gt;Atom content 3&lt;/p&gt;</content>
   </entry>
   <entry>
     <title>Atom Item 4</title>
@@ -32,6 +38,8 @@
     <id>https://example.com/atom/4</id>
     <published>2026-08-16T08:00:00Z</published>
     <updated>2026-08-16T08:00:00Z</updated>
+    <summary>Atom summary 4</summary>
+    <content type="html">&lt;p&gt;Atom content 4&lt;/p&gt;</content>
   </entry>
   <entry>
     <title>Atom Item 5</title>
@@ -39,6 +47,8 @@
     <id>https://example.com/atom/5</id>
     <published>2026-08-16T07:00:00Z</published>
     <updated>2026-08-16T07:00:00Z</updated>
+    <summary>Atom summary 5</summary>
+    <content type="html">&lt;p&gt;Atom content 5&lt;/p&gt;</content>
   </entry>
   <entry>
     <title>Atom Item 6</title>
@@ -46,6 +56,8 @@
     <id>https://example.com/atom/6</id>
     <published>2026-08-16T06:00:00Z</published>
     <updated>2026-08-16T06:00:00Z</updated>
+    <summary>Atom summary 6</summary>
+    <content type="html">&lt;p&gt;Atom content 6&lt;/p&gt;</content>
   </entry>
   <entry>
     <title>Atom Item 7</title>
@@ -53,6 +65,8 @@
     <id>https://example.com/atom/7</id>
     <published>2026-08-16T05:00:00Z</published>
     <updated>2026-08-16T05:00:00Z</updated>
+    <summary>Atom summary 7</summary>
+    <content type="html">&lt;p&gt;Atom content 7&lt;/p&gt;</content>
   </entry>
   <entry>
     <title>Atom Item 8</title>
@@ -60,5 +74,7 @@
     <id>https://example.com/atom/8</id>
     <published>2026-08-16T04:00:00Z</published>
     <updated>2026-08-16T04:00:00Z</updated>
+    <summary>Atom summary 8</summary>
+    <content type="html">&lt;p&gt;Atom content 8&lt;/p&gt;</content>
   </entry>
 </feed>

@@ -24,11 +24,22 @@ export async function renderChipsSvg(input: {
   const node = await fromJsx(
     createElement(ChipsWidget, {
       badges: input.badges,
-      theme: input.theme,
+      ...(input.theme !== undefined ? { theme: input.theme } : {}),
     }),
   );
   assertTakumiTree(node);
   return renderSvg(node);
+}
+
+/** Widget reader: map cached raw badge JSON to `{ label, message, color? }`. */
+export function readChipsBadges(
+  payloads: readonly unknown[],
+): NormalizedBadge[] {
+  try {
+    return payloads.map((payload) => normalizeBadgeJson(payload));
+  } catch (error: unknown) {
+    throw toChipsWidgetError(error);
+  }
 }
 
 /** Consume cached badge JSON payloads. The widget performs no HTTP. */
@@ -36,15 +47,9 @@ export async function renderChipsFromPayloads(input: {
   payloads: readonly unknown[];
   theme?: WidgetTheme;
 }): Promise<string> {
-  let badges: NormalizedBadge[];
-  try {
-    badges = input.payloads.map((payload) => normalizeBadgeJson(payload));
-  } catch (error: unknown) {
-    throw toChipsWidgetError(error);
-  }
   return renderChipsSvg({
-    badges,
-    theme: input.theme,
+    badges: readChipsBadges(input.payloads),
+    ...(input.theme !== undefined ? { theme: input.theme } : {}),
   });
 }
 
@@ -53,6 +58,9 @@ export async function renderChipsFromClient(
   options: ChipsOptions,
   ctx: { user: string; theme?: WidgetTheme },
 ): Promise<string> {
-  const badges = await loadChipsPayloads(client, options, ctx);
-  return renderChipsSvg({ badges, theme: ctx.theme });
+  const payloads = await loadChipsPayloads(client, options, ctx);
+  return renderChipsFromPayloads({
+    payloads,
+    ...(ctx.theme !== undefined ? { theme: ctx.theme } : {}),
+  });
 }

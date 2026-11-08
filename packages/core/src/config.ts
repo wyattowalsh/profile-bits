@@ -84,12 +84,10 @@ export function githubPackDefaultWidgets(): GithubWidgetsConfig {
 export function widgetListSpecified(
   widgets: GithubWidgetsConfig | undefined,
 ): boolean {
-  return (
-    widgets?.demo !== undefined ||
-    widgets?.stats !== undefined ||
-    widgets?.languages !== undefined ||
-    widgets?.repo !== undefined
-  );
+  if (widgets === undefined) {
+    return false;
+  }
+  return Object.values(widgets).some((value) => value !== undefined);
 }
 
 /** Enable `stats` + `languages` when github is on and no widget list is set. */
@@ -120,7 +118,10 @@ export function wakatimePackDefaultWidgets(): WakatimeWidgetsConfig {
 export function wakatimeWidgetListSpecified(
   widgets: WakatimeWidgetsConfig | undefined,
 ): boolean {
-  return widgets?.coding !== undefined;
+  if (widgets === undefined) {
+    return false;
+  }
+  return Object.values(widgets).some((value) => value !== undefined);
 }
 
 export function applyWakatimePackDefaults(config: Config): Config {

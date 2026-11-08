@@ -1,0 +1,12 @@
+{
+  "response": {
+    "players": [
+      {
+        "steamid": "76561197960287930",
+        "personaname": "Octo",
+        "avatarfull": "https://avatars.example/octo.jpg",
+        "extra": true
+      }
+    ]
+  }
+}

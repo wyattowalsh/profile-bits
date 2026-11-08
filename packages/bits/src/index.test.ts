@@ -1,8 +1,22 @@
 import { DARK_THEME, fromJsx, LIGHT_THEME } from "@profile-bits/renderer";
 import { readableInk } from "@profile-bits/themes";
 import { createElement } from "react";
-import { describe, expect, it } from "vitest";
-import { BIT_EXPORTS, Chip, Frame, Text, Theme } from "./index.js";
+import { describe, expect, it, vi } from "vitest";
+import * as bits from "./index.js";
+import {
+  BIT_EXPORTS,
+  Board,
+  Chip,
+  Frame,
+  Grid,
+  Heatmap,
+  Icon,
+  Image,
+  List,
+  Text,
+  Theme,
+  Time,
+} from "./index.js";
 
 type TakumiNode = {
   type: string;
@@ -10,6 +24,39 @@ type TakumiNode = {
   style?: Record<string, unknown>;
   children?: TakumiNode[];
 };
+
+const FROZEN_11 = [
+  "Theme",
+  "Frame",
+  "Stack",
+  "Row",
+  "Text",
+  "Muted",
+  "Stat",
+  "Bar",
+  "Chip",
+  "Avatar",
+  "Divider",
+] as const;
+
+const README_CARD_BITS = [
+  "Image",
+  "Heatmap",
+  "Board",
+  "Icon",
+  "Grid",
+  "List",
+  "Time",
+] as const;
+
+const REFUSED = [
+  "Cover",
+  "Dialog",
+  "Toast",
+  "Popover",
+  "Dropdown",
+  "Command",
+] as const;
 
 function collectTexts(node: TakumiNode): string[] {
   const texts: string[] = [];
@@ -39,20 +86,22 @@ function findNode(
 }
 
 describe("bits", () => {
-  it("exports the v0 index", () => {
-    expect(BIT_EXPORTS).toEqual([
-      "Theme",
-      "Frame",
-      "Stack",
-      "Row",
-      "Text",
-      "Muted",
-      "Stat",
-      "Bar",
-      "Chip",
-      "Avatar",
-      "Divider",
-    ]);
+  it("exports Frozen 11 plus approved README-card bits", () => {
+    expect(BIT_EXPORTS).toEqual([...FROZEN_11, ...README_CARD_BITS]);
+    expect(Image).toEqual(expect.any(Function));
+    expect(Heatmap).toEqual(expect.any(Function));
+    expect(Board).toEqual(expect.any(Function));
+    expect(Icon).toEqual(expect.any(Function));
+    expect(Grid).toEqual(expect.any(Function));
+    expect(List).toEqual(expect.any(Function));
+    expect(Time).toEqual(expect.any(Function));
+  });
+
+  it("does not export Cover or overlay primitives", () => {
+    for (const name of REFUSED) {
+      expect(BIT_EXPORTS).not.toContain(name);
+      expect(name in bits).toBe(false);
+    }
   });
 
   it("fromJsx of Theme/Frame/Text does not need react-dom or document", async () => {
@@ -65,6 +114,83 @@ describe("bits", () => {
       ),
     );
     expect(node.type === "container" || node.type === "text").toBe(true);
+  });
+
+  it("fromJsx of barrel README-card bits does not need react-dom or document", async () => {
+    expect(globalThis.document).toBeUndefined();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const image = await fromJsx(
+      createElement(
+        Theme,
+        { theme: "dark" },
+        createElement(Image, { src: "https://example.com/album.png" }),
+      ),
+    );
+    expect(image.type === "container" || image.type === "image").toBe(true);
+
+    const heatmap = (await fromJsx(
+      createElement(
+        Theme,
+        { theme: "dark" },
+        createElement(Heatmap, {
+          weeks: [{ days: [{ count: 1 }, { count: 0 }] }],
+        }),
+      ),
+    )) as TakumiNode;
+    expect(heatmap.type === "container" || heatmap.type === "text").toBe(true);
+
+    const board = (await fromJsx(
+      createElement(Theme, { theme: "dark" }, createElement(Board, null)),
+    )) as TakumiNode;
+    expect(board.type === "container" || board.type === "text").toBe(true);
+
+    const icon = (await fromJsx(
+      createElement(Theme, { theme: "dark" }, createElement(Icon, null)),
+    )) as TakumiNode;
+    expect(icon.type === "container" || icon.type === "text").toBe(true);
+    expect(collectTexts(icon)).toContain("\u25A0");
+
+    const grid = (await fromJsx(
+      createElement(
+        Theme,
+        { theme: "dark" },
+        createElement(
+          Grid,
+          { columns: 2 },
+          createElement(Text, null, "cell-a"),
+          createElement(Text, null, "cell-b"),
+        ),
+      ),
+    )) as TakumiNode;
+    expect(collectTexts(grid)).toEqual(
+      expect.arrayContaining(["cell-a", "cell-b"]),
+    );
+
+    const list = (await fromJsx(
+      createElement(
+        Theme,
+        { theme: "dark" },
+        createElement(List, {
+          items: [{ title: "Track", meta: "Artist" }],
+        }),
+      ),
+    )) as TakumiNode;
+    expect(collectTexts(list)).toEqual(
+      expect.arrayContaining(["Track", "Artist"]),
+    );
+
+    const time = (await fromJsx(
+      createElement(
+        Theme,
+        { theme: "dark" },
+        createElement(Time, { value: "2026-08-16T11:00:00.000Z" }),
+      ),
+    )) as TakumiNode;
+    expect(collectTexts(time)).toContain("2026-08-16 11:00");
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 
   it("fromJsx of Theme wrapping children Chip still works", async () => {

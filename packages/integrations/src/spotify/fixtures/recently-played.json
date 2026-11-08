@@ -1,0 +1,55 @@
+{
+  "href": "https://api.spotify.com/v1/me/player/recently-played?limit=50",
+  "limit": 50,
+  "cursors": {
+    "after": "1693140000000",
+    "before": "1693130000000"
+  },
+  "next": null,
+  "extra_recent_flag": true,
+  "items": [
+    {
+      "played_at": "2026-08-27T12:00:00.000Z",
+      "context": {
+        "type": "playlist",
+        "href": "https://api.spotify.com/v1/playlists/37i9dQZF1DXcBWIGoYBM5M",
+        "uri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
+        }
+      },
+      "track": {
+        "id": "0VjIjW4GlUZAMYd2vXMi3b",
+        "name": "Blinding Lights",
+        "type": "track",
+        "uri": "spotify:track:0VjIjW4GlUZAMYd2vXMi3b",
+        "href": "https://api.spotify.com/v1/tracks/0VjIjW4GlUZAMYd2vXMi3b",
+        "duration_ms": 200040,
+        "explicit": false,
+        "popularity": 90,
+        "preview_url": "https://p.scdn.co/mp3-preview/blinding",
+        "track_number": 9,
+        "disc_number": 1,
+        "is_local": false,
+        "artists": [
+          {
+            "id": "1Xyo4u8uXC1ZmMpatF05PJ",
+            "name": "The Weeknd",
+            "type": "artist"
+          }
+        ],
+        "album": {
+          "id": "4yP0hdKOZPNshxUOjY0cZj",
+          "name": "After Hours",
+          "images": [
+            {
+              "url": "https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12c1",
+              "height": 640,
+              "width": 640
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

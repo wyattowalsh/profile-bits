@@ -4,17 +4,48 @@ import * as z from "zod";
 export const WakatimeSliceItemSchema = z.object({
   name: z.string(),
   total_seconds: z.number(),
+  percent: z.number().optional(),
+  text: z.string().optional(),
+  digital: z.string().optional(),
+  hours: z.number().optional(),
+  minutes: z.number().optional(),
+  seconds: z.number().optional(),
+  machine_name_id: z.string().optional(),
 });
 export type WakatimeSliceItem = z.infer<typeof WakatimeSliceItemSchema>;
+
+export const WakatimeBestDaySchema = z.object({
+  date: z.string().optional(),
+  text: z.string().optional(),
+  total_seconds: z.number().optional(),
+});
+export type WakatimeBestDay = z.infer<typeof WakatimeBestDaySchema>;
+
+const WakatimeSliceListSchema = z.array(WakatimeSliceItemSchema).optional();
 
 export const WakatimeStatsDataSchema = z.object({
   total_seconds: z.number(),
   human_readable_total: z.string(),
+  total_seconds_including_other_language: z.number().optional(),
+  human_readable_total_including_other_language: z.string().optional(),
+  daily_average: z.number().optional(),
+  daily_average_including_other_language: z.number().optional(),
+  human_readable_daily_average: z.string().optional(),
+  human_readable_daily_average_including_other_language: z.string().optional(),
   is_up_to_date: z.boolean().optional(),
-  languages: z.array(WakatimeSliceItemSchema).optional(),
-  editors: z.array(WakatimeSliceItemSchema).optional(),
-  projects: z.array(WakatimeSliceItemSchema).optional(),
-  operating_systems: z.array(WakatimeSliceItemSchema).optional(),
+  best_day: WakatimeBestDaySchema.optional(),
+  categories: WakatimeSliceListSchema,
+  machines: WakatimeSliceListSchema,
+  dependencies: WakatimeSliceListSchema,
+  languages: WakatimeSliceListSchema,
+  editors: WakatimeSliceListSchema,
+  projects: WakatimeSliceListSchema,
+  operating_systems: WakatimeSliceListSchema,
+  range: z.string().optional(),
+  human_readable_range: z.string().optional(),
+  start: z.string().optional(),
+  end: z.string().optional(),
+  timezone: z.string().optional(),
 });
 export type WakatimeStatsData = z.infer<typeof WakatimeStatsDataSchema>;
 

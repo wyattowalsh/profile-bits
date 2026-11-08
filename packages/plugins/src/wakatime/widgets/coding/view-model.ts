@@ -32,6 +32,21 @@ function toRows(
   }));
 }
 
+type CodingReader = CodingPayload & {
+  operating_systems?: readonly WakatimeSliceItem[];
+};
+
+/** `os` is the widget include token. The stats dump stores `operating_systems`. */
+function sourceRows(
+  payload: CodingReader,
+  key: CodingIncludeToken,
+): readonly WakatimeSliceItem[] | undefined {
+  if (key === "os") {
+    return payload.os ?? payload.operating_systems;
+  }
+  return payload[key];
+}
+
 export function toCodingViewModel(
   payload: CodingPayload,
   include: readonly CodingIncludeToken[],
@@ -39,7 +54,7 @@ export function toCodingViewModel(
 ): CodingViewModel {
   const slices: CodingViewSlice[] = [];
   for (const key of include) {
-    const source = payload[key];
+    const source = sourceRows(payload, key);
     if (source === undefined) {
       continue;
     }

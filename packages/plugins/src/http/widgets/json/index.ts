@@ -24,10 +24,15 @@ export async function renderJsonSvg(input: {
     jsonTemplate({
       value: input.value,
       empty,
-      url: input.url,
-      theme: input.theme,
+      ...(input.url !== undefined ? { url: input.url } : {}),
+      ...(input.theme !== undefined ? { theme: input.theme } : {}),
     }),
   );
+}
+
+/** Widget-side JMESPath reader. MUST NOT filter the http client dump. */
+export function readJsonDump(payload: unknown, jmespath: string): unknown {
+  return searchJson(payload, jmespath);
 }
 
 /** Consume a cached http JSON payload. The widget performs no HTTP. */
@@ -39,7 +44,7 @@ export async function renderJsonFromPayload(input: {
 }): Promise<string> {
   let value: unknown;
   try {
-    value = searchJson(input.payload, input.jmespath);
+    value = readJsonDump(input.payload, input.jmespath);
   } catch (error: unknown) {
     const message =
       error instanceof JsonJmesError ? error.message : "invalid jmespath";
@@ -47,8 +52,26 @@ export async function renderJsonFromPayload(input: {
   }
   return renderJsonSvg({
     value,
-    url: input.url,
-    theme: input.theme,
+    ...(input.url !== undefined ? { url: input.url } : {}),
+    ...(input.theme !== undefined ? { theme: input.theme } : {}),
+  });
+}
+
+/** Cached full JSON dump. `jmespath` stays a widget reader, not a fetch filter. */
+export async function loadJsonPayload(
+  client: HttpClient,
+  request: {
+    url: string;
+    timeout_ms?: number;
+    headers?: Readonly<Record<string, string>>;
+  },
+): Promise<unknown> {
+  return client.fetchJson({
+    url: request.url,
+    ...(request.timeout_ms !== undefined
+      ? { timeout_ms: request.timeout_ms }
+      : {}),
+    ...(request.headers !== undefined ? { headers: request.headers } : {}),
   });
 }
 
@@ -62,16 +85,16 @@ export async function renderJsonFromClient(
     theme?: ThemePalette;
   },
 ): Promise<string> {
-  const payload = await client.fetchJson({
+  const payload = await loadJsonPayload(client, {
     url: input.url,
-    timeout_ms: input.timeout_ms,
-    headers: input.headers,
+    ...(input.timeout_ms !== undefined ? { timeout_ms: input.timeout_ms } : {}),
+    ...(input.headers !== undefined ? { headers: input.headers } : {}),
   });
   return renderJsonFromPayload({
     payload,
     jmespath: input.jmespath,
     url: input.url,
-    theme: input.theme,
+    ...(input.theme !== undefined ? { theme: input.theme } : {}),
   });
 }
 

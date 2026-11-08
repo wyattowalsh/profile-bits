@@ -5,14 +5,17 @@ import {
   GENERATE_PLUGIN_ID,
   SHARE_LABEL,
 } from "@/src/generate/constants";
-import { PREVIEW_WIDGET_IDS, type PreviewRequest } from "@/src/preview/types";
+import {
+  PREVIEW_GITHUB_WIDGET_IDS,
+  type PreviewRequest,
+} from "@/src/preview/types";
 
 export const GITHUB_GENERATE_HREF = `/generate/${GENERATE_PLUGIN_ID}`;
 
 export const metadata: Metadata = {
   title: "Generate · github",
   description:
-    "Visual generator for the github pack (demo, stats, languages). Download or share a 480×160 card.",
+    "Visual generator for the github pack (demo, stats, languages, repo). Download or share a 480×160 card.",
 };
 
 /** Canonical `/generate/github` pack request. v0 github only. */
@@ -35,7 +38,7 @@ export default function GenerateGitHubPage() {
       <h2>{GENERATE_PLUGIN_ID}</h2>
       <p>
         Visual generator for the <code>{GENERATE_PLUGIN_ID}</code> pack. Widgets{" "}
-        {PREVIEW_WIDGET_IDS.map((id) => (
+        {PREVIEW_GITHUB_WIDGET_IDS.map((id) => (
           <code key={id}>{id}</code>
         ))}
         . Primary actions are {DOWNLOAD_LABEL} and {SHARE_LABEL}.

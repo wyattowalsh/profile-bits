@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PREVIEW_WIDGET_IDS } from "@/src/preview/types";
+import { PREVIEW_GITHUB_WIDGET_IDS } from "@/src/preview/types";
 
 const mocks = vi.hoisted(() => ({
   notFound: vi.fn(() => {
@@ -37,6 +37,10 @@ describe("GET /generate/github/[widget]", () => {
     expect(source).toContain("githubWidgetRequest");
     expect(source).toContain('scope: "widget"');
     expect(source).toContain('data-slot="generate-widget"');
+    expect(source).toContain("isPreviewGithubWidgetId");
+    expect(source).toContain("PREVIEW_GITHUB_WIDGET_IDS");
+    expect(source).not.toContain("isPreviewWidgetId");
+    expect(source).not.toContain("PREVIEW_WIDGET_IDS");
     expect(source).not.toContain("source-drop");
     expect(source).not.toContain("code-rail");
     expect(source).not.toContain("export-workflow");
@@ -45,17 +49,20 @@ describe("GET /generate/github/[widget]", () => {
     expect(source).not.toMatch(/\brss\b/i);
   });
 
-  it("generateStaticParams lists only v0 github widgets", () => {
+  it("generateStaticParams lists only github widgets", () => {
     expect(generateStaticParams()).toEqual([
       { widget: "demo" },
       { widget: "stats" },
       { widget: "languages" },
       { widget: "repo" },
     ]);
-    expect(PREVIEW_WIDGET_IDS).toEqual(["demo", "stats", "languages", "repo"]);
+    expect(generateStaticParams().map((row) => row.widget)).toEqual([
+      ...PREVIEW_GITHUB_WIDGET_IDS,
+    ]);
+    expect(PREVIEW_GITHUB_WIDGET_IDS).not.toContain("chips");
   });
 
-  it.each(PREVIEW_WIDGET_IDS)(
+  it.each(PREVIEW_GITHUB_WIDGET_IDS)(
     "renders a labeled %s widget section without nested shell chrome",
     async (widget) => {
       const page = await GenerateGithubWidgetPage({
@@ -84,7 +91,7 @@ describe("GET /generate/github/[widget]", () => {
     },
   );
 
-  it.each(["wakatime", "rss", "coding", "feed"])(
+  it.each(["wakatime", "rss", "coding", "feed", "json", "chips"])(
     "calls notFound() for unknown widget id %s",
     async (widget) => {
       mocks.notFound.mockClear();

@@ -13,7 +13,22 @@ import {
   type SkipFailOutcome,
 } from "@profile-bits/core";
 import type { GithubRequestCache } from "./cache.js";
+import {
+  type GithubOwnerRepository,
+  type GithubRepository,
+  type GithubRestCrawlResult,
+  parseGithubOwnerRepository,
+  parseGithubRepository,
+  parseGithubUser,
+} from "./payload.js";
 import { classifyGithubRateLimit } from "./rate-limit.js";
+
+export type {
+  GithubOwnerRepository,
+  GithubRepository,
+  GithubRestCrawlResult,
+  GithubRestUser,
+} from "./payload.js";
 
 export const GITHUB_API_ORIGIN = "https://api.github.com";
 export const GITHUB_API_VERSION = "2022-11-28";
@@ -28,50 +43,6 @@ export type GithubRestFetch = (
   input: URL,
   init?: RequestInit,
 ) => Promise<Response>;
-
-export type GithubRestUser = {
-  login: string;
-  id: number;
-  nodeId: string;
-  followers: number;
-  following: number;
-  publicRepos: number;
-  publicGists: number;
-};
-
-export type GithubOwnerRepository = {
-  id: number;
-  nodeId: string;
-  name: string;
-  fullName: string;
-  fork: boolean;
-  archived: boolean;
-  private: boolean;
-  stargazersCount: number;
-  forksCount: number;
-};
-
-export type GithubRepository = {
-  fullName: string;
-  name: string;
-  description: string | null;
-  htmlUrl: string;
-  stargazersCount: number;
-  forksCount: number;
-  subscribersCount: number;
-  openIssuesCount: number;
-  language: string | null;
-  license: string | null;
-  ownerLogin: string;
-  ownerAvatarUrl: string;
-};
-
-export type GithubRestCrawlResult = {
-  user: GithubRestUser;
-  repositories: readonly GithubOwnerRepository[];
-  /** Same ordered GraphQL `node_id` list for stars and language bytes. */
-  repositoryIds: readonly string[];
-};
 
 export type GithubRestCrawlInput = {
   login: string;
@@ -144,7 +115,7 @@ export async function crawlGithubRest(
     );
   }
 
-  const user = parseUser(
+  const user = parseGithubUser(
     await cachedGithubGet({
       cache: input.cache,
       url: userUrl(input.login),
@@ -197,7 +168,7 @@ export async function fetchGithubRepo(
   const { owner, name } = splitRepoFullName(input.repo);
   const token = rawToken.trim();
   const fetchImpl = input.fetchImpl ?? fetch;
-  const repository = parseRepository(
+  const repository = parseGithubRepository(
     await cachedGithubGet({
       cache: input.cache,
       url: repoUrl(owner, name),
@@ -256,7 +227,7 @@ async function listOwnerRepositories(input: {
     }
 
     for (const entry of body) {
-      const repo = parseRepo(entry);
+      const repo = parseGithubOwnerRepository(entry);
       if (repo == null || !keepRepo(repo, input)) {
         continue;
       }
@@ -465,77 +436,6 @@ function githubPathname(url: string): string {
   }
 }
 
-function parseUser(value: unknown): GithubRestUser | null {
-  const record = asRecord(value);
-  if (
-    record == null ||
-    typeof record.login !== "string" ||
-    record.login === ""
-  ) {
-    return null;
-  }
-  if (typeof record.id !== "number") {
-    return null;
-  }
-  return {
-    login: record.login,
-    id: record.id,
-    nodeId: stringField(record.node_id),
-    followers: numberField(record.followers),
-    following: numberField(record.following),
-    publicRepos: numberField(record.public_repos),
-    publicGists: numberField(record.public_gists),
-  };
-}
-
-function parseRepository(value: unknown): GithubRepository | null {
-  const record = asRecord(value);
-  if (record == null) {
-    return null;
-  }
-  const name = stringField(record.name);
-  const fullName = stringField(record.full_name);
-  if (name === "" && fullName === "") {
-    return null;
-  }
-  const owner = asRecord(record.owner);
-  return {
-    fullName,
-    name,
-    description: nullableString(record.description),
-    htmlUrl: stringField(record.html_url),
-    stargazersCount: numberField(record.stargazers_count),
-    forksCount: numberField(record.forks_count),
-    subscribersCount: numberField(record.subscribers_count),
-    openIssuesCount: numberField(record.open_issues_count),
-    language: nullableString(record.language),
-    license: licenseField(record.license),
-    ownerLogin: owner == null ? "" : stringField(owner.login),
-    ownerAvatarUrl: owner == null ? "" : stringField(owner.avatar_url),
-  };
-}
-
-function parseRepo(value: unknown): GithubOwnerRepository | null {
-  const record = asRecord(value);
-  if (record == null || typeof record.id !== "number") {
-    return null;
-  }
-  if (typeof record.node_id !== "string" || record.node_id === "") {
-    return null;
-  }
-  return {
-    id: record.id,
-    nodeId: record.node_id,
-    name: stringField(record.name),
-    fullName: stringField(record.full_name),
-    fork: record.fork === true,
-    archived: record.archived === true,
-    private: record.private === true,
-    stargazersCount: numberField(record.stargazers_count),
-    forksCount: numberField(record.forks_count),
-  };
-}
-
 async function readJson(response: Response): Promise<unknown> {
   const text = await response.text();
   if (text.trim() === "") {
@@ -554,37 +454,4 @@ function headersRecord(headers: Headers): Record<string, string> {
     record[key] = value;
   });
   return record;
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value != null && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  return null;
-}
-
-function stringField(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-function nullableString(value: unknown): string | null {
-  return typeof value === "string" && value !== "" ? value : null;
-}
-
-function licenseField(value: unknown): string | null {
-  const record = asRecord(value);
-  if (record == null) {
-    return null;
-  }
-  if (typeof record.spdx_id === "string" && record.spdx_id !== "") {
-    return record.spdx_id;
-  }
-  if (typeof record.name === "string" && record.name !== "") {
-    return record.name;
-  }
-  return null;
-}
-
-function numberField(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }

@@ -1,0 +1,240 @@
+{
+  "stage": "interview",
+  "title": "profile-bits e2e refine",
+  "goalSlug": "e2e-refine",
+  "questions": [
+    {
+      "id": "bundle",
+      "prompt": "What should this goal package contain?",
+      "description": "Setup output only. Execution is a later /goal or the project workflow.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "Parent goal.md + facts.md + plan.md, one plans/<workstream>.md per useful item, backlog.md for nits, and .grok/workflows/e2e-refine.rhai in this repo. This setup stays Plannotator; the workflow runs the plans after /goal.",
+      "recommendedOptionIds": [
+        "parent-docs",
+        "plans-dir",
+        "project-workflow",
+        "backlog"
+      ],
+      "options": [
+        {
+          "id": "parent-docs",
+          "label": "Parent goal.md, facts.md, plan.md"
+        },
+        {
+          "id": "plans-dir",
+          "label": "plans/<workstream>.md for each first-class item"
+        },
+        {
+          "id": "project-workflow",
+          "label": "Project workflow .grok/workflows/e2e-refine.rhai"
+        },
+        {
+          "id": "backlog",
+          "label": "backlog.md for nits / speculative extras"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "wave1",
+      "prompt": "Wave 1 (must finish first) — docs/README closeout?",
+      "description": "Dirty files already exist under apps/docs and packages/core codegen. Full build-out, not a stub.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "Finish docs-full-catalog-playground as a full playground + generator + widget/bit/theme libs. Ship the visual README from existing stills/draft. Keep Marketplace leftover as an operator plan. Fixtures default; optional live including full HTML scrape. POST /api/preview stays layout preview, not an embed API.",
+      "recommendedOptionIds": [
+        "docs-full",
+        "readme-visual",
+        "marketplace-operator",
+        "fixtures-default-live-scrape"
+      ],
+      "options": [
+        {
+          "id": "docs-full",
+          "label": "Full docs app: playground, generator, widget/bit/theme libs"
+        },
+        {
+          "id": "readme-visual",
+          "label": "Root README visual/full build-out from docs/assets/readme"
+        },
+        {
+          "id": "marketplace-operator",
+          "label": "Leftover Marketplace listing operator steps as a plan"
+        },
+        {
+          "id": "fixtures-default-live-scrape",
+          "label": "Fixtures default; optional live including full HTML scrape"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "data-model",
+      "prompt": "How should integration payloads work?",
+      "description": "Widgets still fetch none. Secrets never persist. GitHub fetch-policy locks stay.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "2++ complete dumps: extra allowed endpoints, full typed model for github/wakatime/rss/http and each new source. Public HTML scrape when there is no API (SSRF, fixtures, no Playwright in the Action). yaml token_env plus optional Action *_token inputs for required-auth sources. Never unauth GitHub. Never plugin_*_*_*.",
+      "recommendedOptionIds": [
+        "complete-dumps",
+        "widen-shipped",
+        "html-scrape",
+        "token-env-and-action-inputs"
+      ],
+      "options": [
+        {
+          "id": "complete-dumps",
+          "label": "Map all available source data into the typed profile-bits payload"
+        },
+        {
+          "id": "widen-shipped",
+          "label": "Max-widen github, wakatime, rss, and http (not new sources only)"
+        },
+        {
+          "id": "html-scrape",
+          "label": "Public HTML scrape when there is no API (SSRF; not Playwright in Action)"
+        },
+        {
+          "id": "token-env-and-action-inputs",
+          "label": "yaml token_env + optional Action *_token for required-auth sources"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "expansion",
+      "prompt": "After the four shipped sources, what new product ids should the inventory plan?",
+      "description": "Ranking is integrations-first. N is the elbow where the next source is clearly less useful. New packs are OpenSpec-first.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "Rank new integrations; take N until diminishing returns. For each survivor, plan the pack, widgets, and bits that source needs. Also plan any extra Takumi-safe bits inspired by shadcn/ui (no dialog/toast/popover). One OpenSpec change per workstream.",
+      "recommendedOptionIds": [
+        "elbow-integrations",
+        "combo-pack-widgets-bits",
+        "useful-bits",
+        "one-change-per-workstream"
+      ],
+      "options": [
+        {
+          "id": "elbow-integrations",
+          "label": "Top N new integrations until the next one has diminishing usefulness"
+        },
+        {
+          "id": "combo-pack-widgets-bits",
+          "label": "For each source: corresponding pack + widgets + bits if needed"
+        },
+        {
+          "id": "useful-bits",
+          "label": "Any useful Takumi-safe bits (shadcn-inspired, not web overlays)"
+        },
+        {
+          "id": "one-change-per-workstream",
+          "label": "One OpenSpec change per workstream"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "palettes",
+      "prompt": "Named palettes (47 already ship). What belongs in this bundle?",
+      "description": "The docs themes library is part of wave 1. This is the remaining product fork.",
+      "answerMode": "single-custom",
+      "recommendedAnswer": "Wave 1 documents and playgrounds all 47 (contrast, /generate/themes). Add a new family only if a planned widget needs a named flavor that is not in the catalog. Do not uncap palettes the way bits were uncapped.",
+      "recommendedOptionIds": ["complete-47-plus-if-needed"],
+      "options": [
+        {
+          "id": "complete-47-plus-if-needed",
+          "label": "Complete the 47 in the themes lib; add a family only if a widget needs it"
+        },
+        {
+          "id": "top3-new-families",
+          "label": "Also plan the next 3 palette families from author ideate even without a hole"
+        },
+        {
+          "id": "uncap-palettes",
+          "label": "Plan every useful extra family the themes audit wants"
+        },
+        {
+          "id": "no-new-palettes",
+          "label": "No new families; only document the existing 47"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "waves",
+      "prompt": "Execution wave order?",
+      "description": "The bundle still plans everything. Waves are for the workflow and /goal.",
+      "answerMode": "single",
+      "recommendedAnswer": "Wave 1: docs/README/Marketplace closeout. Wave 2: max-widen the four shipped integrations (parallel). Wave 3: elbow new sources, each OpenSpec change in parallel.",
+      "recommendedOptionIds": ["docs-then-widen-then-new"],
+      "options": [
+        {
+          "id": "docs-then-widen-then-new",
+          "label": "Wave 1 docs/README → wave 2 widen four → wave 3 new sources"
+        },
+        {
+          "id": "docs-plus-widen-then-new",
+          "label": "Wave 1 docs/README plus widen four → wave 2 new sources"
+        },
+        {
+          "id": "new-first",
+          "label": "New sources first, then widen, then docs"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "out",
+      "prompt": "What stays out of scope / locked?",
+      "description": "These are standing product locks unless you uncheck them here.",
+      "answerMode": "multi-custom",
+      "recommendedAnswer": "Keep every lock listed. New packs/ids are allowed only as OpenSpec-first workstreams, never silent catalog append.",
+      "recommendedOptionIds": [
+        "no-flatten",
+        "no-v1-main",
+        "no-unauth-github",
+        "no-rest-languages",
+        "no-embed-api",
+        "no-playwright-action",
+        "openspec-first-ids"
+      ],
+      "options": [
+        {
+          "id": "no-flatten",
+          "label": "No flattened plugin_*_*_* Action inputs"
+        },
+        {
+          "id": "no-v1-main",
+          "label": "Never tag v1 on main; dist/ gitignored on main"
+        },
+        {
+          "id": "no-unauth-github",
+          "label": "Never unauthenticated GitHub"
+        },
+        {
+          "id": "no-rest-languages",
+          "label": "Never REST /languages; GraphQL nodes(ids:) batches of 100"
+        },
+        {
+          "id": "no-embed-api",
+          "label": "Docs POST /api/preview is not a public embed API; GET stays rejected"
+        },
+        {
+          "id": "no-playwright-action",
+          "label": "No Playwright in the Action runtime"
+        },
+        {
+          "id": "openspec-first-ids",
+          "label": "New integration/pack/widget/bit ids are OpenSpec-first"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "done",
+      "prompt": "When is this goal done?",
+      "description": "Done = the package exists and is launchable, not that every plan is implemented.",
+      "answerMode": "text",
+      "recommendedAnswer": "goals/e2e-refine/{goal.md,facts.md,plan.md,plans/*.md,backlog.md} and .grok/workflows/e2e-refine.rhai exist, facts are testable, each first-class plan has files/systems and verification, Plannotator accepted the plan gate, and /goal goals/e2e-refine/goal.md can start wave 1.",
+      "required": true
+    }
+  ]
+}

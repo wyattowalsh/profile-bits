@@ -86,7 +86,7 @@ components:
 
 # profile-bits
 
-GitHub profile README widgets that read as dense GitHub-native stats cards: Geist, Primer-adjacent neutrals, **480×160**, flat 1px borders, no shadows. Dark is default. Motion is Takumi authoring input, not GitHub SVG runtime. Delivery is the Action committing widget files. The docs playground is codegen plus layout preview, not a public embed API. Gist is an optional `output_action`, not a CDN. `/generate/catalog` is a first-party visual gallery, not a marketplace. Local CLI (`just render` / `packages/cli`) wraps Action `runMain`; CLI default `output_action` is `none`. Customize via yaml plus first-party `http` / `rss` / `chips`, not a user plugin loader.
+GitHub profile README widgets that read as dense GitHub-native stats cards: Geist, Primer-adjacent neutrals, **480×160**, flat 1px borders, no shadows. Dark is default. Motion is Takumi authoring input, not GitHub SVG runtime. Delivery is the Action committing widget files. The docs playground is codegen plus layout preview, not a public embed API. Gist is an optional `output_action`, not a CDN. `/generate/catalog` is a first-party visual gallery, not a marketplace. Local CLI (`just render` / `packages/cli`) wraps Action `runMain`; CLI default `output_action` is `none`. Customize via yaml plus first-party packs `github` / `wakatime` / `rss` / `http`, not a user plugin loader.
 
 ## Overview
 
@@ -225,24 +225,28 @@ Live catalog is `packages/core/src/types.ts` (`FIRST_PARTY_*`, `WIDGET_INTEGRATI
 
 | Plugin | Widgets | Integration | Auth |
 | --- | --- | --- | --- |
-| `github` | `demo`, `stats`, `languages` | `static` / `github` | none / optional |
+| `github` | `demo`, `stats`, `languages`, `repo` | `static` / `github` | none / optional |
 | `wakatime` | `coding` | `wakatime` | required |
 | `rss` | `feed` | `rss` | none |
 | `http` | `json`, `chips` | `http` | optional |
 
-Pack defaults: github on with no widget list → `stats` + `languages` (`demo` opt-in). Wakatime on with no widget list → `coding`. `plugins.http: {}` is widget-less; `json` only when `widgets.json` is present (https `url`); `chips` only when `widgets.chips` is present (`preset` + `types`). Rss `feed` requires https `url`.
+Pack defaults: github on with no widget list → `stats` + `languages` (`demo` and `repo` opt-in). Wakatime on with no widget list → `coding`. `plugins.http: {}` is widget-less; `json` only when `widgets.json` is present (https `url`); `chips` only when `widgets.chips` is present (`preset` + `types`). Rss `feed` requires https `url`.
+
+Docs catalog: `/generate/catalog` lists all four packs and eight widgets. `/generate/{github,wakatime,rss,http}` pack pages (and `[widget]`) show that pack's `bitsUsed`. `/generate/bits` shows Frozen 11 samples, not names-only. `/generate/themes` lists `NAMED_THEME_IDS` via `listFamilies` (47 named ids). `/generate/catalog` is a first-party visual gallery, not a marketplace.
 
 ### Code vs archived spec vs in-flight
 
 | Layer | What it says |
 | --- | --- |
-| Live types | Four packs, seven widgets, five integrations (table above). |
-| Archived `openspec/specs/plugin-contract` | github-only v0 (`demo` / `stats` / `languages`). **Lag.** Follow live types. |
-| `engine.ts` `EnabledWidget` | `demo` \| `stats` \| `languages` \| `coding` \| `feed` \| `json` \| `chips`. |
-| `enabledWidgets` | Github widgets + wakatime `coding` + rss `feed` + http `json` / `chips`. |
+| Live types | Four packs, eight widgets, five integrations (table above). |
+| Archived `openspec/specs/plugin-contract` | Four packs; github includes opt-in `repo`. Follow live types if they diverge. |
+| Archived `openspec/specs/playground` | github-only codegen plus fixtures-only `/playground/http`. **Lag.** Follow in-flight `docs-full-catalog-playground`. |
+| `engine.ts` `EnabledWidget` | `demo` \| `stats` \| `languages` \| `repo` \| `coding` \| `feed` \| `json` \| `chips`. |
+| `enabledWidgets` | Github widgets (including opt-in `repo`) + wakatime `coding` + rss `feed` + http `json` / `chips`. |
 | `main.ts` | `runEngine(loaded, { renderWidget, … })`. `renderWidget` is a required port. |
-| On-disk adapters | `render-github.ts`, `render-wakatime.ts`, `render-feed.ts`, `render-http.ts`. `composeRenderWidgets` routes `json` \|\| `chips` → `adapters.json`; `feed` → rss; other ids → github dispatcher (`coding` included). |
-| Playground | `/playground/github` (`PREVIEW_WIDGET_IDS`: `demo` / `stats` / `languages`). Fixtures-only `/playground/http` explorer. No `/playground/wakatime` or `/playground/rss`. |
+| On-disk adapters | `render-github.ts`, `render-wakatime.ts`, `render-feed.ts`, `render-http.ts`. `composeRenderWidgets` routes `json` \|\| `chips` → http; `feed` → rss; remaining ids → `createRenderWidgetFromClients` (`coding` → wakatime; github `demo` / `stats` / `languages` / `repo`). |
+| Playground | `/playground/{github,wakatime,rss,http}` and `[widget]`. Plugin selector lists four packs. Github routes use `PREVIEW_GITHUB_WIDGET_IDS` (`demo` / `stats` / `languages` / `repo`). `PREVIEW_WIDGET_IDS` is the eight-id POST union. Do not dump `coding` / `feed` / `json` / `chips` onto github ids. |
+| Docs catalog | `/generate/catalog` four packs / eight widgets. Pack `bitsUsed`. `POST /api/preview` is not an embed API. |
 
 Hex palettes SSOT is `packages/themes` (named flavors). Renderer `themes.ts` consumes that catalog; do not copy flavor hex into plugins or bits.
 
@@ -285,15 +289,15 @@ Github: one client per run; REST `GET /users/{login}` + paginated `/repos?type=o
 
 Wakatime: `auth: required`. RFC Basic `base64(api_key + ":")`. Never `?api_key=` or Bearer for the API key. Missing `wakatime_token` fails the job **only when the pack is on**. Hostname `wakatime.com` → Cloud stats path; other allowed hosts → Wakapi compat path.
 
-Rss: `auth: none`; https GET; playground uses XML fixtures, zero live feeds.
+Rss: `auth: none`; https GET; playground defaults to XML fixtures (`rss-fixtures.ts`); live feed only for a typed https URL through the SSRF client.
 
 Http: `auth: optional`. Unset `http_token_env` sends no Authorization. Named env empty → `fail_widget`. SSRF closed. 1 MiB body cap.
 
 ## Playground
 
-Routes: `/playground` → `/playground/github`. Fixtures-only `/playground/http` explorer exists (`json` / `chips`; do not add those ids to `PREVIEW_WIDGET_IDS`). No `/playground/wakatime` or `/playground/rss`. GitHub preview widgets stay `demo`, `stats`, `languages`.
+Routes: `/playground` → `/playground/github`. The app also serves `/playground/{wakatime,rss,http}` and `/playground/{plugin}/[widget]` for that pack's widgets (github `demo` / `stats` / `languages` / `repo`; wakatime `coding`; rss `feed`; http `json` / `chips`). Landing redirect stays github. Plugin selector lists `github`, `wakatime`, `rss`, and `http`. Yaml rails emit `plugins.<pack>`. `/playground/http` is the shared PlaygroundShell for `json` and `chips` (keep the URL). Github playground and generate routes use `PREVIEW_GITHUB_WIDGET_IDS` only — do not add `coding`, `feed`, `json`, or `chips` to github ids.
 
-`POST /api/preview` is a docs layout/time-axis preview, not a stable embed API. Dual pane: WASM layout + README mode (`renderSvg` / `renderAnimation`). No App token → fixtures, zero outbound GitHub. Wakatime / rss / http preview: fixtures only. `PREVIEW_TOKEN_QUERY_KEYS` includes `github_token`, `wakatime_token`, `http_token_env`, `http_token` so permalinks cannot round-trip secrets. `Cache-Control: no-store`.
+`POST /api/preview` is a docs layout/time-axis preview, not a stable embed API. `GET /api/preview` is 405. Dual pane: WASM layout + README mode (`renderSvg` / `renderAnimation`). Default preview is non-empty fixtures (octocat including `repo` from `repos[0]`, WakaTime `last_7_days`, Atom feed, `chipFixture` / json sample). No App token → fixtures, zero outbound GitHub. Optional live: server `GITHUB_APP` / `GITHUB_APP_TOKEN`; WakaTime preview env; rss/http SSRF for a visitor https URL; HTML scrape through the same SSRF gates. POST body and permalinks omit token fields. `PREVIEW_TOKEN_QUERY_KEYS` includes `github_token`, `wakatime_token`, `http_token_env`, `http_token` so permalinks cannot round-trip secrets. `Cache-Control: no-store`.
 
 ## Authoring
 

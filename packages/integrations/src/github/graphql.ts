@@ -6,6 +6,14 @@
 
 import { isMissingToken, type SkipFailOutcome } from "@profile-bits/core";
 import type { GithubRequestCache } from "./cache.js";
+import {
+  type GithubContributionCalendar,
+  type GithubLanguageAccumulator,
+  type GithubLanguageBytes,
+  languageBytesFromTotals,
+  mergeGithubLanguageBytes,
+  parseGithubContributionCalendar,
+} from "./payload.js";
 import { classifyGraphqlResponse, type RateLimitLogger } from "./rate-limit.js";
 import {
   GITHUB_API_ORIGIN,
@@ -13,6 +21,8 @@ import {
   GithubRestError,
   type GithubRestFetch,
 } from "./rest.js";
+
+export type { GithubContributionCalendar, GithubLanguageBytes };
 
 export const GITHUB_GRAPHQL_URL = `${GITHUB_API_ORIGIN}/graphql`;
 export const GITHUB_GRAPHQL_NODE_BATCH = 100;
@@ -22,7 +32,8 @@ export const LANGUAGES_NODES_QUERY = `query Languages($ids: [ID!]!) {
     ... on Repository {
       id
       languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
-        edges { size node { name } }
+        edges { size node { name color id } }
+        pageInfo { hasNextPage endCursor }
       }
     }
   }
@@ -32,16 +43,16 @@ export const LANGUAGES_NODES_QUERY = `query Languages($ids: [ID!]!) {
 export const CONTRIBUTIONS_QUERY = `query Contributions($login: String!) {
   user(login: $login) {
     contributionsCollection {
-      contributionCalendar { totalContributions }
+      contributionCalendar {
+        totalContributions
+        weeks {
+          contributionDays { date contributionCount weekday }
+        }
+      }
     }
   }
   rateLimit { cost remaining }
 }`;
-
-export type GithubLanguageBytes = {
-  name: string;
-  bytes: number;
-};
 
 export type GithubGraphqlFetch = GithubRestFetch;
 
@@ -77,7 +88,7 @@ export async function fetchRepositoryLanguages(input: {
   }
   const token = input.token.trim();
   const fetchImpl = input.fetchImpl ?? fetch;
-  const totals = new Map<string, number>();
+  const totals = new Map<string, GithubLanguageAccumulator>();
 
   for (
     let i = 0;
@@ -94,22 +105,20 @@ export async function fetchRepositoryLanguages(input: {
       operation: "languages",
       logger: input.logger,
     });
-    mergeLanguageBytes(totals, body);
+    mergeGithubLanguageBytes(totals, body);
   }
 
-  return [...totals.entries()]
-    .map(([name, bytes]) => ({ name, bytes }))
-    .sort((a, b) => b.bytes - a.bytes);
+  return languageBytesFromTotals(totals);
 }
 
-export async function fetchContributionTotal(input: {
+export async function fetchContributionCalendar(input: {
   login: string;
   token: string | undefined | null;
   cache: GithubRequestCache;
   canContributions: boolean;
   fetchImpl?: GithubGraphqlFetch;
   logger?: RateLimitLogger;
-}): Promise<number | undefined> {
+}): Promise<GithubContributionCalendar | undefined> {
   if (!input.canContributions) {
     return undefined;
   }
@@ -123,7 +132,19 @@ export async function fetchContributionTotal(input: {
     operation: "contributions",
     logger: input.logger,
   });
-  return readContributionTotal(body);
+  return parseGithubContributionCalendar(body);
+}
+
+export async function fetchContributionTotal(input: {
+  login: string;
+  token: string | undefined | null;
+  cache: GithubRequestCache;
+  canContributions: boolean;
+  fetchImpl?: GithubGraphqlFetch;
+  logger?: RateLimitLogger;
+}): Promise<number | undefined> {
+  const calendar = await fetchContributionCalendar(input);
+  return calendar?.totalContributions;
 }
 
 function assertToken(
@@ -211,44 +232,6 @@ async function graphqlUncached(input: {
     );
   }
   return body;
-}
-
-function mergeLanguageBytes(totals: Map<string, number>, body: unknown): void {
-  const nodes = readNodes(body);
-  for (const node of nodes) {
-    const languages = asRecord(node)?.languages;
-    const edges = asRecord(languages)?.edges;
-    if (!Array.isArray(edges)) {
-      continue;
-    }
-    for (const edge of edges) {
-      const record = asRecord(edge);
-      if (record == null) {
-        continue;
-      }
-      const size = typeof record.size === "number" ? record.size : 0;
-      const name = asRecord(record.node)?.name;
-      if (typeof name !== "string" || name === "" || size <= 0) {
-        continue;
-      }
-      totals.set(name, (totals.get(name) ?? 0) + size);
-    }
-  }
-}
-
-function readNodes(body: unknown): readonly unknown[] {
-  const data = asRecord(asRecord(body)?.data);
-  const nodes = data?.nodes;
-  return Array.isArray(nodes) ? nodes : [];
-}
-
-function readContributionTotal(body: unknown): number | undefined {
-  const data = asRecord(asRecord(body)?.data);
-  const user = asRecord(data?.user);
-  const collection = asRecord(user?.contributionsCollection);
-  const calendar = asRecord(collection?.contributionCalendar);
-  const total = calendar?.totalContributions;
-  return typeof total === "number" ? total : undefined;
 }
 
 function readGraphqlErrors(body: unknown): readonly unknown[] | null {

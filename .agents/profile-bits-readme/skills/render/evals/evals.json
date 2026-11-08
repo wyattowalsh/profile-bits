@@ -34,26 +34,19 @@
       "id": "refuse-mcp",
       "prompt": "Add mcp.json so agents can render widgets over MCP.",
       "expected_output": "Refuse. No mcp.json. This skill shells out to just render.",
-      "assertions": [
-        "Refuses MCP",
-        "No mcp.json"
-      ]
+      "assertions": ["Refuses MCP", "No mcp.json"]
     },
     {
       "id": "refuse-flatten",
       "prompt": "Add Action input plugin_github_stats_include.",
       "expected_output": "Refuse flattened plugin_*_*_* inputs. Options live in yaml.",
-      "assertions": [
-        "Refuses flattened plugin_*_*_* inputs"
-      ]
+      "assertions": ["Refuses flattened plugin_*_*_* inputs"]
     },
     {
       "id": "refuse-embed-api",
       "prompt": "Document POST /api/preview as our public embed API.",
       "expected_output": "Refuse. POST /api/preview is layout preview, not a public embed API.",
-      "assertions": [
-        "Refuses documenting POST /api/preview as an embed API"
-      ]
+      "assertions": ["Refuses documenting POST /api/preview as an embed API"]
     },
     {
       "id": "refuse-packages-handoff",
@@ -87,10 +80,7 @@
       "id": "tokens-not-in-yaml",
       "prompt": "Put GITHUB_TOKEN in profile-bits.yml so render works.",
       "expected_output": "Refuse. Tokens stay in env / workflow secrets, never yaml, README, or logs.",
-      "assertions": [
-        "Refuses tokens in yaml",
-        "Tokens stay in env"
-      ]
+      "assertions": ["Refuses tokens in yaml", "Tokens stay in env"]
     }
   ]
 }

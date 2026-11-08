@@ -1,6 +1,6 @@
 # profile-bits
 
-GitHub profile widget generator. A **plugin** is a pack of widgets plus declared integrations (1..N widgets, 0..N integrations) — not a single card and not a single API. First-party packs are `github` (`demo`, `stats`, `languages`, `repo`), `wakatime` (`coding`), `rss` (`feed`), and `http` (`json`, `chips`). Do not invent extra first-party plugins. `repo` is opt-in like `demo` (pack defaults stay `stats` + `languages`).
+GitHub profile widget generator. A **plugin** is a pack of widgets plus declared integrations (1..N widgets, 0..N integrations) — not a single card and not a single API. First-party packs follow live `FIRST_PARTY_PLUGIN_IDS`: `github` (`demo`, `stats`, `languages`, `repo`, `top-repos`, `contributions`), `wakatime` (`coding`, `editors`, `projects`, `os`, `langs`), `rss` (`feed`, `latest`), `http` (`json`, `chips`), `spotify` (`now-playing`, `top`), `leetcode` (`solved`, `heatmap`), `chess` (`ratings`, `game`; integrations `chesscom` and `lichess`), and `steam` (`player`, `recent`). Do not invent packs beyond that live catalog. `repo` is opt-in like `demo` (github pack defaults stay `stats` + `languages`). Spotify defaults `now-playing`, LeetCode defaults `solved`, chess defaults `ratings`, steam defaults `player`.
 
 README delivery is the **Action** (commit widget files). The docs playground is layout preview only, not a public embed API.
 
@@ -15,7 +15,7 @@ README delivery is the **Action** (commit widget files). The docs playground is 
 | Vitest | 4 |
 | Biome | 2.5 |
 
-Use **pnpm** for all JS. Do not add npm/yarn scripts or extra first-party plugin packs beyond `github`, `wakatime`, `rss`, and `http`.
+Use **pnpm** for all JS. Do not add npm/yarn scripts or first-party plugin packs beyond live `FIRST_PARTY_PLUGIN_IDS`.
 
 ## OpenSpec is truth
 
@@ -37,7 +37,7 @@ pnpm exec openspec list --json
 ## Locks
 
 - Config SSOT: committed `.github/profile-bits.yml` (`additionalProperties: false`).
-- Root `action.yml` is **thin** (`user`, `github_token`, `committer_token`, `config`, `output_action`, `dry_run`, optional format/theme overrides, optional `plugin_github`, optional `wakatime_token` with no default, optional `http_token_env` with no default).
+- Root `action.yml` is **thin** (`user`, `github_token`, `committer_token`, `config`, `output_action`, `dry_run`, optional format/theme overrides, optional `plugin_github`, optional `wakatime_token` with no default, optional `http_token_env` with no default, optional `spotify_token` with no default, optional `steam_token` with no default).
 - **No** flattened `plugin_<plugin>_<widget>_<option>` Action inputs.
 - Never REST `/languages`. Languages: REST crawl, **filter forks/archived then cap 500**, GraphQL `nodes(ids:)` batches of 100.
 - Never unauthenticated GitHub (60/h/IP). Empty/`""`/whitespace token **fails the Action**.

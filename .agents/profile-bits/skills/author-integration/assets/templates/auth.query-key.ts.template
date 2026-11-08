@@ -1,0 +1,54 @@
+/**
+ * Destination: packages/integrations/src/{{id}}/auth.ts
+ * Scheme query-key. Catalog auth required. Missing token fails the job.
+ * Inject `?key=` at send time. Never Authorization Bearer. Never cache the secret.
+ */
+import type { AuthRequirement } from "@profile-bits/core";
+import { isMissingToken } from "@profile-bits/core";
+
+export const {{ID}}_AUTH = "{{auth}}" as const satisfies AuthRequirement;
+export const {{ID}}_QUERY_KEY_PARAM = "key" as const;
+export const {{ID}}_CACHE_AUTH = "query-key" as const;
+
+export type {{Id}}Token = string;
+
+export function is{{Id}}TokenMissing(
+  token: string | undefined | null,
+): boolean {
+  return isMissingToken(token);
+}
+
+/**
+ * Missing token fails construct (fail_job). Do not send without `?key=`.
+ */
+export function assert{{Id}}ActionToken(
+  token: string | undefined | null,
+): void {
+  if (is{{Id}}TokenMissing(token)) {
+    throw new Error(
+      "{{id}}: missing token — fail_job; refusing requests without ?key=",
+    );
+  }
+}
+
+/** Query-key never emits Authorization — always `{}`, never Bearer. */
+export function {{id}}AuthorizationHeader(
+  token: string | undefined | null,
+): Readonly<Record<string, string>> {
+  assert{{Id}}ActionToken(token);
+  return {};
+}
+
+export function apply{{Id}}QueryKey(
+  url: string,
+  token: string | undefined | null,
+): string {
+  assert{{Id}}ActionToken(token);
+  const parsed = new URL(url);
+  parsed.searchParams.set({{ID}}_QUERY_KEY_PARAM, token?.trim() ?? "");
+  return parsed.toString();
+}
+
+export function {{id}}RequiresAuthorization(): boolean {
+  return true;
+}

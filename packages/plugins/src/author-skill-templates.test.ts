@@ -24,6 +24,8 @@ const AUTH_SCHEME_FILES = [
   "auth.github-bearer.ts.template",
   "auth.wakatime-basic.ts.template",
   "auth.http-optional.ts.template",
+  "auth.query-key.ts.template",
+  "auth.oauth-refresh.ts.template",
 ] as const;
 
 function readExisting(relativePath: string): string {
@@ -179,8 +181,6 @@ describe("author skill templates", () => {
   it("ci.yml runs both agent plugin validate.sh scripts", () => {
     const source = readExisting(".github/workflows/ci.yml");
     expect(source).toContain(".agents/profile-bits/scripts/validate.sh");
-    expect(source).toContain(
-      ".agents/profile-bits-readme/scripts/validate.sh",
-    );
+    expect(source).toContain(".agents/profile-bits-readme/scripts/validate.sh");
   });
 });

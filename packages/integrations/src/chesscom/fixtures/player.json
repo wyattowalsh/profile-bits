@@ -1,0 +1,21 @@
+{
+  "avatar": "https://images.chesscomfiles.com/uploads/v1/user/15448422.abc.jpeg",
+  "player_id": 15448422,
+  "url": "https://www.chess.com/member/hikaru",
+  "name": "Hikaru Nakamura",
+  "username": "hikaru",
+  "title": "GM",
+  "followers": 1200000,
+  "country": "https://api.chess.com/pub/country/US",
+  "location": "Florida",
+  "last_online": 1756000000,
+  "joined": 1230000000,
+  "status": "premium",
+  "is_streamer": true,
+  "twitch_url": "https://twitch.tv/gmhikaru",
+  "verified": true,
+  "league": "Legend",
+  "streaming_platforms": ["twitch"],
+  "fide": 2736,
+  "extra_player_key": "keep-me"
+}

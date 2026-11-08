@@ -1,0 +1,95 @@
+{
+  "decision": "submitted",
+  "stage": "interview",
+  "result": {
+    "stage": "interview",
+    "title": "profile-bits e2e refine",
+    "goalSlug": "e2e-refine",
+    "answers": [
+      {
+        "questionId": "bundle",
+        "selectedOptionIds": [
+          "parent-docs",
+          "plans-dir",
+          "project-workflow",
+          "backlog"
+        ],
+        "customAnswer": "",
+        "answer": "Parent goal.md, facts.md, plan.md\nplans/<workstream>.md for each first-class item\nProject workflow .grok/workflows/e2e-refine.rhai\nbacklog.md for nits / speculative extras",
+        "completed": true
+      },
+      {
+        "questionId": "wave1",
+        "selectedOptionIds": [
+          "docs-full",
+          "readme-visual",
+          "marketplace-operator",
+          "fixtures-default-live-scrape"
+        ],
+        "customAnswer": "",
+        "answer": "Full docs app: playground, generator, widget/bit/theme libs\nRoot README visual/full build-out from docs/assets/readme\nLeftover Marketplace listing operator steps as a plan\nFixtures default; optional live including full HTML scrape",
+        "completed": true
+      },
+      {
+        "questionId": "data-model",
+        "selectedOptionIds": [
+          "complete-dumps",
+          "widen-shipped",
+          "html-scrape",
+          "token-env-and-action-inputs"
+        ],
+        "customAnswer": "",
+        "answer": "Map all available source data into the typed profile-bits payload\nMax-widen github, wakatime, rss, and http (not new sources only)\nPublic HTML scrape when there is no API (SSRF; not Playwright in Action)\nyaml token_env + optional Action *_token for required-auth sources",
+        "completed": true
+      },
+      {
+        "questionId": "expansion",
+        "selectedOptionIds": [
+          "elbow-integrations",
+          "combo-pack-widgets-bits",
+          "useful-bits",
+          "one-change-per-workstream"
+        ],
+        "customAnswer": "",
+        "answer": "Top N new integrations until the next one has diminishing usefulness\nFor each source: corresponding pack + widgets + bits if needed\nAny useful Takumi-safe bits (shadcn-inspired, not web overlays)\nOne OpenSpec change per workstream",
+        "completed": true
+      },
+      {
+        "questionId": "palettes",
+        "selectedOptionIds": ["complete-47-plus-if-needed"],
+        "customAnswer": "",
+        "answer": "Complete the 47 in the themes lib; add a family only if a widget needs it",
+        "completed": true
+      },
+      {
+        "questionId": "waves",
+        "selectedOptionIds": ["docs-then-widen-then-new"],
+        "customAnswer": "",
+        "answer": "Wave 1 docs/README → wave 2 widen four → wave 3 new sources",
+        "completed": true
+      },
+      {
+        "questionId": "out",
+        "selectedOptionIds": [
+          "no-flatten",
+          "no-v1-main",
+          "no-unauth-github",
+          "no-rest-languages",
+          "no-embed-api",
+          "no-playwright-action",
+          "openspec-first-ids"
+        ],
+        "customAnswer": "",
+        "answer": "No flattened plugin_*_*_* Action inputs\nNever tag v1 on main; dist/ gitignored on main\nNever unauthenticated GitHub\nNever REST /languages; GraphQL nodes(ids:) batches of 100\nDocs POST /api/preview is not a public embed API; GET stays rejected\nNo Playwright in the Action runtime\nNew integration/pack/widget/bit ids are OpenSpec-first",
+        "completed": true
+      },
+      {
+        "questionId": "done",
+        "selectedOptionIds": [],
+        "customAnswer": "",
+        "answer": "goals/e2e-refine/{goal.md,facts.md,plan.md,plans/*.md,backlog.md} and .grok/workflows/e2e-refine.rhai exist, facts are testable, each first-class plan has files/systems and verification, Plannotator accepted the plan gate, and /goal goals/e2e-refine/goal.md can start wave 1.",
+        "completed": true
+      }
+    ]
+  }
+}

@@ -13,6 +13,8 @@ import {
 import {
   EXPORT_ACTION_USES,
   EXPORT_CONFIG_PATH,
+  EXPORT_FEED_SAMPLE_URL,
+  EXPORT_JSON_SAMPLE_URL,
   EXPORT_THIN_WITH_KEYS,
   type ExportWorkflowState,
   exportWorkflow,
@@ -390,5 +392,143 @@ describe("exportWorkflow", () => {
   it("defaults empty user to the repository owner expression", () => {
     const { workflowYml } = exportWorkflow({ ...DEFAULT_STATE, user: "  " });
     expect(workflowYml).toContain(`user: \${{ github.repository_owner }}`);
+  });
+});
+
+describe("exportWorkflow four-pack rails", () => {
+  it("emits plugins.wakatime.widgets.coding from pack defaults", () => {
+    const { workflowYml, configYml } = exportWorkflow({
+      ...DEFAULT_STATE,
+      plugin: "wakatime",
+    });
+    const config = parseConfig({ yaml: configYml });
+
+    expect(configYml).toMatch(
+      /^plugins:\n {2}wakatime:\n {4}widgets:\n {6}coding:/m,
+    );
+    expect(config.plugins.wakatime?.widgets?.coding).toMatchObject({
+      filename: "wakatime",
+      range: "last_7_days",
+      include: ["languages", "editors"],
+      limit: 8,
+      api_domain: "wakatime.com",
+    });
+    expect(config.plugins.github).toBeUndefined();
+    expect(config.plugins.rss).toBeUndefined();
+    expect(config.plugins.http).toBeUndefined();
+    expect(workflowYml).not.toContain("plugin_wakatime");
+    expect(workflowYml).not.toContain("wakatime_token");
+    expect(findFlattenedActionInputs(workflowYml)).toEqual([]);
+    expect(findFlattenedActionInputs(configYml)).toEqual([]);
+  });
+
+  it("emits plugins.rss.widgets.feed with a sample https url", () => {
+    const { configYml, workflowYml } = exportWorkflow({
+      ...DEFAULT_STATE,
+      plugin: "rss",
+    });
+    const config = parseConfig({ yaml: configYml });
+
+    expect(configYml).toContain("rss:");
+    expect(configYml).toContain(EXPORT_FEED_SAMPLE_URL);
+    expect(config.plugins.rss?.widgets?.feed).toMatchObject({
+      filename: "feed",
+      url: EXPORT_FEED_SAMPLE_URL,
+      limit: 5,
+    });
+    expect(config.plugins.github).toBeUndefined();
+    expect(workflowYml).not.toContain("plugin_rss");
+    expect(findFlattenedActionInputs(configYml)).toEqual([]);
+  });
+
+  it("emits plugins.http.widgets.chips from pack defaults", () => {
+    const { configYml, workflowYml } = exportWorkflow({
+      ...DEFAULT_STATE,
+      plugin: "http",
+    });
+    const config = parseConfig({ yaml: configYml });
+
+    expect(configYml).toMatch(
+      /^plugins:\n {2}http:\n {4}widgets:\n {6}chips:/m,
+    );
+    expect(config.plugins.http?.widgets?.chips).toMatchObject({
+      filename: "chips",
+      preset: "shieldcn",
+      types: ["npm"],
+    });
+    expect(config.plugins.http?.widgets?.json).toBeUndefined();
+    expect(config.plugins.github).toBeUndefined();
+    expect(workflowYml).not.toContain("plugin_http");
+    expect(workflowYml).not.toContain("http_token");
+    expect(findFlattenedActionInputs(configYml)).toEqual([]);
+  });
+
+  it("emits plugins.http json and chips when both are enabled", () => {
+    const { configYml } = exportWorkflow({
+      ...DEFAULT_STATE,
+      plugin: "http",
+      enabled: ["json", "chips"],
+      widgets: {
+        json: { url: EXPORT_JSON_SAMPLE_URL, jmespath: "items" },
+        chips: {
+          preset: "shields",
+          types: ["stars", "license"],
+          repo: "wyattowalsh/profile-bits",
+        },
+      },
+    });
+    const config = parseConfig({ yaml: configYml });
+
+    expect(config.plugins.http?.widgets?.json).toMatchObject({
+      url: EXPORT_JSON_SAMPLE_URL,
+      jmespath: "items",
+    });
+    expect(config.plugins.http?.widgets?.chips).toMatchObject({
+      preset: "shields",
+      types: ["stars", "license"],
+      repo: "wyattowalsh/profile-bits",
+    });
+    expect(configYml).not.toContain("plugin_http_chips_preset");
+    expect(configYml).not.toContain("Authorization");
+    expect(configYml).not.toContain("headers:");
+  });
+
+  it("ignores widgets that do not belong to the selected pack", () => {
+    const { configYml } = exportWorkflow({
+      ...DEFAULT_STATE,
+      plugin: "wakatime",
+      enabled: ["demo", "coding", "chips"],
+      widgets: {
+        demo: { text: "nope" },
+        coding: { range: "last_30_days" },
+        chips: { preset: "shieldcn", types: ["npm"] },
+      },
+    });
+    const config = parseConfig({ yaml: configYml });
+
+    expect(config.plugins.wakatime?.widgets?.coding?.range).toBe(
+      "last_30_days",
+    );
+    expect(config.plugins.github).toBeUndefined();
+    expect(config.plugins.http).toBeUndefined();
+    expect(configYml).not.toContain("demo:");
+    expect(configYml).not.toContain("chips:");
+  });
+
+  it("does not emit flattened plugin_<plugin>_<widget>_<option> names for new packs", () => {
+    const { workflowYml, configYml } = exportWorkflow({
+      ...DEFAULT_STATE,
+      plugin: "http",
+      enabled: ["chips"],
+      options: { chips: { preset: "shieldcn", types: ["npm"] } },
+    });
+    const combined = `${workflowYml}\n${configYml}`;
+
+    expect(combined).not.toContain("plugin_http_chips_preset");
+    expect(combined).not.toContain("plugin_wakatime_coding_include");
+    expect(combined).not.toContain("plugin_rss_feed_url");
+    expect(findFlattenedActionInputs(workflowYml)).toEqual([]);
+    expect(findFlattenedActionInputs(configYml)).toEqual([]);
+    expect(() => assertNoFlattenedActionInputs(combined)).not.toThrow();
   });
 });

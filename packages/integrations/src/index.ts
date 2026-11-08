@@ -43,11 +43,17 @@ export {
 export {
   type CreateRssClientInput,
   createRssClient,
+  type RssCategory,
   type RssClient,
   RssClientError,
+  type RssEnclosure,
+  type RssFeed,
+  type RssFeedDump,
+  type RssFeedImage,
   type RssFeedItem,
   type RssFetch,
   type RssLookup,
+  type RssPerson,
 } from "./rss/client.js";
 export {
   loadFixture,

@@ -1,0 +1,26 @@
+{
+  "id": "drnykterstein",
+  "username": "DrNykterstein",
+  "perfs": {
+    "bullet": { "games": 9000, "rating": 3200, "rd": 45, "prog": 12 },
+    "blitz": { "games": 8000, "rating": 3100, "rd": 40, "prog": -4 },
+    "rapid": { "games": 400, "rating": 2800, "rd": 50, "prog": 8 },
+    "classical": { "games": 80, "rating": 2700, "rd": 60, "prog": 0 },
+    "correspondence": { "games": 10, "rating": 2500, "rd": 80, "prog": 0 },
+    "puzzle": { "games": 500, "rating": 2900, "rd": 55, "prog": 3 }
+  },
+  "createdAt": 1400000000000,
+  "seenAt": 1756000000000,
+  "playTime": { "total": 10000000, "tv": 4000000 },
+  "url": "https://lichess.org/@/DrNykterstein",
+  "title": "GM",
+  "profile": { "flag": "NO", "bio": "extra bio stays" },
+  "count": {
+    "all": 20000,
+    "rated": 18000,
+    "win": 12000,
+    "loss": 5000,
+    "draw": 1000
+  },
+  "extra_user_key": "keep-lichess-user"
+}

@@ -635,6 +635,7 @@ describe("fetchGithubRepo", () => {
       license: "MIT",
       ownerLogin: OCTOCAT,
       ownerAvatarUrl: "https://avatars.githubusercontent.com/u/1?v=4",
+      topics: [],
     });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(authorization(fetchImpl.mock.calls[0]?.[1])).toBe(`Bearer ${TOKEN}`);

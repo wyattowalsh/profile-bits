@@ -34,6 +34,8 @@ describe("thin action.yml codegen", () => {
     expect(yml).toContain("plugin_github:");
     expect(yml).toContain("wakatime_token:");
     expect(yml).toContain("http_token_env:");
+    expect(yml).toContain("spotify_token:");
+    expect(yml).toContain("steam_token:");
     expect(yml).not.toContain("plugin_http");
     expect(yml).not.toContain("plugin_http_json_");
     expect(yml).not.toContain("plugin_http_chips_");
@@ -42,6 +44,8 @@ describe("thin action.yml codegen", () => {
     expect(yml).not.toContain("plugin_github_repo_include");
     expect(yml).not.toContain("plugin_rss");
     expect(yml).not.toContain("plugin_wakatime:");
+    expect(yml).not.toContain("plugin_spotify:");
+    expect(yml).not.toContain("plugin_steam:");
     expect(yml).not.toContain("plugin_wakatime_coding_");
     expect(yml).not.toContain("plugin_github_stats_include");
     expect(yml).not.toContain("plugin_github_widgets");
@@ -68,6 +72,16 @@ describe("thin action.yml codegen", () => {
     expect(Object.keys(ActionInputsSchema.shape)).not.toContain("plugin_http");
     expect(THIN_ACTION_INPUT_NAMES).not.toContain("plugin_rss");
     expect(Object.keys(ActionInputsSchema.shape)).not.toContain("plugin_rss");
+    expect(THIN_ACTION_INPUT_NAMES).not.toContain("plugin_wakatime");
+    expect(Object.keys(ActionInputsSchema.shape)).not.toContain(
+      "plugin_wakatime",
+    );
+    expect(THIN_ACTION_INPUT_NAMES).not.toContain("plugin_spotify");
+    expect(Object.keys(ActionInputsSchema.shape)).not.toContain(
+      "plugin_spotify",
+    );
+    expect(THIN_ACTION_INPUT_NAMES).not.toContain("plugin_steam");
+    expect(Object.keys(ActionInputsSchema.shape)).not.toContain("plugin_steam");
     expect(() =>
       assertNoFlattenedActionInputs(generateActionYml()),
     ).not.toThrow();

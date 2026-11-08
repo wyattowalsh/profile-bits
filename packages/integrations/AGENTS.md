@@ -1,6 +1,6 @@
 # @profile-bits/integrations
 
-Reusable data sources. First-party: **`static`** (auth `none`, JSON fixtures), **`github`** (token-class + capability; never unauth), **`wakatime`** (auth `required`; RFC Basic; Cloud + Wakapi compat), **`rss`** (auth `none`; https GET + cache inside the rss client), and **`http`** (auth `optional`; injectable `createHttpClient({ fetch, lookup, token })`; SSRF via ssrfcheck + ipaddr unicast).
+Reusable data sources. First-party follow live `FIRST_PARTY_INTEGRATION_IDS`: **`static`** (auth `none`, JSON fixtures), **`github`** (token-class + capability; never unauth), **`wakatime`** (auth `required`; RFC Basic; Cloud + Wakapi compat), **`rss`** (auth `none`; https GET + cache inside the rss client), **`http`** (auth `optional`; injectable `createHttpClient({ fetch, lookup, token })`; SSRF via ssrfcheck + ipaddr unicast), **`spotify`** (auth `required`; scheme `oauth-refresh`), **`leetcode`** (auth `none`; GraphQL POST), **`chesscom`** and **`lichess`** (auth `none`), and **`steam`** (auth `required`; scheme `query-key`). Elbow clients are not re-exported from `src/index.ts`.
 
 One client instance per Action/playground run, shared by every widget that needs it.
 
@@ -41,3 +41,10 @@ Playground/docs wrap **rss XML fixtures** under `packages/integrations/src/rss/f
 - Preset expander under `src/http/presets.ts`; closed presets `shieldcn` | `shields`; types `npm` | `stars` | `forks` | `license` | `release` | `issues` | `prs` | `ci`. `normalizeBadgeJson`. Fixtures under `src/http/fixtures/chips/` (`chipFixture`).
 - `classifyHttp` is separate from GitHub: 401/404 `fail_widget` (no retry); 403/429/5xx retry then `fail_widget`.
 - Playground/docs: fixtures only. Zero live URLs.
+
+## Elbow clients
+
+- **Spotify** (`src/spotify/`): scheme `oauth-refresh`. Catalog auth `required`. Refresh, then `Authorization: Bearer` the access token. Client id/secret are named env, not yaml. Missing credentials with the pack on is `fail_job` before any request. Dump passthrough: `currently_playing`, `recently_played`, `top_tracks`.
+- **LeetCode** (`src/leetcode/`): auth `none`. GraphQL POST `https://leetcode.com/graphql` with `{ query, variables }`. No `Authorization`. Cache key is `JSON.stringify({ query, variables })`, compared after `JSON.parse` (the query is multiline, so `includes` on the raw string misses it). HTTP 403 is `fail_widget`, not `classifyHttp` (`classifyHttp` maps 403 to `fail_after_backoff`). HTML scrape is the SSRF fallback after 403 only. 404 or HTTP 200 without `matchedUser` is `fail_widget`. Empty username with the pack on is `fail_widget` before any request.
+- **Chess.com** (`src/chesscom/`) and **Lichess** (`src/lichess/`): auth `none`. Chess.com first. Lichess only when Chess.com throws `ChesscomClientError` with `status === 404`. Chess.com User-Agent `profile-bits-chesscom/0 (+https://github.com/wyattowalsh/profile-bits)`. No integration id `chess`.
+- **Steam** (`src/steam/`): scheme `query-key`. GET `ISteamUser/GetPlayerSummaries/v2/`, `IPlayerService/GetRecentlyPlayedGames/v1/`, `ISteamUser/ResolveVanityURL/v1/` on `https://api.steampowered.com`. Apply `?key=` at send time. Never Authorization Bearer. A 17-digit steamid skips vanity. Missing token is `fail_job` before any request. Do not use `RequestCache` (`auth` there is only `"none" | "bearer"`). Cache with `queryKeyRestCacheKey`, which strips `?key=` and sets `auth: "query-key"`. Redact the secret from errors. The word `Bearer` stays out of `client.ts`.

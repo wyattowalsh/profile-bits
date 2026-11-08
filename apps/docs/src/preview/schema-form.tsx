@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import type {
   PreviewOptions,
   PreviewOutputFormat,
+  PreviewPluginId,
   PreviewTheme,
 } from "./types";
 
@@ -39,7 +40,21 @@ const GROUP_ORDER: readonly PlaygroundFieldGroup[] = [
   "stats",
   "languages",
   "repo",
+  "coding",
+  "feed",
+  "json",
+  "chips",
 ];
+
+export const SCHEMA_GROUPS_BY_PLUGIN: Record<
+  PreviewPluginId,
+  readonly PlaygroundFieldGroup[]
+> = {
+  github: ["global", "demo", "stats", "languages", "repo"],
+  wakatime: ["global", "coding"],
+  rss: ["global", "feed"],
+  http: ["global", "json", "chips"],
+};
 
 export const SCHEMA_FORM_LABEL = "Playground options";
 
@@ -124,6 +139,7 @@ export type SchemaFormProps = Omit<
 > & {
   value?: SchemaFormValue;
   onChange?: (value: SchemaFormValue) => void;
+  plugin?: PreviewPluginId;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -138,6 +154,10 @@ function isGlobalBarOwnedPath(path: string): boolean {
   return GLOBAL_BAR_OWNED_PATHS.has(path);
 }
 
+function isObjectField(field: PlaygroundField): boolean {
+  return field.type === "object";
+}
+
 function isGlobalPath(path: string): boolean {
   return !path.includes(".");
 }
@@ -145,8 +165,18 @@ function isGlobalPath(path: string): boolean {
 /** Playground tuners from `getPlaygroundFields()`, minus tokens and GlobalBar globals. */
 export function schemaFormFields(): PlaygroundField[] {
   return getPlaygroundFields().filter(
-    (field) => !isTokenField(field) && !isGlobalBarOwnedPath(field.path),
+    (field) =>
+      !isTokenField(field) &&
+      !isGlobalBarOwnedPath(field.path) &&
+      !isObjectField(field),
   );
+}
+
+export function schemaFormFieldsForPlugin(
+  plugin: PreviewPluginId,
+): PlaygroundField[] {
+  const allowed = new Set(SCHEMA_GROUPS_BY_PLUGIN[plugin]);
+  return schemaFormFields().filter((field) => allowed.has(field.group));
 }
 
 export function schemaFormGroups(
@@ -375,11 +405,12 @@ function FieldControl({
 export function SchemaForm({
   value,
   onChange,
+  plugin = "github",
   className,
   onSubmit,
   ...props
 }: SchemaFormProps) {
-  const fields = useMemo(() => schemaFormFields(), []);
+  const fields = useMemo(() => schemaFormFieldsForPlugin(plugin), [plugin]);
   const groups = useMemo(() => schemaFormGroups(fields), [fields]);
   const isControlled = value !== undefined;
   const [draft, setDraft] = useState<SchemaFormValue>({});
@@ -409,7 +440,7 @@ export function SchemaForm({
       <style href="profile-bits-schema-form" precedence="default">
         {SCHEMA_FORM_CSS}
       </style>
-      <div data-slot="schema-form" data-schema-form="">
+      <div data-slot="schema-form" data-schema-form="" data-plugin={plugin}>
         <Form
           {...props}
           className={cn(className)}

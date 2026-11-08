@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { CHIPS_OPTION_DEFAULTS, type ChipsOptions } from "@profile-bits/core";
 import {
   ChipsExpandError,
@@ -76,7 +79,7 @@ describe("loadChipsPayloads", () => {
       }
       throw new Error(`unexpected url ${request.url}`);
     });
-    const badges = await loadChipsPayloads({ fetchJson }, CHIPS_OPTIONS, {
+    const payloads = await loadChipsPayloads({ fetchJson }, CHIPS_OPTIONS, {
       user: "vercel",
     });
     expect(fetchJson).toHaveBeenCalledTimes(2);
@@ -94,12 +97,27 @@ describe("loadChipsPayloads", () => {
     ]);
     for (const [request] of fetchJson.mock.calls) {
       expect(request).not.toHaveProperty("headers");
+      expect(request).not.toHaveProperty("jmespath");
       expect(request?.auth).toBe("none");
     }
-    expect(badges).toEqual([
-      normalizeBadgeJson(chipFixture("shieldcn", "npm")),
-      normalizeBadgeJson(chipFixture("shieldcn", "stars")),
+    expect(payloads).toEqual([
+      chipFixture("shieldcn", "npm"),
+      chipFixture("shieldcn", "stars"),
     ]);
+    expect(payloads[0]).toEqual({
+      label: "npm",
+      value: "19.1.1",
+      link: "https://www.npmjs.com/package/react",
+    });
+    expect(payloads[0]).not.toHaveProperty("message");
+    expect(normalizeBadgeJson(payloads[0])).toEqual({
+      label: "npm",
+      message: "19.1.1",
+    });
+    expect(payloads[0]).toMatchObject({
+      value: "19.1.1",
+      link: "https://www.npmjs.com/package/react",
+    });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -177,14 +195,20 @@ describe("loadChipsPayloads", () => {
       lookup,
       token: "secret",
     });
-    const badges = await loadChipsPayloads(client, CHIPS_OPTIONS, {
+    const payloads = await loadChipsPayloads(client, CHIPS_OPTIONS, {
       user: "vercel",
     });
     expect(fetch).toHaveBeenCalledTimes(2);
     for (const [, init] of fetch.mock.calls) {
       expect(init?.headers?.Authorization).toBeUndefined();
     }
-    expect(badges).toHaveLength(2);
+    expect(payloads).toHaveLength(2);
+    expect(payloads[0]).toMatchObject({
+      label: "npm",
+      value: "19.1.1",
+      link: "https://www.npmjs.com/package/react",
+    });
+    expect(payloads[0]).not.toHaveProperty("message");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -210,6 +234,20 @@ describe("loadChipsPayloads", () => {
     expect(wrapped.cause).toBeInstanceOf(HttpClientError);
     expect(fetch).toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("loadChipsPayloads source", () => {
+  it("keeps normalizeBadgeJson out of the load helper", () => {
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "load.ts"),
+      "utf8",
+    );
+    expect(source).toContain('auth: "none"');
+    expect(source).not.toMatch(/\bnormalizeBadgeJson\b/);
+    expect(source).not.toMatch(/\bjmespath\b/i);
+    expect(source).not.toMatch(/\bplaywright\b/i);
+    expect(source).not.toMatch(/plugin_[a-z]+_[a-z]+_/);
   });
 });
 

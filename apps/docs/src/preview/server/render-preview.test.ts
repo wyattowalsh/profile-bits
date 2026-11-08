@@ -65,6 +65,32 @@ const REPO_REQUEST: PreviewRequest = {
   user: "octocat",
 };
 
+function packWidgetRequest(
+  plugin: "wakatime" | "rss" | "http",
+  widget: "coding" | "feed" | "json" | "chips",
+): PreviewRequest {
+  return {
+    scope: "widget",
+    plugin,
+    widget,
+    options: {},
+    format: "svg",
+    theme: "dark",
+    output_pair: false,
+    user: "octocat",
+  };
+}
+
+const CODING_REQUEST = packWidgetRequest("wakatime", "coding");
+const FEED_REQUEST = packWidgetRequest("rss", "feed");
+const JSON_REQUEST = packWidgetRequest("http", "json");
+const CHIPS_REQUEST = packWidgetRequest("http", "chips");
+
+function decodeSvg(file: PreviewFile | undefined): string {
+  expect(file).toBeDefined();
+  return Buffer.from(file?.bytesBase64 ?? "", "base64").toString("utf8");
+}
+
 const HELLO_WORLD_REPO = {
   name: "Hello-World",
   fullName: "octocat/Hello-World",
@@ -87,6 +113,10 @@ function clearTokenEnv(): void {
   vi.stubEnv("GITHUB_APP", "");
   vi.stubEnv("GITHUB_APP_TOKEN", "");
   vi.stubEnv("GITHUB_TOKEN", "");
+  vi.stubEnv("WAKATIME_PREVIEW_TOKEN", "");
+  vi.stubEnv("WAKATIME_APP", "");
+  vi.stubEnv("WAKATIME_TOKEN", "");
+  vi.stubEnv("PREVIEW_HTTP_LIVE", "");
 }
 
 function publicClient(
@@ -670,7 +700,21 @@ describe("renderPreview", () => {
     expect(source).toContain("isMissingToken");
     expect(source).toContain("classifyGithubHttp");
     expect(source).toContain("usesGithubIntegration");
-    expect(source).toContain("githubPreviewElement");
+    expect(source).toContain("githubPreviewNode");
+    expect(source).toContain("codingTemplate");
+    expect(source).toContain("feedTemplate");
+    expect(source).toContain("jsonTemplate");
+    expect(source).toContain("chipFixture");
+    expect(source).toContain("loadRssPreviewItems");
+    expect(source).toContain("last_7_days.json");
+    expect(source).toContain("createWakatimeClient");
+    expect(source).toContain("createRssClient");
+    expect(source).toContain("createHttpClient");
+    expect(source).toContain("createHtmlScrapeClient");
+    expect(source).toContain("WAKATIME_PREVIEW_TOKEN");
+    expect(source).toContain("WAKATIME_APP");
+    expect(source).toContain("PREVIEW_HTTP_LIVE");
+    expect(source).toContain("isGithubOwnedHost");
   });
 
   it("plugin scope without a widget id does not auto-render repo", async () => {
@@ -855,5 +899,708 @@ describe("renderPreview", () => {
     );
 
     expect(result.files[0]?.filename).toBe("hello-world.svg");
+  });
+
+  it.each([
+    ["coding", CODING_REQUEST, "wakatime.svg"],
+    ["feed", FEED_REQUEST, "feed.svg"],
+    ["json", JSON_REQUEST, "json.svg"],
+    ["chips", CHIPS_REQUEST, "chips.svg"],
+  ] as const)(
+    "dispatches %s from non-empty fixtures with no GitHub HTTP",
+    async (widget, request, filename) => {
+      const seen: unknown[] = [];
+      const createGithubClient = vi.fn(async () => publicClient());
+
+      const result = await renderPreview(request, {
+        now: () => FIXED_NOW,
+        createGithubClient,
+        renderStill: async (input) => {
+          expect(input.widget).toBe(widget);
+          seen.push(input.payload);
+          return STILL_BYTES;
+        },
+      });
+
+      expect(result.provenance).toBe("fixture");
+      expect(result.generatedAt).toBe(FIXED_NOW.toISOString());
+      expect(result.files).toEqual([
+        {
+          id: widget,
+          mime: "image/svg+xml",
+          bytesBase64: Buffer.from(STILL_BYTES).toString("base64"),
+          filename,
+        },
+      ]);
+      expect(seen).toHaveLength(1);
+      expect(seen[0]).not.toEqual({ wrapped: "t110-static" });
+      expect(createGithubClient).not.toHaveBeenCalled();
+      assertNoUnauthGithub(fetchMock);
+    },
+  );
+
+  it("coding fixture payload is last_7_days, not empty-state", async () => {
+    const seen: unknown[] = [];
+
+    await renderPreview(CODING_REQUEST, {
+      now: () => FIXED_NOW,
+      renderStill: async (input) => {
+        seen.push(input.payload);
+        return STILL_BYTES;
+      },
+    });
+
+    const payload = seen[0] as {
+      human_readable_total?: string;
+      languages?: { name: string }[];
+      editors?: { name: string }[];
+    };
+    expect(payload.human_readable_total).toBe("3 hrs 25 mins");
+    expect(payload.languages?.map((row) => row.name)).toEqual([
+      "TypeScript",
+      "Python",
+      "Go",
+    ]);
+    expect(payload.editors?.map((row) => row.name)).toEqual([
+      "VS Code",
+      "Neovim",
+    ]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("feed fixture payload is the Atom items, not empty", async () => {
+    const seen: unknown[] = [];
+
+    await renderPreview(FEED_REQUEST, {
+      now: () => FIXED_NOW,
+      renderStill: async (input) => {
+        seen.push(input.payload);
+        return STILL_BYTES;
+      },
+    });
+
+    const items = seen[0] as { title?: string }[];
+    expect(Array.isArray(items)).toBe(true);
+    expect(items.map((item) => item.title)).toEqual([
+      "Atom Item 1",
+      "Atom Item 2",
+      "Atom Item 3",
+      "Atom Item 4",
+      "Atom Item 5",
+    ]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("json fixture payload is the committed sample", async () => {
+    const seen: unknown[] = [];
+
+    await renderPreview(JSON_REQUEST, {
+      now: () => FIXED_NOW,
+      renderStill: async (input) => {
+        seen.push(input.payload);
+        return STILL_BYTES;
+      },
+    });
+
+    expect(seen).toEqual([{ name: "octocat", count: 3 }]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("chips fixture payload is chipFixture shieldcn/npm", async () => {
+    const seen: unknown[] = [];
+
+    await renderPreview(CHIPS_REQUEST, {
+      now: () => FIXED_NOW,
+      renderStill: async (input) => {
+        seen.push(input.payload);
+        return STILL_BYTES;
+      },
+    });
+
+    const payloads = seen[0] as { label?: string; value?: string }[];
+    expect(Array.isArray(payloads)).toBe(true);
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0]?.label).toBe("npm");
+    expect(payloads[0]?.value).toBe("19.1.1");
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("App token does not live-fetch coding/feed/json/chips", async () => {
+    vi.stubEnv("GITHUB_APP", "ghs_preview_test");
+    const createGithubClient = vi.fn(async () => publicClient());
+
+    for (const request of [
+      CODING_REQUEST,
+      FEED_REQUEST,
+      JSON_REQUEST,
+      CHIPS_REQUEST,
+    ]) {
+      const result = await renderPreview(request, {
+        now: () => FIXED_NOW,
+        createGithubClient,
+        renderStill: async () => STILL_BYTES,
+      });
+      expect(result.provenance).toBe("fixture");
+    }
+
+    expect(createGithubClient).not.toHaveBeenCalled();
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("plugin-scope wakatime renders coding only", async () => {
+    const seen: string[] = [];
+    const request: PreviewRequest = {
+      scope: "plugin",
+      plugin: "wakatime",
+      options: {},
+      format: "svg",
+      theme: "dark",
+      output_pair: false,
+      user: "octocat",
+    };
+
+    const result = await renderPreview(request, {
+      now: () => FIXED_NOW,
+      renderStill: async (input) => {
+        if (input.widget !== undefined) {
+          seen.push(input.widget);
+        }
+        return STILL_BYTES;
+      },
+    });
+
+    expect(result.provenance).toBe("fixture");
+    expect(seen).toEqual(["coding"]);
+    expect(result.files.map((file) => file.id)).toEqual(["coding"]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("plugin-scope http renders json and chips", async () => {
+    const seen: string[] = [];
+    const request: PreviewRequest = {
+      scope: "plugin",
+      plugin: "http",
+      options: {},
+      format: "svg",
+      theme: "dark",
+      output_pair: false,
+      user: "octocat",
+    };
+
+    const result = await renderPreview(request, {
+      now: () => FIXED_NOW,
+      renderStill: async (input) => {
+        if (input.widget !== undefined) {
+          seen.push(input.widget);
+        }
+        return STILL_BYTES;
+      },
+    });
+
+    expect(result.provenance).toBe("fixture");
+    expect(seen).toEqual(["json", "chips"]);
+    expect(result.files.map((file) => file.id)).toEqual(["json", "chips"]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("plugin-scope rss renders feed only", async () => {
+    const seen: string[] = [];
+    const request: PreviewRequest = {
+      scope: "plugin",
+      plugin: "rss",
+      options: {},
+      format: "svg",
+      theme: "dark",
+      output_pair: false,
+      user: "octocat",
+    };
+
+    const result = await renderPreview(request, {
+      now: () => FIXED_NOW,
+      renderStill: async (input) => {
+        if (input.widget !== undefined) {
+          seen.push(input.widget);
+        }
+        return STILL_BYTES;
+      },
+    });
+
+    expect(seen).toEqual(["feed"]);
+    expect(result.files.map((file) => file.id)).toEqual(["feed"]);
+  });
+
+  it("honors coding/feed/json/chips filename options", async () => {
+    const cases: [PreviewRequest, string][] = [
+      {
+        ...CODING_REQUEST,
+        options: { coding: { filename: "hours" } },
+      },
+      {
+        ...FEED_REQUEST,
+        options: { feed: { filename: "blog" } },
+      },
+      {
+        ...JSON_REQUEST,
+        options: { json: { filename: "api" } },
+      },
+      {
+        ...CHIPS_REQUEST,
+        options: { chips: { filename: "badges" } },
+      },
+    ].map((request, index) => {
+      const names = ["hours.svg", "blog.svg", "api.svg", "badges.svg"];
+      return [request, names[index] ?? ""] as [PreviewRequest, string];
+    });
+
+    for (const [request, filename] of cases) {
+      const result = await renderPreview(request, {
+        now: () => FIXED_NOW,
+        renderStill: async () => STILL_BYTES,
+      });
+      expect(result.files[0]?.filename).toBe(filename);
+    }
+  });
+
+  it("default coding/feed/json/chips SVGs are non-empty Takumi stills", async () => {
+    for (const request of [
+      CODING_REQUEST,
+      FEED_REQUEST,
+      JSON_REQUEST,
+      CHIPS_REQUEST,
+    ]) {
+      const result = await renderPreview(request, { now: () => FIXED_NOW });
+      const svg = decodeSvg(result.files[0]);
+      expect(result.provenance).toBe("fixture");
+      expect(result.files[0]?.mime).toBe("image/svg+xml");
+      expect(svg).toMatch(/<svg\b[^>]*\bwidth="480"/);
+      expect(svg).toMatch(/<svg\b[^>]*\bheight="160"/);
+      expect(svg).not.toContain("No coding data");
+      expect(svg).not.toContain("No feed items");
+      expect(svg).not.toContain("No repo data");
+      expect(svg).not.toContain("No language data");
+    }
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("live coding uses WAKATIME_PREVIEW_TOKEN and ignores visitor api_domain", async () => {
+    vi.stubEnv("WAKATIME_PREVIEW_TOKEN", "waka_preview_secret");
+    const livePayload = {
+      human_readable_total: "live hours",
+      languages: [{ name: "Rust" }],
+      editors: [{ name: "Zed" }],
+    };
+    const fetchStats = vi.fn(async () => livePayload);
+    const createWakatimeClient = vi.fn(async () => ({ fetchStats }));
+    const createGithubClient = vi.fn(async () => publicClient());
+    const seen: unknown[] = [];
+
+    const result = await renderPreview(
+      {
+        ...CODING_REQUEST,
+        options: {
+          coding: { api_domain: "wakapi.dev", range: "last_30_days" },
+        },
+      },
+      {
+        now: () => FIXED_NOW,
+        createWakatimeClient,
+        createGithubClient,
+        renderStill: async (input) => {
+          seen.push(input.payload);
+          return STILL_BYTES;
+        },
+      },
+    );
+
+    expect(result.provenance).toBe("live");
+    expect(createGithubClient).not.toHaveBeenCalled();
+    expect(createWakatimeClient).toHaveBeenCalledOnce();
+    expect(createWakatimeClient).toHaveBeenCalledWith(
+      "waka_preview_secret",
+      "wakatime.com",
+    );
+    expect(fetchStats).toHaveBeenCalledWith({
+      range: "last_30_days",
+      include: ["languages", "editors"],
+      limit: 8,
+    });
+    expect(seen).toEqual([livePayload]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("live coding also accepts WAKATIME_APP and never logs the token", async () => {
+    const token = "waka_MUST_NOT_APPEAR_IN_LOGS";
+    vi.stubEnv("WAKATIME_APP", token);
+    const lines: string[] = [];
+    for (const method of ["log", "info", "warn", "error", "debug"] as const) {
+      vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+        lines.push(args.map(String).join(" "));
+      });
+    }
+    const createWakatimeClient = vi.fn(async () => ({
+      fetchStats: async () => ({ human_readable_total: "1 hr" }),
+    }));
+
+    const result = await renderPreview(CODING_REQUEST, {
+      now: () => FIXED_NOW,
+      createWakatimeClient,
+      renderStill: async () => STILL_BYTES,
+    });
+
+    expect(result.provenance).toBe("live");
+    expect(createWakatimeClient).toHaveBeenCalledWith(token, "wakatime.com");
+    expect(lines.join("\n")).not.toContain(token);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("WAKATIME_TOKEN and visitor wakatime_token do not enable live coding", async () => {
+    vi.stubEnv("WAKATIME_TOKEN", "waka_action_token");
+    const createWakatimeClient = vi.fn(async () => ({
+      fetchStats: async () => ({ human_readable_total: "nope" }),
+    }));
+    const leaked = {
+      ...CODING_REQUEST,
+      wakatime_token: "waka_visitor_must_not_be_used",
+    } as PreviewRequest & { wakatime_token: string };
+
+    const result = await renderPreview(leaked, {
+      now: () => FIXED_NOW,
+      createWakatimeClient,
+      renderStill: async () => STILL_BYTES,
+    });
+
+    expect(result.provenance).toBe("fixture");
+    expect(createWakatimeClient).not.toHaveBeenCalled();
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("live feed uses the visitor https URL through the rss SSRF client", async () => {
+    const items = [
+      {
+        title: "Live Item",
+        url: "https://example.com/1",
+        published_at: null,
+      },
+    ];
+    const fetchFeed = vi.fn(async (url: string) => {
+      expect(url).toBe("https://example.com/feed.xml");
+      return items;
+    });
+    const createRssClient = vi.fn(async () => ({ fetchFeed }));
+    const seen: unknown[] = [];
+
+    const result = await renderPreview(
+      {
+        ...FEED_REQUEST,
+        options: { feed: { url: "https://example.com/feed.xml" } },
+      },
+      {
+        now: () => FIXED_NOW,
+        createRssClient,
+        renderStill: async (input) => {
+          seen.push(input.payload);
+          return STILL_BYTES;
+        },
+      },
+    );
+
+    expect(result.provenance).toBe("live");
+    expect(createRssClient).toHaveBeenCalledOnce();
+    expect(fetchFeed).toHaveBeenCalledOnce();
+    expect(seen).toEqual([items]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("feed http URLs and GitHub-owned hosts stay on fixtures", async () => {
+    const createRssClient = vi.fn(async () => ({
+      fetchFeed: async () => {
+        throw new Error("must not fetch");
+      },
+    }));
+
+    for (const url of [
+      "http://example.com/feed.xml",
+      "https://github.com/octocat.atom",
+      "https://raw.githubusercontent.com/octocat/feed.xml",
+    ]) {
+      const result = await renderPreview(
+        { ...FEED_REQUEST, options: { feed: { url } } },
+        {
+          now: () => FIXED_NOW,
+          createRssClient,
+          renderStill: async () => STILL_BYTES,
+        },
+      );
+      expect(result.provenance).toBe("fixture");
+    }
+
+    expect(createRssClient).not.toHaveBeenCalled();
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("live json uses the visitor https URL with auth none", async () => {
+    const document = { live: true, n: 7 };
+    const fetchJson = vi.fn(async (request: { url: string; auth?: "none" }) => {
+      expect(request.url).toBe("https://example.com/data.json");
+      expect(request.auth).toBe("none");
+      return document;
+    });
+    const scrape = vi.fn(async () => ({ title: "should not scrape" }));
+    const seen: unknown[] = [];
+
+    const result = await renderPreview(
+      {
+        ...JSON_REQUEST,
+        options: { json: { url: "https://example.com/data.json" } },
+      },
+      {
+        now: () => FIXED_NOW,
+        createHttpClient: async () => ({ fetchJson }),
+        createHtmlScrapeClient: async () => ({ scrape }),
+        renderStill: async (input) => {
+          seen.push(input.payload);
+          return STILL_BYTES;
+        },
+      },
+    );
+
+    expect(result.provenance).toBe("live");
+    expect(fetchJson).toHaveBeenCalledOnce();
+    expect(scrape).not.toHaveBeenCalled();
+    expect(seen).toEqual([document]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("json invalid_json falls back to HTML scrape of the visitor URL", async () => {
+    const dump = {
+      title: "Scraped page",
+      url: "https://example.com/page",
+      headings: [{ level: 1, text: "Hello" }],
+    };
+    const fetchJson = vi.fn(async () => {
+      throw Object.assign(new Error("invalid json"), {
+        outcome: "fail_widget",
+        code: "invalid_json",
+      });
+    });
+    const scrape = vi.fn(async (url: string) => {
+      expect(url).toBe("https://example.com/page");
+      return dump;
+    });
+    const seen: unknown[] = [];
+
+    const result = await renderPreview(
+      {
+        ...JSON_REQUEST,
+        options: { json: { url: "https://example.com/page" } },
+      },
+      {
+        now: () => FIXED_NOW,
+        createHttpClient: async () => ({ fetchJson }),
+        createHtmlScrapeClient: async () => ({ scrape }),
+        renderStill: async (input) => {
+          seen.push(input.payload);
+          return STILL_BYTES;
+        },
+      },
+    );
+
+    expect(result.provenance).toBe("live");
+    expect(fetchJson).toHaveBeenCalledOnce();
+    expect(scrape).toHaveBeenCalledOnce();
+    expect(seen).toEqual([dump]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("json GitHub-owned hosts stay on fixtures and do not scrape", async () => {
+    const fetchJson = vi.fn(async () => ({ live: true }));
+    const scrape = vi.fn(async () => ({ title: "nope" }));
+
+    const result = await renderPreview(
+      {
+        ...JSON_REQUEST,
+        options: { json: { url: "https://api.github.com/users/octocat" } },
+      },
+      {
+        now: () => FIXED_NOW,
+        createHttpClient: async () => ({ fetchJson }),
+        createHtmlScrapeClient: async () => ({ scrape }),
+        renderStill: async () => STILL_BYTES,
+      },
+    );
+
+    expect(result.provenance).toBe("fixture");
+    expect(fetchJson).not.toHaveBeenCalled();
+    expect(scrape).not.toHaveBeenCalled();
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("live chips uses PREVIEW_HTTP_LIVE with auth none", async () => {
+    vi.stubEnv("PREVIEW_HTTP_LIVE", "1");
+    const fetchJson = vi.fn(async (request: { url: string; auth?: "none" }) => {
+      expect(request.auth).toBe("none");
+      expect(request.url).toContain("shieldcn.dev");
+      return { label: "npm", message: "9.9.9" };
+    });
+    const seen: unknown[] = [];
+
+    const result = await renderPreview(
+      {
+        ...CHIPS_REQUEST,
+        options: { chips: { package: "profile-bits" } },
+      },
+      {
+        now: () => FIXED_NOW,
+        createHttpClient: async () => ({ fetchJson }),
+        renderStill: async (input) => {
+          seen.push(input.payload);
+          return STILL_BYTES;
+        },
+      },
+    );
+
+    expect(result.provenance).toBe("live");
+    expect(fetchJson).toHaveBeenCalledOnce();
+    expect(seen).toEqual([[{ label: "npm", message: "9.9.9" }]]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("chips without PREVIEW_HTTP_LIVE stay on fixtures", async () => {
+    const fetchJson = vi.fn(async () => ({ label: "npm", message: "nope" }));
+
+    const result = await renderPreview(
+      {
+        ...CHIPS_REQUEST,
+        options: { chips: { package: "profile-bits" } },
+      },
+      {
+        now: () => FIXED_NOW,
+        createHttpClient: async () => ({ fetchJson }),
+        renderStill: async () => STILL_BYTES,
+      },
+    );
+
+    expect(result.provenance).toBe("fixture");
+    expect(fetchJson).not.toHaveBeenCalled();
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("plugin-scope http can mix live json with fixture chips", async () => {
+    const fetchJson = vi.fn(async () => ({ mixed: true }));
+    const seen: string[] = [];
+    const request: PreviewRequest = {
+      scope: "plugin",
+      plugin: "http",
+      options: { json: { url: "https://example.com/data.json" } },
+      format: "svg",
+      theme: "dark",
+      output_pair: false,
+      user: "octocat",
+    };
+
+    const result = await renderPreview(request, {
+      now: () => FIXED_NOW,
+      createHttpClient: async () => ({ fetchJson }),
+      renderStill: async (input) => {
+        if (input.widget !== undefined) {
+          seen.push(input.widget);
+        }
+        return STILL_BYTES;
+      },
+    });
+
+    expect(result.provenance).toBe("live");
+    expect(seen).toEqual(["json", "chips"]);
+    expect(fetchJson).toHaveBeenCalledOnce();
+    expect(result.files.map((file) => file.id)).toEqual(["json", "chips"]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("wakatime 429 falls back to fixtures with rate_limited provenance", async () => {
+    vi.stubEnv("WAKATIME_PREVIEW_TOKEN", "waka_preview");
+    const fetchStats = vi.fn(async () => {
+      throw Object.assign(new Error("rate limited"), {
+        status: 429,
+        outcome: "fail_after_backoff",
+      });
+    });
+
+    const result = await renderPreview(CODING_REQUEST, {
+      now: () => FIXED_NOW,
+      createWakatimeClient: async () => ({ fetchStats }),
+      renderStill: async () => STILL_BYTES,
+    });
+
+    expect(result.provenance).toBe("rate_limited");
+    expect(result.files[0]?.id).toBe("coding");
+    expect(fetchStats).toHaveBeenCalledOnce();
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("live fail_widget falls back to pack fixtures", async () => {
+    const fetchFeed = vi.fn(async () => {
+      throw Object.assign(new Error("ssrf"), { outcome: "fail_widget" });
+    });
+    const seen: unknown[] = [];
+
+    const result = await renderPreview(
+      {
+        ...FEED_REQUEST,
+        options: { feed: { url: "https://example.com/feed.xml" } },
+      },
+      {
+        now: () => FIXED_NOW,
+        createRssClient: async () => ({ fetchFeed }),
+        renderStill: async (input) => {
+          seen.push(input.payload);
+          return STILL_BYTES;
+        },
+      },
+    );
+
+    expect(result.provenance).toBe("fixture");
+    expect(fetchFeed).toHaveBeenCalledOnce();
+    const items = seen[0] as { title?: string }[];
+    expect(items.map((item) => item.title)).toEqual([
+      "Atom Item 1",
+      "Atom Item 2",
+      "Atom Item 3",
+      "Atom Item 4",
+      "Atom Item 5",
+    ]);
+    assertNoUnauthGithub(fetchMock);
+  });
+
+  it("bit scope stays fixtures even when live credentials and URLs are set", async () => {
+    vi.stubEnv("WAKATIME_PREVIEW_TOKEN", "waka_preview");
+    vi.stubEnv("PREVIEW_HTTP_LIVE", "1");
+    const createWakatimeClient = vi.fn(async () => ({
+      fetchStats: async () => ({ human_readable_total: "nope" }),
+    }));
+    const fetchJson = vi.fn(async () => ({ live: true }));
+    const request: PreviewRequest = {
+      scope: "bit",
+      bit: "Text",
+      options: {
+        json: { url: "https://example.com/data.json" },
+        feed: { url: "https://example.com/feed.xml" },
+      },
+      format: "svg",
+      theme: "dark",
+      output_pair: false,
+      user: "octocat",
+    };
+
+    const result = await renderPreview(request, {
+      now: () => FIXED_NOW,
+      createWakatimeClient,
+      createHttpClient: async () => ({ fetchJson }),
+      renderStill: async () => STILL_BYTES,
+    });
+
+    expect(result.provenance).toBe("fixture");
+    expect(createWakatimeClient).not.toHaveBeenCalled();
+    expect(fetchJson).not.toHaveBeenCalled();
+    assertNoUnauthGithub(fetchMock);
   });
 });

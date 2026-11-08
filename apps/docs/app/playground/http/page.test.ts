@@ -1,101 +1,53 @@
 import { readFile } from "node:fs/promises";
-import * as plugins from "@profile-bits/plugins";
-import { TakumiRenderError } from "@profile-bits/renderer";
+import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import HttpPlaygroundPage, {
   HTTP_PLAYGROUND_HREF,
   HTTP_PLAYGROUND_PLUGIN,
-  HTTP_PLAYGROUND_WIDGET,
+  HTTP_PLAYGROUND_SHELL,
   HTTP_PLAYGROUND_WIDGET_IDS,
+  HTTP_WIDGET_IDS,
   PRIMARY_CTA,
 } from "@/app/playground/http/page";
+import { PlaygroundShell } from "@/src/codegen/shell";
 import {
-  chipsThemeForPlayground,
-  emitChipsConfigYaml,
-  emitChipsReadmeMarkdown,
-  HTTP_PLAYGROUND_DEFAULTS,
-  HTTP_PLAYGROUND_README,
-  parseHttpPlaygroundSearch,
-} from "@/app/playground/http/state";
-import { PREVIEW_PLUGIN_IDS, PREVIEW_WIDGET_IDS } from "@/src/preview/types";
-
-const pluginActuals = vi.hoisted(() => ({
-  renderChipsFromPayloads: undefined as
-    | typeof import("@profile-bits/plugins").renderChipsFromPayloads
-    | undefined,
-  renderChipsSvg: undefined as
-    | typeof import("@profile-bits/plugins").renderChipsSvg
-    | undefined,
-}));
-
-vi.mock("@profile-bits/plugins", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@profile-bits/plugins")>();
-  pluginActuals.renderChipsFromPayloads = actual.renderChipsFromPayloads;
-  pluginActuals.renderChipsSvg = actual.renderChipsSvg;
-  return {
-    ...actual,
-    renderChipsFromPayloads: vi.fn(actual.renderChipsFromPayloads),
-    renderChipsSvg: vi.fn(actual.renderChipsSvg),
-  };
-});
+  PREVIEW_GITHUB_WIDGET_IDS,
+  PREVIEW_HTTP_WIDGET_IDS,
+  PREVIEW_PLUGIN_IDS,
+  PREVIEW_TOKEN_QUERY_KEYS,
+  PREVIEW_WIDGET_IDS,
+} from "@/src/preview/types";
 
 const PAGE_URL = new URL("./page.tsx", import.meta.url);
-const STATE_URL = new URL("./state.ts", import.meta.url);
-
 const VENDOR_FETCH_HOSTS = ["shieldcn.dev", "img.shields.io"] as const;
-const MOCHA_CARD = "#181825";
-const MOCHA_ACCENT = "#cba6f7";
-const PRIMER_DARK_BG = "#0d1117";
-const SVG_DATA_URL_RE = /data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)/g;
-
-function decodeSvgDataUrls(html: string): string[] {
-  const svgs: string[] = [];
-  for (const match of html.matchAll(SVG_DATA_URL_RE)) {
-    const encoded = match[1];
-    if (encoded === undefined) {
-      continue;
-    }
-    svgs.push(Buffer.from(encoded, "base64").toString("utf8"));
-  }
-  return svgs;
-}
-
-function pluginRenderOriginal(
-  key: "renderChipsFromPayloads" | "renderChipsSvg",
-): typeof import("@profile-bits/plugins")[typeof key] {
-  const impl = pluginActuals[key];
-  if (impl === undefined) {
-    throw new Error(`missing plugin mock original ${key}`);
-  }
-  return impl;
-}
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.mocked(plugins.renderChipsFromPayloads).mockReset();
-  vi.mocked(plugins.renderChipsSvg).mockReset();
-  vi.mocked(plugins.renderChipsFromPayloads).mockImplementation(
-    pluginRenderOriginal("renderChipsFromPayloads"),
-  );
-  vi.mocked(plugins.renderChipsSvg).mockImplementation(
-    pluginRenderOriginal("renderChipsSvg"),
-  );
-});
 
 describe("/playground/http page (server)", () => {
-  it("is a server page that renders chips from chipFixture", async () => {
+  it("is a server page that folds http into PlaygroundShell", async () => {
     const source = await readFile(PAGE_URL, "utf8");
 
     expect(source).not.toContain("use client");
-    expect(source).toContain("chipFixture");
-    expect(source).toContain("renderChipsFromPayloads");
-    expect(source).toContain("renderChipsSvg");
-    expect(source).toContain("HTTP_PLAYGROUND_WIDGET_IDS");
+    expect(source).toContain("PlaygroundShell");
+    expect(source).toContain("HTTP_PLAYGROUND_PLUGIN");
+    expect(source).toContain("PREVIEW_HTTP_WIDGET_IDS");
     expect(source).toContain(PRIMARY_CTA);
+    expect(source).toContain("json");
+    expect(source).toContain("chips");
+    expect(source).not.toContain("PREVIEW_WIDGET_IDS");
     expect(source).not.toContain("redirect(");
     expect(source).not.toContain("permanentRedirect");
+    expect(source).not.toContain("generateStaticParams");
+    expect(source).not.toContain("notFound");
+    expect(source).not.toContain("chipFixture");
+    expect(source).not.toContain("renderChipsFromPayloads");
+    expect(source).not.toContain("renderChipsSvg");
     expect(source).not.toContain("expandChipsRequest");
+    expect(source).not.toContain("playground-http-tuners");
+    expect(source).not.toContain("playground-http-stage");
+    expect(source).not.toContain("wakatime");
+    expect(source).not.toContain("rss");
+    expect(source).not.toContain("coding");
+    expect(source).not.toContain("feed");
     expect(source).not.toMatch(/\bfetch\s*\(/);
     expect(source.toLowerCase()).not.toContain("download");
     expect(source.toLowerCase()).not.toContain("share");
@@ -104,232 +56,54 @@ describe("/playground/http page (server)", () => {
     }
   });
 
-  it("state helpers stay fixtures-only and emit chips yaml", async () => {
-    const source = await readFile(STATE_URL, "utf8");
-    const parsed = parseHttpPlaygroundSearch({
-      preset: "shields",
-      types: ["stars", "npm", "stars"],
-      package: "react",
-      repo: "vercel/next.js",
-      workflow: "ci.yml",
-    });
-    const yaml = emitChipsConfigYaml(parsed);
-
-    expect(HTTP_PLAYGROUND_HREF).toBe("/playground/http");
+  it("locks http widgets to json and chips and Copy as the primary CTA", () => {
     expect(HTTP_PLAYGROUND_PLUGIN).toBe("http");
-    expect(HTTP_PLAYGROUND_WIDGET).toBe("chips");
+    expect(HTTP_PLAYGROUND_HREF).toBe("/playground/http");
     expect(HTTP_PLAYGROUND_WIDGET_IDS).toEqual(["json", "chips"]);
+    expect(HTTP_WIDGET_IDS).toEqual(PREVIEW_HTTP_WIDGET_IDS);
+    expect(HTTP_WIDGET_IDS).not.toEqual(PREVIEW_WIDGET_IDS);
+    expect(HTTP_WIDGET_IDS).not.toEqual(PREVIEW_GITHUB_WIDGET_IDS);
+    expect(HTTP_WIDGET_IDS).not.toContain("demo");
+    expect(HTTP_WIDGET_IDS).not.toContain("stats");
+    expect(HTTP_WIDGET_IDS).not.toContain("languages");
+    expect(HTTP_WIDGET_IDS).not.toContain("repo");
+    expect(HTTP_WIDGET_IDS).not.toContain("coding");
+    expect(HTTP_WIDGET_IDS).not.toContain("feed");
+    expect(PREVIEW_PLUGIN_IDS).toEqual(["github", "wakatime", "rss", "http"]);
+    expect(PREVIEW_GITHUB_WIDGET_IDS).not.toContain("json");
+    expect(PREVIEW_GITHUB_WIDGET_IDS).not.toContain("chips");
+    expect(PREVIEW_TOKEN_QUERY_KEYS).toEqual(
+      expect.arrayContaining(["http_token_env", "http_token"]),
+    );
     expect(PRIMARY_CTA).toBe("Copy");
-    expect(PREVIEW_PLUGIN_IDS).toEqual(["github", "http"]);
-    expect(PREVIEW_WIDGET_IDS).not.toContain("chips");
-    expect(PREVIEW_WIDGET_IDS).not.toContain("json");
-    expect(parsed.preset).toBe("shields");
-    expect(parsed.types).toEqual(["stars", "npm"]);
-    expect(yaml).toContain("plugins:");
-    expect(yaml).toContain("http:");
-    expect(yaml).toContain("widgets:");
-    expect(yaml).toContain("chips:");
-    expect(yaml).toContain("preset: shields");
-    expect(yaml).toContain("types: [stars, npm]");
-    expect(emitChipsReadmeMarkdown()).toBe(HTTP_PLAYGROUND_README);
-    expect(emitChipsReadmeMarkdown()).toBe("![](./profile-bits/chips.svg)");
-    expect(parseHttpPlaygroundSearch({}).preset).toBe(
-      HTTP_PLAYGROUND_DEFAULTS.preset,
-    );
-    expect(parseHttpPlaygroundSearch({}).theme).toBe("dark");
-    expect(parseHttpPlaygroundSearch({ theme: "catppuccin-mocha" }).theme).toBe(
-      "catppuccin-mocha",
-    );
-    expect(parseHttpPlaygroundSearch({ theme: "light" }).theme).toBe("light");
-    expect(parseHttpPlaygroundSearch({ theme: "mocha" }).theme).toBe("mocha");
-    expect(parseHttpPlaygroundSearch({ theme: "radical" }).theme).toBe(
-      "radical",
-    );
-    expect(source).not.toContain("HTTP_PLAYGROUND_THEMES");
-    expect(source).not.toMatch(/\bfetch\s*\(/);
-    expect(source).not.toContain("expandChipsRequest");
-    for (const host of VENDOR_FETCH_HOSTS) {
-      expect(source).not.toContain(host);
-    }
+    expect(HTTP_PLAYGROUND_SHELL).toBe(PlaygroundShell);
   });
 
-  it("renders fixture SVG dual pane and copy rail without fetch", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const page = await HttpPlaygroundPage({
-      searchParams: {
-        preset: "shieldcn",
-        types: ["npm"],
-        package: "react",
-        repo: "vercel/next.js",
-        workflow: "ci.yml",
-      },
-    });
-    const html = renderToStaticMarkup(page);
+  it("renders the http pack identity without a chips-only sidecar", () => {
+    const html = renderToStaticMarkup(createElement(HttpPlaygroundPage));
 
     expect(html).toContain('data-slot="playground-http-page"');
     expect(html).toContain('data-plugin="http"');
-    expect(html).toContain('data-widget="chips"');
     expect(html).toContain('data-href="/playground/http"');
     expect(html).toContain(`data-primary-cta="${PRIMARY_CTA}"`);
-    expect(html).toContain('data-preset="shieldcn"');
-    expect(html).toContain('data-provenance="fixture"');
-    expect(html).toContain('data-pane="layout"');
-    expect(html).toContain('data-pane="readme"');
-    expect(html).toContain('data-rail="config"');
-    expect(html).toContain('data-rail="readme"');
-    expect(html).toContain("<code>http</code>");
-    expect(html).toContain("<code>chips</code>");
-    expect(html).toContain("<code>json</code>");
-    expect(html).toContain("plugins:");
-    expect(html).toContain("widgets:");
-    expect(html).toContain("chips:");
-    expect(html).toContain("preset: shieldcn");
-    expect(html).toContain("types: [npm]");
-    expect(html).toContain("![](./profile-bits/chips.svg)");
-    expect(html).toContain("data:image/svg+xml;base64,");
-    expect(html).toContain('name="preset"');
-    expect(html).toContain('value="shieldcn"');
-    expect(html).toContain('value="shields"');
-    expect(html).toContain('name="types"');
-    expect(html).toContain('name="package"');
-    expect(html).toContain('name="repo"');
-    expect(html).toContain('name="workflow"');
+    expect(html).not.toContain('data-widget="chips"');
+    expect(html).not.toContain('data-slot="playground-http-tuners"');
+    expect(html).not.toContain('data-pane="layout"');
+    expect(html).not.toContain('data-pane="readme"');
+    expect(html).not.toContain('name="preset"');
+    expect(html).not.toContain('name="types"');
     expect(html).toContain(PRIMARY_CTA);
-    expect(html).not.toContain("shieldcn.dev");
-    expect(html).not.toContain("img.shields.io");
+    expect(html).toContain("<code>http</code>");
+    expect(html).toContain("<code>json</code>");
+    expect(html).toContain("<code>chips</code>");
     expect(html.toLowerCase()).not.toContain("download");
     expect(html.toLowerCase()).not.toContain("share");
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("defaults empty search to shieldcn npm fixtures", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const html = renderToStaticMarkup(await HttpPlaygroundPage({}));
-
-    expect(html).toContain('data-preset="shieldcn"');
-    expect(html).toContain("types: [npm]");
-    expect(html).toContain("package: react");
-    expect(html).toContain("repo: vercel/next.js");
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("shows preview-error pane when chips render throws TakumiRenderError", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    vi.mocked(plugins.renderChipsFromPayloads).mockRejectedValueOnce(
-      new TakumiRenderError("takumi failed"),
-    );
-    vi.mocked(plugins.renderChipsSvg).mockRejectedValueOnce(
-      new TakumiRenderError("takumi failed"),
-    );
-
-    const html = renderToStaticMarkup(
-      await HttpPlaygroundPage({
-        searchParams: { preset: "shieldcn", types: ["npm"] },
-      }),
-    );
-
-    expect(html).toContain('data-slot="playground-http-preview-error"');
-    expect(html).toContain("Preview unavailable");
-    expect(html).toContain('data-rail="config"');
-    expect(html).toContain('data-rail="readme"');
-    expect(html).toContain("plugins:");
-    expect(html).toContain("http:");
-    expect(html).toContain("widgets:");
-    expect(html).toContain("chips:");
-    expect(html).toContain("preset: shieldcn");
-    expect(html).toContain("types: [npm]");
-    expect(html).toContain("![](./profile-bits/chips.svg)");
+    expect(html).not.toContain("wakatime");
+    expect(html).not.toContain("rss");
+    expect(html).not.toContain("coding");
+    expect(html).not.toContain("feed");
     expect(html).not.toContain("shieldcn.dev");
     expect(html).not.toContain("img.shields.io");
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("bakes mocha catalog theme into chips SVG instead of Primer dark", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const html = renderToStaticMarkup(
-      await HttpPlaygroundPage({
-        searchParams: {
-          preset: "shieldcn",
-          types: ["npm"],
-          theme: "catppuccin-mocha",
-        },
-      }),
-    );
-    const svgs = decodeSvgDataUrls(html);
-
-    expect(chipsThemeForPlayground("catppuccin-mocha")).toBe(
-      "catppuccin-mocha",
-    );
-    expect(html).toContain('name="theme"');
-    expect(html).toContain('value="catppuccin-mocha"');
-    expect(html).not.toContain("Preview unavailable");
-    expect(svgs.length).toBeGreaterThan(0);
-    for (const svg of svgs) {
-      expect(svg).toContain(MOCHA_CARD);
-      expect(svg).toContain(MOCHA_ACCENT);
-      expect(svg).not.toContain(PRIMER_DARK_BG);
-    }
-    expect(plugins.renderChipsFromPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({ theme: "catppuccin-mocha" }),
-    );
-    expect(plugins.renderChipsSvg).toHaveBeenCalledWith(
-      expect.objectContaining({ theme: "catppuccin-mocha" }),
-    );
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("does not coerce dump theme ids or custom permalinks to Primer dark", async () => {
-    const dump = parseHttpPlaygroundSearch({ theme: "mocha" });
-    const custom = parseHttpPlaygroundSearch({
-      theme: "custom",
-      cbg: "catppuccin-mocha.bg",
-      ccard: "catppuccin-mocha.card",
-      ctext: "catppuccin-mocha.text",
-      cmuted: "catppuccin-mocha.muted",
-      caccent: "catppuccin-mocha.mauve",
-      cborder: "catppuccin-mocha.border",
-    });
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const html = renderToStaticMarkup(
-      await HttpPlaygroundPage({
-        searchParams: {
-          preset: "shieldcn",
-          types: ["npm"],
-          theme: "custom",
-          cbg: "catppuccin-mocha.bg",
-          ccard: "catppuccin-mocha.card",
-          ctext: "catppuccin-mocha.text",
-          cmuted: "catppuccin-mocha.muted",
-          caccent: "catppuccin-mocha.mauve",
-          cborder: "catppuccin-mocha.border",
-        },
-      }),
-    );
-    const svgs = decodeSvgDataUrls(html);
-
-    expect(dump.theme).toBe("mocha");
-    expect(dump.theme).not.toBe("dark");
-    expect(chipsThemeForPlayground(dump.theme)).toBeNull();
-    expect(custom.theme).toEqual({
-      custom: {
-        bg: "catppuccin-mocha.bg",
-        card: "catppuccin-mocha.card",
-        text: "catppuccin-mocha.text",
-        muted: "catppuccin-mocha.muted",
-        accent: "catppuccin-mocha.mauve",
-        border: "catppuccin-mocha.border",
-      },
-    });
-    expect(chipsThemeForPlayground(custom.theme)).toMatchObject({
-      card: MOCHA_CARD,
-      accent: MOCHA_ACCENT,
-    });
-    expect(svgs.length).toBeGreaterThan(0);
-    for (const svg of svgs) {
-      expect(svg).toContain(MOCHA_CARD);
-      expect(svg).toContain(MOCHA_ACCENT);
-      expect(svg).not.toContain(PRIMER_DARK_BG);
-    }
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(html).not.toContain("data:image/svg+xml;base64,");
   });
 });

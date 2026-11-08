@@ -11,7 +11,7 @@ import {
   RSS_MAX_ATTEMPTS,
   rssRetryDelayMs,
 } from "./outcomes.js";
-import { parseRssXml, type RssFeedItem, RssParseError } from "./parse.js";
+import { parseRssXml, type RssFeedDump, RssParseError } from "./parse.js";
 import {
   type RssFetch,
   type RssLookup,
@@ -19,7 +19,16 @@ import {
   ssrfGet,
 } from "./ssrf.js";
 
-export type { RssFeedItem, RssFetch, RssLookup };
+export type {
+  RssCategory,
+  RssEnclosure,
+  RssFeed,
+  RssFeedDump,
+  RssFeedImage,
+  RssFeedItem,
+  RssPerson,
+} from "./parse.js";
+export type { RssFetch, RssLookup };
 
 export class RssClientError extends Error {
   override readonly name = "RssClientError";
@@ -46,13 +55,14 @@ export type CreateRssClientInput = {
 };
 
 export type RssClient = {
-  fetchFeed: (url: string) => Promise<readonly RssFeedItem[]>;
+  fetchFeed: (url: string) => Promise<RssFeedDump>;
 };
 
 /**
  * One rss client per Action / playground / generate preview run.
  * GitHub-host fail → cache/single-flight → ssrf GET → parse → freeze.
- * Returns the full frozen list; the widget slices to `limit`.
+ * Returns the full frozen `{ feed, items }` dump; the widget slices
+ * `items` to `limit`.
  */
 export function createRssClient(input: CreateRssClientInput = {}): RssClient {
   const fetchImpl = input.fetch;
@@ -97,7 +107,7 @@ async function loadFeed(
     sleep: (ms: number) => Promise<void>;
     logger?: RunLogSink;
   },
-): Promise<readonly RssFeedItem[]> {
+): Promise<RssFeedDump> {
   let lastStatus: number | undefined;
   for (let attempt = 1; attempt <= RSS_MAX_ATTEMPTS; attempt += 1) {
     const started = Date.now();
@@ -112,12 +122,12 @@ async function loadFeed(
     lastStatus = result.status;
     if (result.status >= 200 && result.status < 300) {
       try {
-        const items = parseRssXml(result.body);
+        const dump = parseRssXml(result.body);
         emitRssCall(deps.logger, url, started, {
           outcome: "ok",
           status: result.status,
         });
-        return items;
+        return dump;
       } catch (error: unknown) {
         emitRssCall(deps.logger, url, started, {
           outcome: "fail_widget",

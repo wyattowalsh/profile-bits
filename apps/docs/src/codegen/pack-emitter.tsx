@@ -1,10 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type {
-  PreviewOptions,
-  PreviewRequest,
-  PreviewWidgetId,
+import {
+  isPreviewPluginId,
+  type PreviewOptions,
+  type PreviewPluginId,
+  type PreviewRequest,
+  type PreviewWidgetId,
+  pluginForWidget,
 } from "../preview/types";
 import {
   EXPORT_CONFIG_PATH,
@@ -70,6 +73,7 @@ export function packEmitterState(request: PreviewRequest): ExportWorkflowState {
     format: request.format,
     theme: request.theme,
     output_pair: request.output_pair,
+    plugin: pluginFromRequest(request),
     ...(hasWidgetOptions(options) ? { options } : {}),
     ...(enabled !== undefined ? { enabled } : {}),
   };
@@ -117,6 +121,16 @@ export function PackEmitter({ state, className }: PackEmitterProps) {
   );
 }
 
+function pluginFromRequest(request: PreviewRequest): PreviewPluginId {
+  if (request.plugin !== undefined && isPreviewPluginId(request.plugin)) {
+    return request.plugin;
+  }
+  if (request.widget !== undefined) {
+    return pluginForWidget(request.widget);
+  }
+  return "github";
+}
+
 function widgetOptions(options: PreviewOptions): ExportWorkflowWidgets {
   const out: ExportWorkflowWidgets = {};
   if (options.demo !== undefined) {
@@ -128,6 +142,21 @@ function widgetOptions(options: PreviewOptions): ExportWorkflowWidgets {
   if (options.languages !== undefined) {
     out.languages = options.languages;
   }
+  if (options.repo !== undefined) {
+    out.repo = options.repo;
+  }
+  if (options.coding !== undefined) {
+    out.coding = options.coding;
+  }
+  if (options.feed !== undefined) {
+    out.feed = options.feed;
+  }
+  if (options.json !== undefined) {
+    out.json = options.json;
+  }
+  if (options.chips !== undefined) {
+    out.chips = options.chips;
+  }
   return out;
 }
 
@@ -135,7 +164,12 @@ function hasWidgetOptions(options: ExportWorkflowWidgets): boolean {
   return (
     options.demo !== undefined ||
     options.stats !== undefined ||
-    options.languages !== undefined
+    options.languages !== undefined ||
+    options.repo !== undefined ||
+    options.coding !== undefined ||
+    options.feed !== undefined ||
+    options.json !== undefined ||
+    options.chips !== undefined
   );
 }
 

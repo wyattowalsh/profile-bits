@@ -3,9 +3,10 @@
  * crawl plus GraphQL `nodes(ids:)` language bytes (T112) for stats/languages.
  * Widget demo: probe only. Widget repo: probe + GET /repos/{owner}/{repo}.
  * Never unauthenticated (60/h/IP). Empty token fails before any HTTP. Never
- * REST `/languages`. FORBIDDEN: rewriting rest.ts; implementing GraphQL
- * inside this file. `logger` is GraphQL RateLimitLogger; `runLog` is REST
- * crawl RunLogSink.
+ * REST `/languages`. Optional extra endpoints (pinned, public events) omit
+ * without capability and MUST NOT invent `0`. FORBIDDEN: rewriting rest.ts;
+ * implementing GraphQL inside this file. `logger` is GraphQL
+ * RateLimitLogger; `runLog` is REST crawl RunLogSink.
  */
 
 import {
@@ -22,20 +23,23 @@ import {
   type GithubProbeResult,
   mapGithubCapabilities,
 } from "./capabilities.js";
+import { fetchGithubExtraEndpoints } from "./extra.js";
 import {
-  fetchContributionTotal,
+  fetchContributionCalendar,
   fetchRepositoryLanguages,
   GithubGraphqlError,
-  type GithubLanguageBytes,
 } from "./graphql.js";
+import {
+  emptyGithubCrawl,
+  type GithubDumpPayload,
+  type GithubRestCrawlResult,
+} from "./payload.js";
 import { classifyGithubRateLimit, type RateLimitLogger } from "./rate-limit.js";
 import {
   crawlGithubRest,
   fetchGithubRepo,
   GITHUB_API_ORIGIN,
   GITHUB_API_VERSION,
-  type GithubRepository,
-  type GithubRestCrawlResult,
   GithubRestError,
   type GithubRestFetch,
 } from "./rest.js";
@@ -62,12 +66,8 @@ export type GithubPayloadInput = {
   includeArchived: boolean;
 };
 
-/** REST crawl plus GraphQL language bytes; contributions iff capable. */
-export type GithubWidgetPayload = GithubRestCrawlResult & {
-  languages: readonly GithubLanguageBytes[];
-  contributions?: number;
-  repository?: GithubRepository;
-};
+/** REST crawl plus GraphQL language bytes; calendar iff capable. */
+export type GithubWidgetPayload = GithubDumpPayload;
 
 export type GithubClient = {
   readonly tokenClass: TokenClass;
@@ -209,24 +209,39 @@ export function createGithubClient(
         fetchImpl,
         logger: runLog,
       });
-      const languages = await fetchRepositoryLanguages({
-        repositoryIds: crawl.repositoryIds,
-        token,
-        cache,
-        fetchImpl,
-        logger,
-      });
-      const contributions = await fetchContributionTotal({
-        login,
-        token,
-        cache,
-        canContributions: capabilities.canContributions,
-        fetchImpl,
-        logger,
-      });
-      return contributions === undefined
-        ? { ...crawl, languages }
-        : { ...crawl, languages, contributions };
+      const [languages, calendar, extra] = await Promise.all([
+        fetchRepositoryLanguages({
+          repositoryIds: crawl.repositoryIds,
+          token,
+          cache,
+          fetchImpl,
+          logger,
+        }),
+        fetchContributionCalendar({
+          login,
+          token,
+          cache,
+          canContributions: capabilities.canContributions,
+          fetchImpl,
+          logger,
+        }),
+        fetchGithubExtraEndpoints({
+          login,
+          token,
+          cache,
+          fetchImpl,
+          logger,
+        }),
+      ]);
+      return calendar === undefined
+        ? { ...crawl, languages, ...extra }
+        : {
+            ...crawl,
+            languages,
+            contributions: calendar.totalContributions,
+            calendar,
+            ...extra,
+          };
     } catch (error) {
       throw wrapGithubDataError(
         error,
@@ -298,22 +313,6 @@ function resolveLogin(payloadUser: string, configuredUser: string): string {
     return fromPayload;
   }
   return configuredUser.trim();
-}
-
-function emptyGithubCrawl(login: string): GithubRestCrawlResult {
-  return {
-    user: {
-      login,
-      id: 0,
-      nodeId: "",
-      followers: 0,
-      following: 0,
-      publicRepos: 0,
-      publicGists: 0,
-    },
-    repositories: [],
-    repositoryIds: [],
-  };
 }
 
 async function fetchIdentityProbe(input: {

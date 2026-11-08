@@ -230,15 +230,16 @@
     {
       "id": "auth-scheme-id-filename",
       "prompt": "Scaffold auth.ts from the default auth.ts.template. Use github Bearer and decideActionToken for WakaTime and http too; infer github-bearer whenever catalog auth is optional. For a new OpenSpec id linear whose named scheme is http-optional, copy whatever file you think is right. If OpenSpec named scheme oauth2, invent a new template.",
-      "expected_output": "There is no default auth.ts.template. Copy from the four-file scheme\u2192filename table, not by interpolating auth.{{scheme}}.ts.template. static/rss \u2192 auth.none.ts.template; github (new-id only) \u2192 auth.github-bearer.ts.template; wakatime (new-id only) \u2192 auth.wakatime-basic.ts.template; http (new-id only) \u2192 auth.http-optional.ts.template. New id linear with OpenSpec-named scheme http-optional copies auth.http-optional.ts.template (does not stop). Unknown scheme oauth2 stops. Do not invent auth.ts.template. Templates are for new ids; do not emit a parallel auth.ts onto live github/wakatime/rss. WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=. http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken. Does not copy github decideActionToken into wakatime or http auth.",
+      "expected_output": "There is no default auth.ts.template. Copy from the six-file scheme\u2192filename table, not by interpolating auth.{{scheme}}.ts.template. static/rss/leetcode/chesscom/lichess \u2192 auth.none.ts.template; github (new-id only) \u2192 auth.github-bearer.ts.template; wakatime (new-id only) \u2192 auth.wakatime-basic.ts.template; http (new-id only) \u2192 auth.http-optional.ts.template; query-key (new-id only) \u2192 auth.query-key.ts.template; oauth-refresh (new-id only) \u2192 auth.oauth-refresh.ts.template. New id linear with OpenSpec-named scheme http-optional copies auth.http-optional.ts.template (does not stop). Named schemes query-key and oauth-refresh copy their templates and do not stop. Unknown scheme oauth2 stops. Do not invent auth.oauth2.ts.template or auth.ts.template. Templates are for new ids; do not emit a parallel auth.ts onto live github/wakatime/rss/http. WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=. http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken. query-key injects ?key= at send time and never sends Authorization Bearer. oauth-refresh exchanges grant_type=refresh_token then sends Authorization Bearer the access token; client id/secret are named env, not yaml. Does not copy github decideActionToken into wakatime, http, query-key, or oauth-refresh auth.",
       "assertions": [
         "WakaTime Authorization is RFC Basic base64(api_key + \":\"), never Bearer, never decideActionToken, never ?api_key=",
         "http optional: unset token sends no Authorization; whitespace is fail_widget not fail_job; never decideActionToken",
         "Does not copy github decideActionToken into wakatime or http auth",
-        "Copies the scheme file from the four-file scheme\u2192filename table, not a default auth.ts.template",
+        "Copies the scheme file from the six-file scheme\u2192filename table, not a default auth.ts.template",
         "A new id whose OpenSpec-named scheme is http-optional copies auth.http-optional.ts.template and does not stop",
+        "Named schemes query-key and oauth-refresh copy auth.query-key.ts.template and auth.oauth-refresh.ts.template",
         "Unknown scheme (oauth2) stops",
-        "Does not invent auth.ts.template or interpolate auth.{{scheme}}.ts.template as a path"
+        "Does not invent auth.oauth2.ts.template or auth.ts.template or interpolate auth.{{scheme}}.ts.template as a path"
       ]
     },
     {

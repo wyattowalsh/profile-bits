@@ -12,6 +12,7 @@ import {
   GithubClientError,
   inferGithubTokenClass,
 } from "./client.js";
+import { PINNED_ITEMS_QUERY } from "./extra.js";
 import {
   CONTRIBUTIONS_QUERY,
   GITHUB_GRAPHQL_NODE_BATCH,
@@ -169,6 +170,28 @@ function contributionsGraphqlBody(total = 42): unknown {
   };
 }
 
+function pinnedGraphqlBody(): unknown {
+  return {
+    data: {
+      user: {
+        pinnedItems: {
+          nodes: [
+            {
+              __typename: "Repository",
+              name: "Hello-World",
+              nameWithOwner: `${OCTOCAT}/Hello-World`,
+              description: "My first repository",
+              url: `https://github.com/${OCTOCAT}/Hello-World`,
+              stargazerCount: 80,
+            },
+          ],
+        },
+      },
+      rateLimit: { cost: 1, remaining: 5000 },
+    },
+  };
+}
+
 function mockGraphqlOk(init?: RequestInit): Response {
   const { query, variables } = parseGraphqlBody(init);
   if (query === LANGUAGES_NODES_QUERY) {
@@ -179,6 +202,9 @@ function mockGraphqlOk(init?: RequestInit): Response {
   }
   if (query === CONTRIBUTIONS_QUERY) {
     return jsonResponse(200, contributionsGraphqlBody());
+  }
+  if (query === PINNED_ITEMS_QUERY) {
+    return jsonResponse(200, pinnedGraphqlBody());
   }
   throw new Error(`unexpected GraphQL query: ${query.slice(0, 80)}`);
 }
@@ -275,7 +301,17 @@ describe("createGithubClient", () => {
     expect(paths.filter((path) => path === "/user")).toHaveLength(1);
     expect(paths.some((path) => path === `/users/${OCTOCAT}`)).toBe(true);
     expect(paths.some((path) => path.includes("/languages"))).toBe(false);
-    expect(graphqlCalls(fetchImpl.mock.calls)).toHaveLength(2);
+    expect(
+      graphqlCalls(fetchImpl.mock.calls).map(
+        ([, init]) => parseGraphqlBody(init).query,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        LANGUAGES_NODES_QUERY,
+        CONTRIBUTIONS_QUERY,
+        PINNED_ITEMS_QUERY,
+      ]),
+    );
     expect(new URL(GITHUB_PROBE_URL).pathname).toBe("/user");
     for (const [, init] of fetchImpl.mock.calls) {
       expect(authorization(init)).toBe(`Bearer ${PAT}`);
@@ -489,12 +525,18 @@ describe("createGithubClient", () => {
     const paths = fetchImpl.mock.calls.map(([input]) => pathnameOf(input));
     expect(paths).toContain("/user");
     expect(paths.some((path) => path === "/user/repos")).toBe(false);
-    expect(graphqlCalls(fetchImpl.mock.calls)).toHaveLength(1);
     expect(
       graphqlCalls(fetchImpl.mock.calls).map(
         ([, init]) => parseGraphqlBody(init).query,
       ),
-    ).toEqual([LANGUAGES_NODES_QUERY]);
+    ).toEqual(
+      expect.arrayContaining([LANGUAGES_NODES_QUERY, PINNED_ITEMS_QUERY]),
+    );
+    expect(
+      graphqlCalls(fetchImpl.mock.calls).some(
+        ([, init]) => parseGraphqlBody(init).query === CONTRIBUTIONS_QUERY,
+      ),
+    ).toBe(false);
   });
 
   it("lists private-capable owner repos for a matching user PAT", async () => {
@@ -774,6 +816,7 @@ describe("createGithubClient", () => {
       license: "MIT",
       ownerLogin: OCTOCAT,
       ownerAvatarUrl: "https://avatars.githubusercontent.com/u/1?v=4",
+      topics: [],
     });
     const paths = fetchImpl.mock.calls.map(([input]) => pathnameOf(input));
     expect(paths).toEqual(["/user", `/repos/${OCTOCAT}/Hello-World`]);
@@ -794,8 +837,17 @@ describe("createGithubClient", () => {
       if (path === `/users/${OCTOCAT}/repos`) {
         return jsonResponse(200, []);
       }
+      if (path === `/users/${OCTOCAT}/events/public`) {
+        return jsonResponse(404, { message: "Not Found" });
+      }
       if (path === "/graphql") {
-        throw new Error("GraphQL must not run for empty repositoryIds");
+        const { query } = parseGraphqlBody(init);
+        if (query === PINNED_ITEMS_QUERY) {
+          return jsonResponse(200, pinnedGraphqlBody());
+        }
+        throw new Error(
+          "language GraphQL must not run for empty repositoryIds",
+        );
       }
       throw new Error(`unexpected ${input.href}`);
     });
@@ -813,7 +865,11 @@ describe("createGithubClient", () => {
     expect(payload.repositoryIds).toEqual([]);
     expect(payload.languages).toEqual([]);
     expect(payload).not.toHaveProperty("contributions");
-    expect(graphqlCalls(fetchImpl.mock.calls)).toHaveLength(0);
+    expect(
+      graphqlCalls(fetchImpl.mock.calls).map(
+        ([, init]) => parseGraphqlBody(init).query,
+      ),
+    ).toEqual([PINNED_ITEMS_QUERY]);
   });
 
   it("maps GraphQL 200 + errors[] to GithubClientError fail_after_backoff", async () => {
@@ -935,12 +991,18 @@ describe("createGithubClient", () => {
 
     expect(payload.languages).toEqual([{ name: "TypeScript", bytes: 1 }]);
     expect(payload).not.toHaveProperty("contributions");
-    expect(graphqlCalls(fetchImpl.mock.calls)).toHaveLength(1);
     expect(
       graphqlCalls(fetchImpl.mock.calls).map(
         ([, init]) => parseGraphqlBody(init).query,
       ),
-    ).toEqual([LANGUAGES_NODES_QUERY]);
+    ).toEqual(
+      expect.arrayContaining([LANGUAGES_NODES_QUERY, PINNED_ITEMS_QUERY]),
+    );
+    expect(
+      graphqlCalls(fetchImpl.mock.calls).some(
+        ([, init]) => parseGraphqlBody(init).query === CONTRIBUTIONS_QUERY,
+      ),
+    ).toBe(false);
     expect(
       fetchImpl.mock.calls.some(([input]) =>
         pathnameOf(input).includes("/languages"),

@@ -6,6 +6,7 @@ export {
   LANGUAGES_BITS_USED,
   REPO_BITS_USED,
   STATS_BITS_USED,
+  TOP_REPOS_BITS_USED,
 } from "./github/plugin.js";
 export {
   type GithubPreviewTarget,
@@ -16,6 +17,7 @@ export { renderDemoSvg } from "./github/widgets/demo/render.js";
 export { renderLanguagesSvg } from "./github/widgets/languages/render.js";
 export { renderRepoSvg } from "./github/widgets/repo/render.js";
 export { renderStatsSvg } from "./github/widgets/stats/render.js";
+export { renderTopReposSvg } from "./github/widgets/top-repos/render.js";
 export { HTTP_BITS_USED, httpPlugin } from "./http/plugin.js";
 export {
   ChipsWidgetError,

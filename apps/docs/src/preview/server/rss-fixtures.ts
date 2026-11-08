@@ -25,7 +25,7 @@ export const RSS_PREVIEW_LIMIT = 5;
 export function loadRssPreviewItems(
   name: RssFixtureName = "atom.xml",
 ): readonly RssFeedItem[] {
-  return parseRssXml(loadFixture(name));
+  return parseRssXml(loadFixture(name)).items;
 }
 
 export function rssPreviewLines(

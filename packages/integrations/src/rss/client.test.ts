@@ -38,13 +38,15 @@ describe("createRssClient", () => {
       xmlResponse(loadFixture("atom.xml")),
     );
     const client = createRssClient({ fetch, lookup: publicLookup() });
-    const items = await client.fetchFeed(FEED_URL);
+    const dump = await client.fetchFeed(FEED_URL);
     const expected = parseRssXml(loadFixture("atom.xml"));
 
-    expect(items).toHaveLength(8);
-    expect(items).toEqual(expected);
-    expect(Object.isFrozen(items)).toBe(true);
-    expect(Object.isFrozen(items[0])).toBe(true);
+    expect(dump.items).toHaveLength(8);
+    expect(dump).toEqual(expected);
+    expect(Object.isFrozen(dump)).toBe(true);
+    expect(Object.isFrozen(dump.feed)).toBe(true);
+    expect(Object.isFrozen(dump.items)).toBe(true);
+    expect(Object.isFrozen(dump.items[0])).toBe(true);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -86,16 +88,19 @@ describe("createRssClient", () => {
       xmlResponse(loadFixture("rss2.xml")),
     );
     const client = createRssClient({ fetch, lookup: publicLookup() });
-    const items = await client.fetchFeed(FEED_URL);
+    const dump = await client.fetchFeed(FEED_URL);
 
-    expect(items).toHaveLength(8);
-    expect(items).toEqual(parseRssXml(loadFixture("rss2.xml")));
-    expect(Object.isFrozen(items)).toBe(true);
-    expect(items[0]).toEqual({
-      title: "RSS Item 1",
-      url: "https://example.com/rss/1",
-      published_at: "2026-08-16T11:00:00.000Z",
-    });
+    expect(dump.items).toHaveLength(8);
+    expect(dump).toEqual(parseRssXml(loadFixture("rss2.xml")));
+    expect(Object.isFrozen(dump)).toBe(true);
+    expect(dump.items[0]).toEqual(
+      expect.objectContaining({
+        title: "RSS Item 1",
+        url: "https://example.com/rss/1",
+        published_at: "2026-08-16T11:00:00.000Z",
+        id: "https://example.com/rss/1",
+      }),
+    );
   });
 
   it("returns an empty frozen list for an empty feed", async () => {
@@ -103,10 +108,12 @@ describe("createRssClient", () => {
       xmlResponse(loadFixture("empty.xml")),
     );
     const client = createRssClient({ fetch, lookup: publicLookup() });
-    const items = await client.fetchFeed(FEED_URL);
+    const dump = await client.fetchFeed(FEED_URL);
 
-    expect(items).toEqual([]);
-    expect(Object.isFrozen(items)).toBe(true);
+    expect(dump.items).toEqual([]);
+    expect(Object.isFrozen(dump)).toBe(true);
+    expect(Object.isFrozen(dump.items)).toBe(true);
+    expect(dump.feed.title).toBe("Empty Fixture");
   });
 
   it.each([401, 403, 404])(
@@ -250,7 +257,7 @@ describe("createRssClient", () => {
     release?.();
     const [a, b] = await Promise.all([first, second]);
     expect(a).toBe(b);
-    expect(a).toHaveLength(8);
+    expect(a.items).toHaveLength(8);
 
     const third = await client.fetchFeed(FEED_URL);
     expect(third).toBe(a);
@@ -277,8 +284,8 @@ describe("createRssClient", () => {
     const client = createRssClient({ fetch, lookup: publicLookup() });
 
     try {
-      const items = await client.fetchFeed(FEED_URL);
-      const blob = JSON.stringify(items);
+      const dump = await client.fetchFeed(FEED_URL);
+      const blob = JSON.stringify(dump);
       expect(blob).not.toMatch(/root:.*:0:0/u);
       expect(blob).not.toContain("xxe-canary-should-not-appear");
       expect(blob).not.toContain("/etc/passwd");

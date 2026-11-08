@@ -1,8 +1,9 @@
 /**
  * Injectable HTTPS JSON client. One instance per run.
  * Order: token → cache/single-flight → ssrf → GET (manual redirect) → hops →
- * size cap → BOM-strip JSON.parse → classifyHttp → backoff.
- * MUST NOT import octokit.
+ * size cap → BOM-strip JSON.parse → dump schema → classifyHttp → backoff.
+ * MUST NOT import octokit. No extra vendor client. Chips origins
+ * shieldcn.dev + img.shields.io GET auth none.
  */
 
 import type { LookupAddress } from "node:dns";
@@ -21,6 +22,7 @@ import {
 import { paramsFromUrl, RequestCache, type RestCacheAuth } from "../cache.js";
 import { authorizationFromToken, authorizationHeaderValue } from "./auth.js";
 import { assertSafeYamlHeaders, buildHttpRequestHeaders } from "./headers.js";
+import { parseHttpJsonDump, parseRawBadgeJson } from "./payload.js";
 import {
   assertSafeHttpUrl,
   HTTP_MAX_REDIRECTS,
@@ -39,7 +41,26 @@ export const HTTP_RETRY_BACKOFF_MS = [200, 400, 800] as const;
 export const HTTP_RETRY_AFTER_CAP_MS = 10_000;
 export const HTTP_TIMEOUT_MS_DEFAULT = 10_000;
 
+/** Chips CDN hosts. Origin allowlist in addition to SSRF. No www / apex shields.io. */
+export const HTTP_CHIPS_ALLOWED_HOSTNAMES = [
+  "shieldcn.dev",
+  "img.shields.io",
+] as const;
+
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+export function isHttpChipsOrigin(hostname: string): boolean {
+  const normalized = hostname.replace(/\.$/, "").toLowerCase();
+  return (HTTP_CHIPS_ALLOWED_HOSTNAMES as readonly string[]).includes(
+    normalized,
+  );
+}
+
+function assertHttpChipsOrigin(url: URL): void {
+  if (!isHttpChipsOrigin(url.hostname)) {
+    throw new HttpSsrfError("forbidden chips origin");
+  }
+}
 
 export type HttpClientErrorCode =
   | "timeout"
@@ -132,9 +153,12 @@ export function createHttpClient(
   return {
     async fetchJson(request) {
       try {
+        assertSafeYamlHeaders(request.headers);
+        const url = assertSafeHttpUrl(request.url);
+        const chips = isHttpChipsOrigin(url.hostname);
         let requestAuth = auth;
         let requestAuthorization = authorizationHeaderValue(authorization);
-        if (request.auth === "none") {
+        if (chips || request.auth === "none") {
           requestAuth = "none";
           requestAuthorization = undefined;
         } else if (authorization.kind === "missing") {
@@ -145,8 +169,6 @@ export function createHttpClient(
             { code: "missing_token" },
           );
         }
-        assertSafeYamlHeaders(request.headers);
-        const url = assertSafeHttpUrl(request.url);
         const timeoutMs = request.timeout_ms ?? HTTP_TIMEOUT_MS_DEFAULT;
         return await cache.get(
           {
@@ -165,6 +187,7 @@ export function createHttpClient(
               timeoutMs,
               extraHeaders: request.headers,
               logger,
+              chips,
             }),
         );
       } catch (error: unknown) {
@@ -192,6 +215,7 @@ async function loadJson(
     timeoutMs: number;
     extraHeaders?: Readonly<Record<string, string>>;
     logger?: RunLogSink;
+    chips: boolean;
   },
 ): Promise<unknown> {
   const host = hostnameOnly(url);
@@ -217,7 +241,7 @@ async function loadJson(
     const classified = classifyHttp({ status: result.status });
     if (classified === "render") {
       try {
-        const parsed = parseJsonBody(result.body);
+        const parsed = parseFetchedDump(parseJsonBody(result.body), deps.chips);
         emitHttpCall(deps.logger, url, started, {
           outcome: "ok",
           status: result.status,
@@ -272,6 +296,7 @@ async function httpGet(
     authorization: string | undefined;
     timeoutMs: number;
     extraHeaders?: Readonly<Record<string, string>>;
+    chips: boolean;
   },
 ): Promise<{
   status: number;
@@ -279,6 +304,9 @@ async function httpGet(
   body: string;
 }> {
   let current = assertSafeHttpUrl(urlString);
+  if (deps.chips) {
+    assertHttpChipsOrigin(current);
+  }
   let redirects = 0;
   let includeAuthorization = true;
   const headers = buildHttpRequestHeaders(
@@ -309,6 +337,9 @@ async function httpGet(
           throw new HttpSsrfError("too many redirects");
         }
         const next = nextRedirectUrl(current, response.headers.get("location"));
+        if (deps.chips) {
+          assertHttpChipsOrigin(next);
+        }
         if (next.origin !== current.origin) {
           includeAuthorization = false;
         }
@@ -527,6 +558,17 @@ export function parseJsonBody(body: string): unknown {
   const stripped = body.replace(/^\uFEFF/, "");
   try {
     return JSON.parse(stripped) as unknown;
+  } catch (cause: unknown) {
+    throw new HttpClientError("fail_widget", "invalid json", undefined, {
+      cause,
+      code: "invalid_json",
+    });
+  }
+}
+
+function parseFetchedDump(parsed: unknown, chips: boolean): unknown {
+  try {
+    return chips ? parseRawBadgeJson(parsed) : parseHttpJsonDump(parsed);
   } catch (cause: unknown) {
     throw new HttpClientError("fail_widget", "invalid json", undefined, {
       cause,

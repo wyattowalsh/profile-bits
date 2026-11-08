@@ -6,7 +6,10 @@ import {
   DEFAULT_GENERATE_REQUEST,
   GENERATE_PLUGIN_ID,
 } from "@/src/generate/shell";
-import { PREVIEW_WIDGET_IDS } from "@/src/preview/types";
+import {
+  PREVIEW_GITHUB_WIDGET_IDS,
+  PREVIEW_WIDGET_IDS,
+} from "@/src/preview/types";
 import GenerateGitHubPage, {
   GITHUB_GENERATE_HREF,
   githubPackRequest,
@@ -25,15 +28,24 @@ describe("GET /generate/github", () => {
     expect(source).not.toContain("source-drop");
     expect(source).not.toContain("code-rail");
     expect(source).not.toContain("export-workflow");
+    expect(source).toContain("PREVIEW_GITHUB_WIDGET_IDS");
+    expect(source).not.toContain("PREVIEW_WIDGET_IDS");
     expect(source).not.toMatch(/\byaml\b/i);
     expect(source).not.toMatch(/\bwakatime\b/i);
     expect(source).not.toMatch(/\brss\b/i);
   });
 
-  it("locks the pack request to v0 github", () => {
+  it("locks the pack request to github widgets only", () => {
     expect(GENERATE_PLUGIN_ID).toBe("github");
     expect(GITHUB_GENERATE_HREF).toBe("/generate/github");
-    expect(PREVIEW_WIDGET_IDS).toEqual(["demo", "stats", "languages", "repo"]);
+    expect(PREVIEW_GITHUB_WIDGET_IDS).toEqual([
+      "demo",
+      "stats",
+      "languages",
+      "repo",
+    ]);
+    expect(PREVIEW_WIDGET_IDS).not.toEqual(PREVIEW_GITHUB_WIDGET_IDS);
+    expect(PREVIEW_GITHUB_WIDGET_IDS).not.toContain("chips");
     expect(githubPackRequest()).toEqual({
       ...DEFAULT_GENERATE_REQUEST,
       scope: "plugin",
@@ -50,9 +62,11 @@ describe("GET /generate/github", () => {
     expect(html).toContain('data-href="/generate/github"');
     expect(html).toContain("<h2>github</h2>");
     expect(html).toContain("<code>github</code>");
-    for (const widget of PREVIEW_WIDGET_IDS) {
+    for (const widget of PREVIEW_GITHUB_WIDGET_IDS) {
       expect(html).toContain(`<code>${widget}</code>`);
     }
+    expect(html).not.toContain("<code>coding</code>");
+    expect(html).not.toContain("<code>chips</code>");
     expect(html).toContain("Download");
     expect(html).toContain("Share");
     expect(html).not.toContain("wakatime");

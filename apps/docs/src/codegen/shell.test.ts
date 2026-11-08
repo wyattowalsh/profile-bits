@@ -1,9 +1,22 @@
 import { readFile } from "node:fs/promises";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { COPY_BUTTON_LABEL } from "../preview/copy-button";
-import { PREVIEW_OUTPUT_FORMATS, PREVIEW_WIDGET_IDS } from "../preview/types";
+import {
+  PREVIEW_GITHUB_WIDGET_IDS,
+  PREVIEW_HTTP_WIDGET_IDS,
+  PREVIEW_OUTPUT_FORMATS,
+  PREVIEW_PLUGIN_IDS,
+  PREVIEW_RSS_WIDGET_IDS,
+  PREVIEW_WAKATIME_WIDGET_IDS,
+  type PreviewPluginId,
+} from "../preview/types";
+
+const navigation = vi.hoisted(() => ({
+  pathname: "/playground/github",
+  push: vi.fn(),
+}));
 
 vi.mock("next/link", () => ({
   default: ({
@@ -17,14 +30,17 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/playground/github",
+  usePathname: () => navigation.pathname,
   useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: navigation.push }),
 }));
 
 import {
   GENERATE_BUTTON_LABEL,
   PLAYGROUND_PLUGIN,
   PlaygroundShell,
+  playgroundHref,
+  pluginFromPathname,
   widgetFromPathname,
 } from "./shell";
 
@@ -46,8 +62,32 @@ describe("playground layout (server)", () => {
   });
 });
 
+describe("pluginFromPathname", () => {
+  it("honors the route pack and falls back to github", () => {
+    expect(pluginFromPathname("/playground")).toBe("github");
+    expect(pluginFromPathname("/playground/github")).toBe("github");
+    expect(pluginFromPathname("/playground/wakatime")).toBe("wakatime");
+    expect(pluginFromPathname("/playground/rss")).toBe("rss");
+    expect(pluginFromPathname("/playground/http")).toBe("http");
+    expect(pluginFromPathname("/playground/github/stats")).toBe("github");
+    expect(pluginFromPathname("/playground/wakatime/coding")).toBe("wakatime");
+    expect(pluginFromPathname("/playground/chess")).toBe("github");
+    expect(PLAYGROUND_PLUGIN).toBe("github");
+  });
+});
+
+describe("playgroundHref", () => {
+  it("builds pack and widget playground paths", () => {
+    expect(playgroundHref("github")).toBe("/playground/github");
+    expect(playgroundHref("wakatime")).toBe("/playground/wakatime");
+    expect(playgroundHref("rss", "feed")).toBe("/playground/rss/feed");
+    expect(playgroundHref("http", "chips")).toBe("/playground/http/chips");
+    expect(playgroundHref("github", "coding")).toBe("/playground/github");
+  });
+});
+
 describe("widgetFromPathname", () => {
-  it("reads v0 github widget ids from the playground path", () => {
+  it("reads pack-local widget ids from the playground path", () => {
     expect(widgetFromPathname("/playground/github")).toBeUndefined();
     expect(widgetFromPathname("/playground/github/demo")).toBe("demo");
     expect(widgetFromPathname("/playground/github/stats")).toBe("stats");
@@ -56,10 +96,20 @@ describe("widgetFromPathname", () => {
     );
     expect(widgetFromPathname("/playground/github/repo")).toBe("repo");
     expect(widgetFromPathname("/playground/github/coding")).toBeUndefined();
+    expect(widgetFromPathname("/playground/wakatime/coding")).toBe("coding");
+    expect(widgetFromPathname("/playground/rss/feed")).toBe("feed");
+    expect(widgetFromPathname("/playground/http/json")).toBe("json");
+    expect(widgetFromPathname("/playground/http/chips")).toBe("chips");
+    expect(widgetFromPathname("/playground/http/repo")).toBeUndefined();
   });
 });
 
 describe("PlaygroundShell (client island)", () => {
+  beforeEach(() => {
+    navigation.pathname = "/playground/github";
+    navigation.push.mockReset();
+  });
+
   it("declares a client module that statically imports sibling chrome", async () => {
     const source = await readFile(SHELL_URL, "utf8");
     const firstLine = source.split("\n").find((line) => line.trim() !== "");
@@ -78,8 +128,13 @@ describe("PlaygroundShell (client island)", () => {
     expect(source).toContain("FixturePill");
     expect(source).toContain("CrossLink");
     expect(source).toContain("usePreview");
+    expect(source).toContain("PREVIEW_PLUGIN_IDS");
+    expect(source).toContain("pluginFromPathname");
+    expect(source).toContain("widgetsForPlugin");
+    expect(source).toContain("defaultWidgetsForPlugin");
     expect(source).toContain(GENERATE_BUTTON_LABEL);
     expect(source).toContain("source-drop");
+    expect(source).not.toContain("plugin_github_stats_include");
     expect(source).not.toMatch(/\bDownload\b/);
     expect(source).not.toMatch(/\bShare\b/);
   });
@@ -106,15 +161,27 @@ describe("PlaygroundShell (client island)", () => {
     expect(html).toContain(COPY_BUTTON_LABEL);
     expect(html).toContain('value="github"');
     expect(html).toContain("/generate/github");
-    expect(html).not.toContain("wakatime");
-    expect(html).not.toContain("rss");
     expect(html.toLowerCase()).not.toContain("download");
     expect(html.toLowerCase()).not.toContain("share");
     expect(html).toContain("source-drop");
+    expect(html).toContain("plugins:");
+    expect(html).toContain("github:");
 
-    for (const widget of PREVIEW_WIDGET_IDS) {
+    for (const pack of PREVIEW_PLUGIN_IDS) {
+      expect(html).toContain(`value="${pack}"`);
+    }
+    expect((html.match(/<option /g) ?? []).length).toBe(4);
+
+    for (const widget of PREVIEW_GITHUB_WIDGET_IDS) {
       expect(html).toContain(`value="${widget}"`);
     }
+    expect(html).not.toContain('value="coding"');
+    expect(html).not.toContain('value="feed"');
+    expect(html).not.toContain('data-group="coding"');
+    expect(html).not.toContain('data-group="feed"');
+    expect(html).not.toContain('data-group="json"');
+    expect(html).not.toContain('data-group="chips"');
+    expect(html).not.toContain("plugin_github_stats_include");
     for (const format of PREVIEW_OUTPUT_FORMATS) {
       expect(html).toContain(`value="${format}"`);
     }
@@ -123,6 +190,35 @@ describe("PlaygroundShell (client island)", () => {
     );
     expect(PLAYGROUND_PLUGIN).toBe("github");
   });
+
+  it.each([
+    ["wakatime", PREVIEW_WAKATIME_WIDGET_IDS, "coding", "wakatime:"] as const,
+    ["rss", PREVIEW_RSS_WIDGET_IDS, "feed", "rss:"] as const,
+    ["http", PREVIEW_HTTP_WIDGET_IDS, "chips", "http:"] as const,
+  ])(
+    "honors /playground/%s with pack-local widgets and plugins.%s yaml",
+    (plugin: PreviewPluginId, widgets, defaultWidget, rail) => {
+      navigation.pathname = `/playground/${plugin}`;
+      const html = renderToStaticMarkup(createElement(PlaygroundShell));
+
+      expect(html).toContain(`data-plugin="${plugin}"`);
+      expect(html).toContain(`Playground · ${plugin}`);
+      expect(html).toContain(`/generate/${plugin}`);
+      expect(html).toContain(rail);
+      expect(html).toContain(`${defaultWidget}:`);
+      for (const pack of PREVIEW_PLUGIN_IDS) {
+        expect(html).toContain(`value="${pack}"`);
+      }
+      for (const widget of widgets) {
+        expect(html).toContain(`value="${widget}"`);
+      }
+      expect(html).not.toContain('value="demo"');
+      expect(html).not.toContain('data-group="demo"');
+      expect(html).not.toContain("plugin_wakatime");
+      expect(html).not.toContain("plugin_rss");
+      expect(html).not.toContain("plugin_http");
+    },
+  );
 
   it("renders children into the shell", () => {
     const html = renderToStaticMarkup(

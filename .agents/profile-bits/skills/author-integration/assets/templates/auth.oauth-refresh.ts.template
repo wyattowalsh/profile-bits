@@ -1,0 +1,138 @@
+/**
+ * Destination: packages/integrations/src/{{id}}/auth.ts
+ * Scheme oauth-refresh. Catalog auth required. Missing refresh token or
+ * client credentials fails the job. Resource Authorization is Bearer
+ * access token after grant_type=refresh_token. Never query-string key.
+ * Client id/secret are named env, not yaml. Never decideActionToken.
+ */
+import type { AuthDecision, AuthRequirement } from "@profile-bits/core";
+import { isMissingToken } from "@profile-bits/core";
+
+export const {{ID}}_AUTH = "{{auth}}" as const satisfies AuthRequirement;
+export const {{ID}}_CACHE_AUTH = "bearer" as const;
+export const {{ID}}_CLIENT_ID_ENV = "{{ID}}_CLIENT_ID" as const;
+export const {{ID}}_CLIENT_SECRET_ENV = "{{ID}}_CLIENT_SECRET" as const;
+
+export type {{Id}}Token = string;
+
+export function is{{Id}}TokenMissing(
+  token: string | undefined | null,
+): boolean {
+  return isMissingToken(token);
+}
+
+export function is{{Id}}ClientIdMissing(
+  clientId: string | undefined | null,
+): boolean {
+  return isMissingToken(clientId);
+}
+
+export function is{{Id}}ClientSecretMissing(
+  clientSecret: string | undefined | null,
+): boolean {
+  return isMissingToken(clientSecret);
+}
+
+/**
+ * Refresh token is required only when the pack is on. Pack absent does
+ * not require credentials. Missing client id/secret with pack on is
+ * fail_job (same as a missing refresh token).
+ */
+export function decide{{Id}}Token(input: {
+  token: string | undefined | null;
+  clientId?: string | undefined | null;
+  clientSecret?: string | undefined | null;
+  packEnabled: boolean;
+}): AuthDecision {
+  if (!input.packEnabled) {
+    return "render";
+  }
+  if (
+    is{{Id}}TokenMissing(input.token) ||
+    is{{Id}}ClientIdMissing(input.clientId) ||
+    is{{Id}}ClientSecretMissing(input.clientSecret)
+  ) {
+    return "fail_job";
+  }
+  return "render";
+}
+
+/**
+ * Missing refresh token fails construct (fail_job). Do not send without
+ * a token exchange.
+ */
+export function assert{{Id}}ActionToken(
+  token: string | undefined | null,
+): void {
+  if (is{{Id}}TokenMissing(token)) {
+    throw new Error(
+      "{{id}}: missing token — fail_job; refusing refresh without a refresh token",
+    );
+  }
+}
+
+export function assert{{Id}}ClientCredentials(
+  clientId: string | undefined | null,
+  clientSecret: string | undefined | null,
+): void {
+  if (is{{Id}}ClientIdMissing(clientId) || is{{Id}}ClientSecretMissing(clientSecret)) {
+    throw new Error(
+      "{{id}}: missing client credentials — fail_job; refusing refresh without named env",
+    );
+  }
+}
+
+/** RFC Basic `base64(client_id + ":" + client_secret)` for the token POST. */
+export function {{id}}ClientBasicAuthorization(
+  clientId: string | undefined | null,
+  clientSecret: string | undefined | null,
+): Readonly<Record<string, string>> {
+  assert{{Id}}ClientCredentials(clientId, clientSecret);
+  const id = clientId?.trim() ?? "";
+  const secret = clientSecret?.trim() ?? "";
+  return {
+    Authorization: `Basic ${Buffer.from(`${id}:${secret}`, "utf8").toString("base64")}`,
+  };
+}
+
+export function {{id}}TokenRequestBody(
+  refreshToken: string | undefined | null,
+): string {
+  assert{{Id}}ActionToken(refreshToken);
+  const token = refreshToken?.trim() ?? "";
+  return new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: token,
+  }).toString();
+}
+
+/**
+ * Resource Authorization is Bearer **access** token. Never the refresh
+ * token. Never `{ Authorization: "" }`.
+ */
+export function {{id}}AuthorizationHeader(
+  accessToken: string | undefined | null,
+): Readonly<Record<string, string>> {
+  if (isMissingToken(accessToken)) {
+    return {};
+  }
+  return { Authorization: `Bearer ${accessToken?.trim() ?? ""}` };
+}
+
+export function {{id}}RequiresAuthorization(): boolean {
+  return true;
+}
+
+export function {{id}}Secrets(input: {
+  refreshToken?: string | undefined | null;
+  accessToken?: string | undefined | null;
+  clientSecret?: string | undefined | null;
+}): readonly string[] {
+  const secrets: string[] = [];
+  for (const value of [input.refreshToken, input.accessToken, input.clientSecret]) {
+    if (!isMissingToken(value)) {
+      secrets.push(value?.trim() ?? "");
+    }
+  }
+  return secrets;
+}

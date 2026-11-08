@@ -8,6 +8,7 @@ export class JsonJmesError extends Error {
   }
 }
 
+/** Widget-side JMESPath. MUST NOT run in the http client. */
 export function searchJson(data: unknown, expression: string): unknown {
   try {
     return search(data as never, expression);

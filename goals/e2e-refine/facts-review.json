@@ -1,0 +1,279 @@
+{
+  "stage": "facts",
+  "title": "profile-bits e2e refine facts",
+  "goalSlug": "e2e-refine",
+  "facts": [
+    {
+      "id": "bundle-parent",
+      "text": "goals/e2e-refine/ contains goal.md, facts.md, facts.meta.json, and plan.md as the parent package.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "bundle-plans",
+      "text": "goals/e2e-refine/plans/ has one markdown file per first-class workstream; nits live in backlog.md, not their own plan files.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "bundle-workflow",
+      "text": "The repo has .grok/workflows/e2e-refine.rhai that fans out independent workstreams with verification after /goal.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "waves",
+      "text": "Execution order is wave 1 docs/README/Marketplace, then wave 2 max-widen github/wakatime/rss/http in parallel, then wave 3 elbow new sources in parallel.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "openspec-slice",
+      "text": "Each workstream is its own OpenSpec change. New integration, pack, widget, and bit ids are OpenSpec-first. Existing docs-full-catalog-playground and marketplace-release are not rewritten except to finish their tasks.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "docs-four-packs",
+      "text": "The docs playground serves /playground/{github,wakatime,rss,http} and [widget] routes. The plugin selector lists four packs. Yaml rails emit plugins.<pack>. /playground still redirects to /playground/github and that landing page source does not mention other pack paths.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "docs-http-shell",
+      "text": " /playground/http uses the shared PlaygroundShell with json and chips tuners (fixtures default), not a chips-only sidecar.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "docs-github-ids",
+      "text": "The github playground and github generate routes use PREVIEW_GITHUB_WIDGET_IDS only (demo, stats, languages, repo). They do not list coding, feed, json, or chips.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "docs-preview-dispatch",
+      "text": "POST /api/preview dispatches coding, feed, json, and chips with non-empty fixtures. GET /api/preview stays 405. POST omits token fields. Missing GitHub App token uses fixtures and never sends unauthenticated GitHub.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "docs-live-scrape",
+      "text": "Docs preview defaults to fixtures. Optional live includes GitHub App token, WakaTime preview env, rss/http SSRF for a visitor https URL, and full HTML scrape of a visitor https URL through the same SSRF gates. POST /api/preview remains layout preview, not a public embed API.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "docs-catalog",
+      "text": "/generate/catalog lists four packs and eight widgets. /generate/{wakatime,rss,http} exist with widget pages. Pack pages show bitsUsed for that pack.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "docs-bits-themes",
+      "text": "The bits index shows samples, not names-only. /generate/themes lists all 47 NAMED_THEME_IDS via listFamilies.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "docs-honesty",
+      "text": "DESIGN.md and apps/docs/AGENTS.md describe all four packs on playground and catalog, and state that preview is not an embed API.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "docs-generate-check",
+      "text": "just generate-docs --check and the docs-fields snapshot include coding, feed, json, and chips groups. Token fields stay omitted. No flattened Action inputs are added.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "readme-stills",
+      "text": "Root README embeds stills only from .github/assets with picture/prefers-color-scheme pairs. It does not reference docs/assets/readme/.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "readme-eight",
+      "text": "The README widget gallery includes all eight first-party widgets as dark/light stills: github-demo, github-stats, github-languages, github-repo, wakatime-coding, rss-feed, http-json, http-chips.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "readme-pin",
+      "text": "Consumer uses: snippets pin wyattowalsh/profile-bits@v1 and never main. Marketplace body is action/README.md. Action write paths that touch README.md fail with Action must not patch README.md.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "readme-output-pair",
+      "text": "Root README documents output_pair: false as the selected flavor, matching action/README.md, not as always-dark.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "marketplace-operator",
+      "text": "A plan records leftover Marketplace operator steps: attach .github/assets stills in the listing UI, publish from orphan @v1 via release.yml workflow_dispatch, confirm live uses: wyattowalsh/profile-bits@v1 and output_action commit.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": false,
+      "automatedVerification": false
+    },
+    {
+      "id": "dump-cache",
+      "text": "For each integration, the cached typed payload is a complete dump of available source data from allowed endpoints. Widgets only read that cache. Secrets never persist. Include/limit/jmespath filters run in the widget, not by dropping fields at fetch.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "widen-github",
+      "text": "GitHub typed payload includes the already-fetched REST and GraphQL JSON (user, owner repos, repo GET, language nodes, contributions calendar when capable). Extra authenticated endpoints may be added. REST /languages stays forbidden. Empty github_token still fails the job. Filter-forks/archived-then-cap-500 stays.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "widen-wakatime",
+      "text": "WakaTime cache is the full stats data object including daily averages, best_day, categories, machines, dependencies, range metadata, and per-slice percent/text. Extra allowed authenticated endpoints include all_time_since_today, bounded summaries, statusbar/today, and goals. Include/limit stay on the coding widget. RFC Basic auth stays. Email and API keys never enter the model.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "widen-rss",
+      "text": "RSS cache types feed metadata plus item id, content/summary, authors, categories, updated, and enclosures. SSRF, 1 MiB, no GitHub hosts, and no URL userinfo stay. The feed widget may still render a title/url/date slice.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "widen-http",
+      "text": "HTTP json keeps the full JSON value in the model. Chips cache raw badge JSON (label, message, color, name, value, link); normalize stays a widget reader. Chips GETs stay auth none and origin-allowlisted.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "html-scrape",
+      "text": "When a source has no JSON API, the integration may fetch public HTML over https through SSRF, parse it with fixtures and mocked HTTP tests, and map extracted fields into the typed dump. Playwright is not in the Action runtime.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "auth-tokens",
+      "text": "New required-auth sources add optional Action *_token inputs with no default (wakatime_token pattern) plus yaml token_env (http pattern). just generate-action --check stays green. No plugin_*_*_* inputs. No plugin_wakatime/rss/http bools.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "author-call",
+      "text": "Wave 2 extends live integration clients; it does not run author-integration add on ids that already have client.ts. Wave 3 runs author ideate then author-integration add for new ids, then author-plugin, then author-widget, then author-bit only for OpenSpec-approved new primitives.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "elbow",
+      "text": "Wave 3 ranks new integrations by README-widget usefulness after dropping anything github, wakatime, rss, or http json/chips already cover. N is the last source before a clear usefulness drop. Each of the N sources gets integration + pack + widgets + bits plans.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": false
+    },
+    {
+      "id": "bits-12th",
+      "text": "New shared bits are OpenSpec-first. Candidates that help README cards include Icon, Grid, List, Time, and Image. Dialog, Toast, Popover, Dropdown, and Command are refused in packages/bits.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "palettes",
+      "text": "Wave 1 documents and playgrounds all 47 named themes. A new palette family is planned only if a widget needs a named flavor that is not in the catalog.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "reuse-widgets",
+      "text": "Plans include extra widgets on existing packs that reuse widened caches (github top-repos from the owner crawl, wakatime slice cards, rss dated latest) with OpenSpec for new widget ids.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "locks",
+      "text": "Never tag v1 on main. dist/ stays gitignored on main. Never unauthenticated GitHub. Never REST /languages. Languages stay GraphQL nodes(ids:) batches of 100. CLI output_action default stays none; Action Marketplace default stays commit.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "quality-green",
+      "text": "After wave 1 docs-fields work, just lint, targeted vitest, just generate-action --check, and just generate-docs --check pass. add-github-repo-widget is archived into main specs if still sitting complete.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "setup-done",
+      "text": "This goal is done when the package and workflow exist, facts are accepted, each first-class plan names files/systems and verification, Plannotator has approved plan.md, and /goal goals/e2e-refine/goal.md can start wave 1.",
+      "accepted": false,
+      "removed": false,
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    }
+  ]
+}

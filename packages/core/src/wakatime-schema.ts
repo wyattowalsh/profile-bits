@@ -98,8 +98,48 @@ export const CodingOptionsSchema = z.strictObject({
 });
 export type CodingOptions = z.infer<typeof CodingOptionsSchema>;
 
+export const EDITORS_FILENAME_DEFAULT = "editors";
+export const PROJECTS_FILENAME_DEFAULT = "projects";
+export const OS_FILENAME_DEFAULT = "os";
+export const LANGS_FILENAME_DEFAULT = "langs";
+
+function wakatimeSliceOptionsSchema(filenameDefault: string) {
+  return z.strictObject({
+    filename: z.string().default(filenameDefault),
+    range: CodingRangeSchema.default(CODING_RANGE_DEFAULT),
+    limit: z
+      .int()
+      .min(CODING_LIMIT_MIN)
+      .max(CODING_LIMIT_MAX)
+      .default(CODING_LIMIT_DEFAULT),
+    animate: z.boolean().default(CODING_ANIMATE_DEFAULT),
+  });
+}
+
+export const EditorsOptionsSchema = wakatimeSliceOptionsSchema(
+  EDITORS_FILENAME_DEFAULT,
+);
+export type EditorsOptions = z.infer<typeof EditorsOptionsSchema>;
+
+export const ProjectsOptionsSchema = wakatimeSliceOptionsSchema(
+  PROJECTS_FILENAME_DEFAULT,
+);
+export type ProjectsOptions = z.infer<typeof ProjectsOptionsSchema>;
+
+export const OsOptionsSchema = wakatimeSliceOptionsSchema(OS_FILENAME_DEFAULT);
+export type OsOptions = z.infer<typeof OsOptionsSchema>;
+
+export const LangsOptionsSchema = wakatimeSliceOptionsSchema(
+  LANGS_FILENAME_DEFAULT,
+);
+export type LangsOptions = z.infer<typeof LangsOptionsSchema>;
+
 export const WakatimeWidgetsConfigSchema = z.strictObject({
   coding: CodingOptionsSchema.optional(),
+  editors: EditorsOptionsSchema.optional(),
+  projects: ProjectsOptionsSchema.optional(),
+  os: OsOptionsSchema.optional(),
+  langs: LangsOptionsSchema.optional(),
 });
 export type WakatimeWidgetsConfig = z.infer<typeof WakatimeWidgetsConfigSchema>;
 

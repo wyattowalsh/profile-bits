@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { CHIPS_OPTION_DEFAULTS, type ChipsOptions } from "@profile-bits/core";
 import {
   chipFixture,
@@ -15,6 +18,7 @@ import {
   ChipsWidget,
   ChipsWidgetError,
   NO_CHIPS_DATA,
+  readChipsBadges,
   renderChipsFromClient,
   renderChipsFromPayloads,
   renderChipsSvg,
@@ -93,6 +97,40 @@ function chipsUrl(type: ChipsOptions["types"][number]): string {
 }
 
 describe("chips widget", () => {
+  it("reads raw badge JSON via normalize and leaves dump link/value", () => {
+    const dump = {
+      label: "npm",
+      value: "19.0.0",
+      link: "https://example.com",
+    };
+    const cached = { ...dump };
+    const badges = readChipsBadges([dump]);
+    expect(badges).toEqual([{ label: "npm", message: "19.0.0" }]);
+    expect(badges[0]).not.toHaveProperty("color");
+    expect(badges[0]).not.toHaveProperty("link");
+    expect(badges[0]).not.toHaveProperty("value");
+    expect(dump).toEqual(cached);
+    expect(dump).toMatchObject({
+      value: "19.0.0",
+      link: "https://example.com",
+    });
+  });
+
+  it("maps shields name/value dump to label/message/color for the template", () => {
+    const dump = chipFixture("shields", "npm");
+    expect(dump).toMatchObject({
+      name: "npm",
+      value: "v19.1.1",
+      label: "npm",
+      message: "v19.1.1",
+      color: "blue",
+    });
+    expect(readChipsBadges([dump])).toEqual([
+      { label: "npm", message: "v19.1.1", color: "blue" },
+    ]);
+    expect(dump).toMatchObject({ name: "npm", value: "v19.1.1" });
+  });
+
   it("renders fixture payloads without fetch", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const payloads = [
@@ -222,5 +260,55 @@ describe("chips widget", () => {
     expect(light).not.toEqual(dark);
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
+  });
+
+  it("ignores dump link as chrome and uses label/message/accent", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const dump = chipFixture("shieldcn", "npm");
+    expect(dump).toMatchObject({
+      value: "19.1.1",
+      link: "https://www.npmjs.com/package/react",
+    });
+    const node = (await fromJsx(
+      createElement(ChipsWidget, {
+        theme: "dark",
+        badges: readChipsBadges([dump]),
+      }),
+    )) as TakumiNode;
+    const texts = collectTexts(node);
+    expect(texts).toContain("npm");
+    expect(texts).toContain("19.1.1");
+    expect(texts.join(" ")).not.toContain("https://");
+    const messageHalf = findNode(
+      node,
+      (candidate) => candidate.text === "19.1.1",
+    );
+    expect(messageHalf?.style).toMatchObject({
+      color: readableInk(DARK_THEME.accent),
+      backgroundColor: DARK_THEME.accent,
+    });
+    expect(dump.link).toBe("https://www.npmjs.com/package/react");
+    expect(dump.value).toBe("19.1.1");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it("keeps the template on label/message/color without fetch or Stat", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const widgetSource = readFileSync(join(here, "widget.tsx"), "utf8");
+    const indexSource = readFileSync(join(here, "index.ts"), "utf8");
+    expect(widgetSource).toContain("label={badge.label}");
+    expect(widgetSource).toContain("message={badge.message}");
+    expect(widgetSource).toContain("badge.color");
+    expect(widgetSource).not.toContain("badge.link");
+    expect(widgetSource).not.toContain("badge.href");
+    expect(widgetSource).not.toContain("badge.value");
+    expect(widgetSource).not.toContain("badge.name");
+    expect(widgetSource).not.toContain("Stat");
+    expect(widgetSource).not.toMatch(/\bfetch\b/);
+    expect(indexSource).toContain("normalizeBadgeJson");
+    expect(indexSource).toContain("readChipsBadges");
+    expect(indexSource).not.toMatch(/plugin_[a-z]+_[a-z]+_/);
+    expect(indexSource).not.toMatch(/\bplaywright\b/i);
   });
 });

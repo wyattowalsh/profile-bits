@@ -2,21 +2,29 @@ import * as z from "zod";
 import {
   ACTION_USER_DEFAULT,
   ActionInputsSchema,
+  ChipsOptionsSchema,
   CONFIG_THEME_DEFAULT,
   ConfigSchema,
   DemoOptionsSchema,
+  FeedOptionsSchema,
+  JsonOptionsSchema,
   LanguagesOptionsSchema,
   RepoOptionsSchema,
   StatsOptionsSchema,
   ThemeSchema,
 } from "../types.ts";
+import { CodingOptionsSchema } from "../wakatime-schema.ts";
 
 export type PlaygroundFieldGroup =
   | "global"
   | "demo"
   | "stats"
   | "languages"
-  | "repo";
+  | "repo"
+  | "coding"
+  | "feed"
+  | "json"
+  | "chips";
 
 export type PlaygroundField = {
   path: string;
@@ -115,8 +123,7 @@ function fieldsFromObject(
 
 /**
  * Playground form fields derived from the yaml Zod shapes at runtime.
- * Playground chrome is github (`demo`, `stats`, `languages`, `repo`).
- * WakaTime coding tuners are fixtures/skip-live, not token fields here.
+ * Groups cover all first-party widgets. Token fields stay omitted.
  */
 export function getPlaygroundFields(): PlaygroundField[] {
   const fields: PlaygroundField[] = [];
@@ -148,6 +155,10 @@ export function getPlaygroundFields(): PlaygroundField[] {
   fields.push(...fieldsFromObject(StatsOptionsSchema, "stats"));
   fields.push(...fieldsFromObject(LanguagesOptionsSchema, "languages"));
   fields.push(...fieldsFromObject(RepoOptionsSchema, "repo"));
+  fields.push(...fieldsFromObject(CodingOptionsSchema, "coding"));
+  fields.push(...fieldsFromObject(FeedOptionsSchema, "feed"));
+  fields.push(...fieldsFromObject(JsonOptionsSchema, "json"));
+  fields.push(...fieldsFromObject(ChipsOptionsSchema, "chips"));
 
   return fields;
 }

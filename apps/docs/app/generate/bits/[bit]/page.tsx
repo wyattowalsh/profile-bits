@@ -6,7 +6,7 @@ import { CARD_HEIGHT, CARD_WIDTH } from "@/src/generate/constants";
 import { GENERATE_PATH_PREFIX } from "@/src/preview/permalink";
 import { isPreviewBitName } from "@/src/preview/types";
 
-type V0BitName = (typeof BIT_SAMPLE_IDS)[number];
+type BitSampleName = (typeof BIT_SAMPLE_IDS)[number];
 
 type BitPageParams = {
   bit: string;
@@ -71,8 +71,8 @@ const BIT_ISOLATOR_CSS = `
 }
 `;
 
-/** `/generate/bits/[bit]` — v0 bit names from T315s samples. */
-export function generateStaticParams(): { bit: V0BitName }[] {
+/** `/generate/bits/[bit]` — Frozen 11 plus README-card sample names. */
+export function generateStaticParams(): { bit: BitSampleName }[] {
   return BIT_SAMPLE_IDS.map((bit) => ({ bit }));
 }
 
@@ -87,8 +87,9 @@ export async function generateMetadata({
 }
 
 /**
- * Staged primitive for one v0 bit. Samples come from T315s; the island POSTs
- * `/api/preview` with `scope: "bit"` so the Theme+Frame card can render.
+ * Staged primitive for one sample bit. Samples come from bit-samples; the
+ * island POSTs `/api/preview` with `scope: "bit"` as layout preview (not an embed API)
+ * so the Theme+Frame card can render.
  */
 export default async function GenerateBitPage({ params }: BitPageProps) {
   const { bit } = await params;

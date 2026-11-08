@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
+  PREVIEW_PLUGIN_IDS,
   PREVIEW_TOKEN_QUERY_KEYS,
   type PreviewOptions,
   type PreviewRequest,
@@ -10,6 +11,8 @@ import {
 import {
   EXPORT_ACTION_USES,
   EXPORT_CONFIG_PATH,
+  EXPORT_FEED_SAMPLE_URL,
+  EXPORT_JSON_SAMPLE_URL,
   exportWorkflow,
 } from "./export-workflow";
 import {
@@ -102,6 +105,7 @@ describe("packEmitterState", () => {
       format: "svg",
       theme: "dark",
       output_pair: false,
+      plugin: "github",
       options: {
         demo: YAML_OPTIONS.demo,
         stats: YAML_OPTIONS.stats,
@@ -130,9 +134,52 @@ describe("packEmitterState", () => {
     });
 
     expect(state.enabled).toEqual(["stats"]);
+    expect(state.plugin).toBe("github");
     expect(state.format).toBe("png");
     expect(state.theme).toBe("light");
     expect(state.output_pair).toBe(true);
+  });
+
+  it.each(PREVIEW_PLUGIN_IDS)(
+    "carries route plugin %s onto ExportWorkflowState",
+    (plugin) => {
+      const state = packEmitterState({
+        scope: "plugin",
+        plugin,
+        options: {},
+        format: "svg",
+        theme: "dark",
+        output_pair: false,
+        user: "octocat",
+      });
+      expect(state.plugin).toBe(plugin);
+    },
+  );
+
+  it("maps coding/feed/json/chips options without token keys", () => {
+    const state = packEmitterState({
+      scope: "plugin",
+      plugin: "http",
+      options: {
+        json: { url: EXPORT_JSON_SAMPLE_URL },
+        chips: { preset: "shieldcn", types: ["npm"] },
+        feed: { url: EXPORT_FEED_SAMPLE_URL },
+        coding: { range: "last_7_days" },
+      },
+      format: "svg",
+      theme: "dark",
+      output_pair: false,
+      user: "octocat",
+    });
+
+    expect(state.plugin).toBe("http");
+    expect(state.options?.json?.url).toBe(EXPORT_JSON_SAMPLE_URL);
+    expect(state.options?.chips?.preset).toBe("shieldcn");
+    expect(state.options?.feed?.url).toBe(EXPORT_FEED_SAMPLE_URL);
+    expect(state.options?.coding?.range).toBe("last_7_days");
+    for (const key of PREVIEW_TOKEN_QUERY_KEYS) {
+      expect(state).not.toHaveProperty(key);
+    }
   });
 });
 
@@ -187,6 +234,54 @@ describe("PackEmitter", () => {
     expect(html.toLowerCase()).not.toContain("zip");
     expect(html).not.toContain('data-slot="copy-button"');
     expect(html).not.toContain('data-slot="code-rail"');
+  });
+
+  it("renders plugins.wakatime yaml rails for the wakatime pack", () => {
+    const html = renderedHtml({
+      scope: "plugin",
+      plugin: "wakatime",
+      options: {},
+      format: "svg",
+      theme: "dark",
+      output_pair: false,
+      user: "octocat",
+    });
+
+    expect(html).toContain("plugins:");
+    expect(html).toContain("wakatime:");
+    expect(html).toContain("coding:");
+    expect(html).not.toContain("plugin_wakatime");
+    expect(html).not.toContain("wakatime_token");
+  });
+
+  it("renders plugins.rss and plugins.http yaml rails", () => {
+    const rss = renderedHtml({
+      scope: "plugin",
+      plugin: "rss",
+      options: {},
+      format: "svg",
+      theme: "dark",
+      output_pair: false,
+      user: "octocat",
+    });
+    const http = renderedHtml({
+      scope: "plugin",
+      plugin: "http",
+      options: {},
+      format: "svg",
+      theme: "dark",
+      output_pair: false,
+      user: "octocat",
+    });
+
+    expect(rss).toContain("rss:");
+    expect(rss).toContain("feed:");
+    expect(rss).toContain(EXPORT_FEED_SAMPLE_URL);
+    expect(rss).not.toContain("plugin_rss");
+    expect(http).toContain("http:");
+    expect(http).toContain("chips:");
+    expect(http).not.toContain("plugin_http");
+    expect(http).not.toContain("http_token");
   });
 
   it("does not emit token literals from a token-bag request", () => {

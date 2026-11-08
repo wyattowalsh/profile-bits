@@ -1,0 +1,40 @@
+{
+  "data": {
+    "user": {
+      "contributionsCollection": {
+        "contributionCalendar": {
+          "totalContributions": 1600,
+          "weeks": [
+            {
+              "contributionDays": [
+                {
+                  "date": "2026-01-04",
+                  "contributionCount": 3,
+                  "weekday": 0
+                },
+                {
+                  "date": "2026-01-05",
+                  "contributionCount": 1,
+                  "weekday": 1
+                }
+              ]
+            },
+            {
+              "contributionDays": [
+                {
+                  "date": "2026-01-11",
+                  "contributionCount": 0,
+                  "weekday": 0
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "rateLimit": {
+      "cost": 1,
+      "remaining": 5000
+    }
+  }
+}

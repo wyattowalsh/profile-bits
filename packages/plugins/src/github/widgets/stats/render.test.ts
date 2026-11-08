@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { githubDumpFromFixtures } from "../github-dump.fixture.js";
 import { renderStatsSvg } from "./render.js";
 import { statsViewModel } from "./view-model.js";
 
@@ -32,6 +33,7 @@ describe("stats widget", () => {
   });
 
   it("renders svg without HTTP", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const svg = await renderStatsSvg({
       payload: {
         user: { login: "octocat" },
@@ -39,6 +41,16 @@ describe("stats widget", () => {
       },
     });
     expect(svg).toMatch(/<svg\b/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it("renders a dump with extra keys without HTTP", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const svg = await renderStatsSvg({ payload: githubDumpFromFixtures() });
+    expect(svg).toMatch(/<svg\b/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 
   it("bakes mocha bg hex instead of Primer dark", async () => {

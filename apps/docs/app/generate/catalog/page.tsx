@@ -3,23 +3,33 @@ import { GENERATE_PATH_PREFIX } from "@/src/preview/permalink";
 import {
   PREVIEW_PLUGIN_IDS,
   PREVIEW_WIDGET_IDS,
+  PREVIEW_WIDGETS_BY_PLUGIN,
   type PreviewPluginId,
   type PreviewWidgetId,
 } from "@/src/preview/types";
 
-/** v0 visual catalog pack. Do not add plugin ids. */
+/** Landing pack remains github (`PREVIEW_PLUGIN_IDS[0]`). */
 export const CATALOG_PLUGIN_ID: PreviewPluginId = PREVIEW_PLUGIN_IDS[0];
 
-/** v0 visual catalog widgets. */
+/** First-party packs listed on `/generate/catalog`. */
+export const CATALOG_PLUGIN_IDS = PREVIEW_PLUGIN_IDS;
+
+/** Eight first-party widgets. Per-pack lists stay on `PREVIEW_WIDGETS_BY_PLUGIN`. */
 export const CATALOG_WIDGET_IDS = PREVIEW_WIDGET_IDS;
 
 export const CATALOG_HREF = `${GENERATE_PATH_PREFIX}/catalog`;
-export const GITHUB_HREF = `${GENERATE_PATH_PREFIX}/${CATALOG_PLUGIN_ID}`;
+export const GITHUB_HREF = `${GENERATE_PATH_PREFIX}/github`;
+export const WAKATIME_HREF = `${GENERATE_PATH_PREFIX}/wakatime`;
+export const RSS_HREF = `${GENERATE_PATH_PREFIX}/rss`;
+export const HTTP_HREF = `${GENERATE_PATH_PREFIX}/http`;
 export const WIDGETS_HREF = `${GENERATE_PATH_PREFIX}/widgets`;
 export const BITS_HREF = `${GENERATE_PATH_PREFIX}/bits`;
 
 export const CATALOG_INDEX_HREFS = [
   GITHUB_HREF,
+  WAKATIME_HREF,
+  RSS_HREF,
+  HTTP_HREF,
   WIDGETS_HREF,
   BITS_HREF,
 ] as const;
@@ -33,22 +43,37 @@ export type CatalogEntry = {
   label: string;
 };
 
-/** github pack plus demo/stats/languages/repo. No extra plugins. */
+export function packHref(plugin: PreviewPluginId): string {
+  return `${GENERATE_PATH_PREFIX}/${plugin}`;
+}
+
+export function catalogWidgetHref(
+  plugin: PreviewPluginId,
+  widget: PreviewWidgetId,
+): string {
+  return `${GENERATE_PATH_PREFIX}/${plugin}/${widget}`;
+}
+
+/** Four packs plus eight widgets. Widget hrefs stay on their pack, not github. */
 export function catalogEntries(): CatalogEntry[] {
   return [
-    {
-      id: CATALOG_PLUGIN_ID,
-      kind: "plugin",
-      href: GITHUB_HREF,
-      label: `${CATALOG_PLUGIN_ID} pack`,
-    },
-    ...CATALOG_WIDGET_IDS.map(
-      (widget): CatalogEntry => ({
-        id: widget,
-        kind: "widget",
-        href: `${GITHUB_HREF}/${widget}`,
-        label: widget,
+    ...CATALOG_PLUGIN_IDS.map(
+      (plugin): CatalogEntry => ({
+        id: plugin,
+        kind: "plugin",
+        href: packHref(plugin),
+        label: `${plugin} pack`,
       }),
+    ),
+    ...CATALOG_PLUGIN_IDS.flatMap((plugin) =>
+      PREVIEW_WIDGETS_BY_PLUGIN[plugin].map(
+        (widget): CatalogEntry => ({
+          id: widget,
+          kind: "widget",
+          href: catalogWidgetHref(plugin, widget),
+          label: widget,
+        }),
+      ),
     ),
   ];
 }
@@ -56,7 +81,7 @@ export function catalogEntries(): CatalogEntry[] {
 export const metadata: Metadata = {
   title: "Catalog",
   description:
-    "v0 visual catalog: github pack plus widgets demo, stats, languages, and repo.",
+    "First-party visual catalog: github, wakatime, rss, and http packs plus widgets demo, stats, languages, repo, coding, feed, json, and chips.",
 };
 
 const CATALOG_CSS = `
@@ -113,18 +138,21 @@ const CATALOG_CSS = `
 
 const INDEX_LABELS: Record<(typeof CATALOG_INDEX_HREFS)[number], string> = {
   [GITHUB_HREF]: "github",
+  [WAKATIME_HREF]: "wakatime",
+  [RSS_HREF]: "rss",
+  [HTTP_HREF]: "http",
   [WIDGETS_HREF]: "widgets",
   [BITS_HREF]: "bits",
 };
 
-/** `/generate/catalog` — v0 visual catalog for the github pack. */
+/** `/generate/catalog` — first-party visual gallery for all four packs. */
 export default function GenerateCatalogPage() {
   const entries = catalogEntries();
 
   return (
     <nav
       data-slot="generate-catalog"
-      data-plugin={CATALOG_PLUGIN_ID}
+      data-plugins={CATALOG_PLUGIN_IDS.join(" ")}
       data-href={CATALOG_HREF}
       aria-labelledby="generate-catalog-heading"
     >
@@ -135,7 +163,10 @@ export default function GenerateCatalogPage() {
         Catalog
       </h2>
       <p data-slot="generate-catalog-lede">
-        First-party visual gallery for the <code>{CATALOG_PLUGIN_ID}</code> pack
+        First-party visual gallery for packs{" "}
+        {CATALOG_PLUGIN_IDS.map((id) => (
+          <code key={id}>{id}</code>
+        ))}{" "}
         (
         {CATALOG_WIDGET_IDS.map((id) => (
           <code key={id}>{id}</code>

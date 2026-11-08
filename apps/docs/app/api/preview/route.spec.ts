@@ -227,14 +227,14 @@ describe("POST /api/preview", () => {
     const unknownPlugin = await POST(
       postRequest({
         ...PREVIEW_BODY,
-        plugin: "wakatime",
+        plugin: "spotify",
       }),
     );
     const unknownWidget = await POST(
       postRequest({
         scope: "widget",
         plugin: "github",
-        widget: "coding",
+        widget: "heatmap",
         options: {},
         format: "svg",
         theme: "dark",
@@ -248,14 +248,8 @@ describe("POST /api/preview", () => {
     expect(mocks.renderPreview).not.toHaveBeenCalled();
   });
 
-  it("returns 400 for plugin http and widgets chips|json", async () => {
-    const pluginHttp = await POST(
-      postRequest({
-        ...PREVIEW_BODY,
-        plugin: "http",
-      }),
-    );
-    const widgetChips = await POST(
+  it("returns 400 when widget does not belong to plugin", async () => {
+    const githubChips = await POST(
       postRequest({
         scope: "widget",
         plugin: "github",
@@ -267,7 +261,7 @@ describe("POST /api/preview", () => {
         user: "octocat",
       }),
     );
-    const widgetJson = await POST(
+    const githubJson = await POST(
       postRequest({
         scope: "widget",
         plugin: "github",
@@ -279,14 +273,72 @@ describe("POST /api/preview", () => {
         user: "octocat",
       }),
     );
+    const githubCoding = await POST(
+      postRequest({
+        scope: "widget",
+        plugin: "github",
+        widget: "coding",
+        options: {},
+        format: "svg",
+        theme: "dark",
+        output_pair: false,
+        user: "octocat",
+      }),
+    );
 
-    expect(pluginHttp.status).toBe(400);
-    expect(widgetChips.status).toBe(400);
-    expect(widgetJson.status).toBe(400);
-    expect(await pluginHttp.json()).toEqual({ error: "Invalid preview body" });
-    expect(pluginHttp.headers.get("Cache-Control")).toBe("no-store");
-    expect(pluginHttp.headers.get("X-Robots-Tag")).toBe("noindex");
+    expect(githubChips.status).toBe(400);
+    expect(githubJson.status).toBe(400);
+    expect(githubCoding.status).toBe(400);
+    expect(await githubChips.json()).toEqual({ error: "Invalid preview body" });
+    expect(githubChips.headers.get("Cache-Control")).toBe("no-store");
+    expect(githubChips.headers.get("X-Robots-Tag")).toBe("noindex");
     expect(mocks.renderPreview).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["wakatime", "coding"],
+    ["rss", "feed"],
+    ["http", "json"],
+    ["http", "chips"],
+  ] as const)(
+    "forwards POST plugin %s widget %s to renderPreview",
+    async (plugin, widget) => {
+      const body = {
+        scope: "widget" as const,
+        plugin,
+        widget,
+        options: {},
+        format: "svg" as const,
+        theme: "dark" as const,
+        output_pair: false,
+        user: "octocat",
+      };
+      const response = await POST(postRequest(body));
+      const forwarded = mocks.renderPreview.mock.calls[0]?.[0];
+
+      expect(response.status).toBe(200);
+      expect(forwarded).toEqual(body);
+      expect(forwarded).not.toHaveProperty("github_token");
+      expect(forwarded).not.toHaveProperty("wakatime_token");
+      expect(forwarded).not.toHaveProperty("http_token");
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
+    },
+  );
+
+  it("accepts plugin-scope http/wakatime/rss", async () => {
+    for (const plugin of ["wakatime", "rss", "http"] as const) {
+      mocks.renderPreview.mockClear();
+      const body = {
+        ...PREVIEW_BODY,
+        plugin,
+      };
+      const response = await POST(postRequest(body));
+      expect(response.status).toBe(200);
+      expect(mocks.renderPreview).toHaveBeenCalledWith(
+        expect.objectContaining({ scope: "plugin", plugin }),
+      );
+    }
   });
 
   it("returns 400 when required fields are missing", async () => {

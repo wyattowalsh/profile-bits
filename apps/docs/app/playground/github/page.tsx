@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PLAYGROUND_PLUGIN } from "@/src/codegen/constants";
 import { PlaygroundShell } from "@/src/codegen/shell";
-import { PREVIEW_WIDGET_IDS } from "@/src/preview/types";
+import { PREVIEW_GITHUB_WIDGET_IDS } from "@/src/preview/types";
 
 /** Canonical codegen playground for the v0 github pack. */
 export const GITHUB_PLAYGROUND_HREF = `/playground/${PLAYGROUND_PLUGIN}`;
@@ -9,14 +9,14 @@ export const GITHUB_PLAYGROUND_HREF = `/playground/${PLAYGROUND_PLUGIN}`;
 /** PlaygroundShell is mounted by `app/playground/layout.tsx` (Suspense). */
 export const GITHUB_PLAYGROUND_SHELL = PlaygroundShell;
 
-export const GITHUB_WIDGET_IDS = PREVIEW_WIDGET_IDS;
+export const GITHUB_WIDGET_IDS = PREVIEW_GITHUB_WIDGET_IDS;
 
 export const PRIMARY_CTA = "Copy";
 
 export const metadata: Metadata = {
   title: "Playground · github",
   description:
-    "Codegen playground for the github pack (demo, stats, languages). Primary action is Copy.",
+    "Codegen playground for the github pack (demo, stats, languages, repo). Primary action is Copy.",
 };
 
 /**

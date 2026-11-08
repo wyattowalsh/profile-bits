@@ -3,7 +3,7 @@
 Load when scaffolding `auth.ts` or deciding token / capability behavior. Reuse `packages/core/src/auth-policy.ts`. Do not fork a second matrix.
 
 There is **no** default `auth.ts.template`. Copy **one** scheme file from the
-SKILL four-file scheme→filename table onto
+SKILL six-file scheme→filename table onto
 `packages/integrations/src/<id>/auth.ts` only when dest is empty or new. Do
 not interpolate `auth.{{scheme}}.ts.template` as a path. If dest `client.ts`
 exists, **stop**. Never omit `src/` under `packages/integrations/`. Refuse
@@ -27,17 +27,24 @@ Today’s snapshot (header/fail is not in `types.ts`):
 | `wakatime` | `required` | `wakatime-basic` | RFC Basic `base64(api_key:)`. Never Bearer. Never `decideActionToken`. |
 | `rss` | `none` | `none` | No `Authorization`. |
 | `http` | `optional` | `http-optional` | Unset sends no `Authorization`. Whitespace is `fail_widget` (not `fail_job`). Never `decideActionToken`. |
+| `spotify` | `required` | `oauth-refresh` | Refresh token, then `Authorization: Bearer` access token. Client id/secret are named env, not yaml. Never `?key=`. Never `decideActionToken`. |
+| `leetcode` | `none` | `none` | GraphQL POST. No `Authorization`. |
+| `chesscom` | `none` | `none` | No `Authorization`. |
+| `lichess` | `none` | `none` | No `Authorization`. |
+| `steam` | `required` | `query-key` | Inject `?key=` at send time. Never Authorization Bearer. Secret stays out of the cache key. |
 
 Completing an id already in `FIRST_PARTY_INTEGRATION_IDS` is allowed. A new
 id needs OpenSpec first (OpenSpec must name `{{scheme}}` in
-`{none, github-bearer, wakatime-basic, http-optional}`). Copy that named
-file from the four-file list. Unknown **scheme** **stops**. A new id with a
+`{none, github-bearer, wakatime-basic, http-optional, query-key, oauth-refresh}`).
+Copy that named file from the six-file list. Unknown **scheme** (including
+`oauth2`) **stops**. Do not invent `auth.oauth2.ts.template`. A new id with a
 named allowed scheme does **not** stop. Do not infer `github-bearer` from
 catalog `optional`. Do not create a second pack for an id already in
 `FIRST_PARTY_PLUGIN_IDS`. Templates are for **new** ids; do not emit a
 parallel `auth.ts` onto any live dest from the catalog (any dest with
 `client.ts`). Thin Action names: read `ActionInputsSchema` (optional
-`wakatime_token`, `http_token_env`); never invent `plugin_*_*_*`.
+`wakatime_token`, `http_token_env`, `spotify_token`, `steam_token`); never
+invent `plugin_*_*_*`.
 
 Shared export **names**: `{{ID}}_AUTH`, `is{{Id}}TokenMissing`,
 `assert{{Id}}ActionToken`, `{{id}}AuthorizationHeader`,
@@ -61,6 +68,11 @@ Copy the named scheme file for a **new** dest only. Do not emit a parallel
 | `github` | `optional` | `github-bearer` | **Not** unauthenticated. Action requires a non-empty token. Playground uses a GitHub App token or fixtures. Copy `auth.github-bearer.ts.template` for a **new** id only. |
 | `wakatime` | `required` | `wakatime-basic` | Missing API key fails the run. Never send the request without the secret. RFC Basic `base64(api_key:)`. Never Bearer. Never `?api_key=`. Never `decideActionToken`. Copy `auth.wakatime-basic.ts.template` for a **new** id only. |
 | `http` | `optional` | `http-optional` | Unset / `null` token sends no `Authorization`. `""` / whitespace is `fail_widget` before fetch, not `fail_job`. Else Bearer unless the value already has `Bearer` / `token` / `Basic`. Never `decideActionToken`. Copy `auth.http-optional.ts.template` for a **new** id only. Pack auth stays `optional` even when a request sets per-request `auth: "none"`. |
+| `spotify` | `required` | `oauth-refresh` | Pack on + missing refresh token or client credentials is `fail_job` before any request. Exchange `grant_type=refresh_token`, then send `Authorization: Bearer` the access token. Client id/secret are named env (`{{ID}}_CLIENT_ID` / `{{ID}}_CLIENT_SECRET`), not yaml. Never `?key=` or `?api_key=`. Never `decideActionToken`. Copy `auth.oauth-refresh.ts.template` for a **new** id only. |
+| `leetcode` | `none` | `none` | No `Authorization`. Copy `auth.none.ts.template` for a **new** none-kind id. |
+| `chesscom` | `none` | `none` | No `Authorization`. Copy `auth.none.ts.template` for a **new** none-kind id. |
+| `lichess` | `none` | `none` | No `Authorization`. Copy `auth.none.ts.template` for a **new** none-kind id. |
+| `steam` | `required` | `query-key` | Missing token is `fail_job` before any request. Inject `?key=` at send time. Authorization header is always `{}`. Never Bearer. Never put the secret in the cache key or logs. Copy `auth.query-key.ts.template` for a **new** id only. |
 
 `auth: optional` MUST NOT send a GitHub request without `Authorization`. Unauthenticated 60 requests/hour per IP MUST NEVER be used.
 
@@ -82,6 +94,22 @@ no-op; construct never throws. Unset / `null` → header `{}`. `""` /
 whitespace → `{ kind: "missing" }` and send/fetchJson throws `fail_widget`
 before fetch. Else Bearer unless the value already has `Bearer` / `token` /
 `Basic`. Never `fail_job` for a missing optional token.
+
+### query-key (`auth.query-key.ts.template`)
+
+`{{id}}RequiresAuthorization() === true`. Missing token fails construct
+(`fail_job`) before any request. `{{id}}AuthorizationHeader` returns `{}`.
+Inject `?key=` at send time. Never Authorization Bearer. Never cache the
+secret. Never `decideActionToken`.
+
+### oauth-refresh (`auth.oauth-refresh.ts.template`)
+
+`{{id}}RequiresAuthorization() === true`. Missing refresh token or client
+id/secret with the pack on is `fail_job`. Exchange `grant_type=refresh_token`,
+then send `Authorization: Bearer` the access token. Client id/secret are
+named env, not yaml. Never `?key=` or `?api_key=`. Never `decideActionToken`.
+`oauth2` is not this scheme and **stops**. Do not invent
+`auth.oauth2.ts.template`.
 
 ## Action token (github)
 

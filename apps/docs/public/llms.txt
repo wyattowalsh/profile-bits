@@ -14,19 +14,46 @@ Widget ids come from plugin/widget option schemas (not a hand-copied option tabl
 - `stats`
 - `languages`
 - `repo`
+- `top-repos`
+- `contributions`
 
 ### `wakatime`
 
 - `coding`
+- `editors`
+- `projects`
+- `os`
+- `langs`
 
 ### `rss`
 
 - `feed`
+- `latest`
 
 ### `http`
 
 - `json`
 - `chips`
+
+### `spotify`
+
+- `now-playing`
+- `top`
+
+### `leetcode`
+
+- `solved`
+- `heatmap`
+
+### `chess`
+
+- `ratings`
+- `game`
+
+### `steam`
+
+- `player`
+- `recent`
 
 ## Configuration
 

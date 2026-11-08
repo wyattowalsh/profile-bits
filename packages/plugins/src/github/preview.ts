@@ -9,9 +9,11 @@ import { repoViewModel } from "./widgets/repo/view-model.js";
 import { RepoWidget } from "./widgets/repo/widget.js";
 import { statsViewModel } from "./widgets/stats/view-model.js";
 import { StatsWidget } from "./widgets/stats/widget.js";
+import { topReposViewModel } from "./widgets/top-repos/view-model.js";
+import { TopReposWidget } from "./widgets/top-repos/widget.js";
 
 export type GithubPreviewTarget = {
-  widget?: "demo" | "stats" | "languages" | "repo";
+  widget?: "demo" | "stats" | "languages" | "repo" | "top-repos";
   theme?: WidgetTheme;
   payload?: unknown;
   options?: {
@@ -45,6 +47,9 @@ export type GithubPreviewTarget = {
       avatar?: boolean;
       repo?: string;
     };
+    "top-repos"?: {
+      limit?: number;
+    };
   };
   canContributions?: boolean;
 };
@@ -69,6 +74,17 @@ export function githubPreviewElement(input: GithubPreviewTarget): ReactElement {
   if (input.widget === "repo") {
     const model = repoViewModel(input.payload, input.options?.repo ?? {});
     return createElement(RepoWidget, { ...model, theme });
+  }
+  if (input.widget === "top-repos") {
+    const model = topReposViewModel(
+      input.payload,
+      input.options?.["top-repos"] ?? {},
+    );
+    return createElement(TopReposWidget, {
+      items: model.items,
+      empty: model.empty,
+      theme,
+    });
   }
   const demo = demoTextFromPayload(input.payload, input.options?.demo ?? {});
   return createElement(DemoWidget, { ...demo, theme });

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { githubDumpFromFixtures } from "../github-dump.fixture.js";
 import { renderLanguagesSvg } from "./render.js";
 import { languagesViewModel } from "./view-model.js";
 import { NO_LANGUAGE_DATA } from "./widget.js";
@@ -24,9 +25,22 @@ describe("languages widget", () => {
   });
 
   it("renders svg without HTTP", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const svg = await renderLanguagesSvg({
       payload: { languages: [{ name: "TS", bytes: 10 }] },
     });
     expect(svg).toMatch(/<svg\b/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it("renders a dump with extra language color/id keys without HTTP", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const svg = await renderLanguagesSvg({
+      payload: githubDumpFromFixtures(),
+    });
+    expect(svg).toMatch(/<svg\b/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });

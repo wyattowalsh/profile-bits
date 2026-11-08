@@ -33,7 +33,14 @@ describe("llms.txt stub from schemas", () => {
     const fromSchema = githubWidgetIdsFromSchemas();
 
     expect(Object.keys(GithubWidgetsConfigSchema.shape)).toEqual(fromSchema);
-    expect(fromSchema).toEqual(["demo", "stats", "languages", "repo"]);
+    expect(fromSchema).toEqual([
+      "demo",
+      "stats",
+      "languages",
+      "repo",
+      "top-repos",
+      "contributions",
+    ]);
 
     const txt = renderLlmsTxt();
     expect(txt).toContain("### `github`");
@@ -47,14 +54,29 @@ describe("llms.txt stub from schemas", () => {
     const entries = pluginWidgetEntriesFromSchemas();
 
     expect(Object.keys(PluginsConfigSchema.shape)).toEqual(plugins);
-    expect(plugins).toEqual(["github", "wakatime", "rss", "http"]);
+    expect(plugins).toEqual([
+      "github",
+      "wakatime",
+      "rss",
+      "http",
+      "spotify",
+      "leetcode",
+      "chess",
+      "steam",
+    ]);
     expect(renderLlmsTxt()).toContain("`github`");
 
     const wakatime = entries.find((entry) => entry.plugin === "wakatime");
     expect(wakatime?.widgets).toEqual(
       Object.keys(WakatimeWidgetsConfigSchema.shape),
     );
-    expect(wakatime?.widgets).toEqual(["coding"]);
+    expect(wakatime?.widgets).toEqual([
+      "coding",
+      "editors",
+      "projects",
+      "os",
+      "langs",
+    ]);
     expect(renderLlmsTxt()).toContain("### `wakatime`");
     for (const id of wakatime?.widgets ?? []) {
       expect(renderLlmsTxt()).toContain(`- \`${id}\``);
@@ -62,7 +84,7 @@ describe("llms.txt stub from schemas", () => {
 
     const rss = entries.find((entry) => entry.plugin === "rss");
     expect(rss?.widgets).toEqual(Object.keys(RssWidgetsConfigSchema.shape));
-    expect(rss?.widgets).toEqual(["feed"]);
+    expect(rss?.widgets).toEqual(["feed", "latest"]);
     expect(renderLlmsTxt()).toContain("### `rss`");
     for (const id of rss?.widgets ?? []) {
       expect(renderLlmsTxt()).toContain(`- \`${id}\``);

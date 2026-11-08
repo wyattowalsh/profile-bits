@@ -72,9 +72,11 @@ describe("GET /generate/bits/[bit]", () => {
     expect(source).not.toMatch(/yaml/i);
     expect(source).not.toMatch(/\bwakatime\b/i);
     expect(source).not.toMatch(/\brss\b/i);
+    expect(source).toContain("layout preview");
+    expect(source).toContain("not an embed API");
   });
 
-  it("generateStaticParams lists only v0 bit sample names", () => {
+  it("generateStaticParams lists Frozen 11 plus README-card bit sample names", () => {
     expect(generateStaticParams()).toEqual(
       BIT_SAMPLE_IDS.map((bit) => ({ bit })),
     );
@@ -91,7 +93,16 @@ describe("GET /generate/bits/[bit]", () => {
       "Chip",
       "Avatar",
       "Divider",
+      "Image",
+      "Heatmap",
+      "Board",
+      "Icon",
+      "Grid",
+      "List",
+      "Time",
     ]);
+    expect(PREVIEW_BIT_IDS).not.toContain("Cover");
+    expect(PREVIEW_BIT_IDS).not.toContain("Dialog");
   });
 
   it.each(PREVIEW_BIT_IDS)(
@@ -142,4 +153,17 @@ describe("GET /generate/bits/[bit]", () => {
     ).rejects.toThrow("NEXT_NOT_FOUND");
     expect(mocks.notFound).toHaveBeenCalledOnce();
   });
+
+  it.each(["Cover", "Dialog", "Toast", "Popover", "Dropdown", "Command"])(
+    "calls notFound() for refused bit name %s",
+    async (bit) => {
+      mocks.notFound.mockClear();
+      await expect(
+        GenerateBitPage({
+          params: Promise.resolve({ bit }),
+        }),
+      ).rejects.toThrow("NEXT_NOT_FOUND");
+      expect(mocks.notFound).toHaveBeenCalledOnce();
+    },
+  );
 });

@@ -1,4 +1,12 @@
 import type { StatsIncludeToken, StatsOptions } from "@profile-bits/core";
+import {
+  asDumpRecord,
+  dumpContributions,
+  dumpRepositories,
+  dumpUser,
+  numberOrUndef,
+  stringField,
+} from "../select-dump.js";
 import type { StatsChip } from "./widget.js";
 
 const LABELS: Record<StatsIncludeToken, string> = {
@@ -21,16 +29,16 @@ export function statsViewModel(
   chips: StatsChip[];
 } {
   const include = options.include ?? ["followers", "repos", "stars"];
-  const record = asRecord(payload);
-  const user = asRecord(record?.user) ?? record;
-  const stats = asRecord(record?.stats);
+  const record = asDumpRecord(payload);
+  const user = dumpUser(payload);
+  const stats = asDumpRecord(record?.stats);
   const login =
     stringField(user?.login) || stringField(record?.login) || "octocat";
   const avatarUrl =
     options.avatar === false
       ? undefined
       : stringField(user?.avatarUrl) || stringField(user?.avatar_url);
-  const values = valuesFromPayload(record, stats, user);
+  const values = valuesFromPayload(payload, stats, user);
   const chips: StatsChip[] = [];
   for (const token of include) {
     if (
@@ -52,37 +60,68 @@ export function statsViewModel(
 }
 
 function valuesFromPayload(
-  record: Record<string, unknown> | null,
+  payload: unknown,
   stats: Record<string, unknown> | null,
   user: Record<string, unknown> | null,
 ): Partial<Record<StatsIncludeToken, number>> {
-  const repos = asArray(record?.repositories);
+  const repos = dumpRepositories(payload);
   const stars = repos.reduce(
-    (sum, repo) => sum + numberField(asRecord(repo)?.stargazersCount),
+    (sum, repo) => sum + numberField(repo.stargazersCount),
     0,
   );
   const forks = repos.reduce(
-    (sum, repo) => sum + numberField(asRecord(repo)?.forksCount),
+    (sum, repo) => sum + numberField(repo.forksCount),
     0,
   );
-  return {
-    followers:
-      numberOrUndef(stats?.followers) ?? numberOrUndef(user?.followers),
-    following:
-      numberOrUndef(stats?.following) ?? numberOrUndef(user?.following),
-    repos:
-      numberOrUndef(stats?.repos) ??
+  const values: Partial<Record<StatsIncludeToken, number>> = {};
+  assignToken(
+    values,
+    "followers",
+    numberOrUndef(stats?.followers) ?? numberOrUndef(user?.followers),
+  );
+  assignToken(
+    values,
+    "following",
+    numberOrUndef(stats?.following) ?? numberOrUndef(user?.following),
+  );
+  assignToken(
+    values,
+    "repos",
+    numberOrUndef(stats?.repos) ??
       numberOrUndef(user?.publicRepos) ??
       (repos.length > 0 ? repos.length : undefined),
-    stars:
-      numberOrUndef(stats?.stars) ?? (repos.length > 0 ? stars : undefined),
-    forks:
-      numberOrUndef(stats?.forks) ?? (repos.length > 0 ? forks : undefined),
-    gists: numberOrUndef(stats?.gists) ?? numberOrUndef(user?.publicGists),
-    contributions:
-      numberOrUndef(record?.contributions) ??
-      numberOrUndef(stats?.contributions),
-  };
+  );
+  assignToken(
+    values,
+    "stars",
+    numberOrUndef(stats?.stars) ?? (repos.length > 0 ? stars : undefined),
+  );
+  assignToken(
+    values,
+    "forks",
+    numberOrUndef(stats?.forks) ?? (repos.length > 0 ? forks : undefined),
+  );
+  assignToken(
+    values,
+    "gists",
+    numberOrUndef(stats?.gists) ?? numberOrUndef(user?.publicGists),
+  );
+  assignToken(
+    values,
+    "contributions",
+    dumpContributions(payload) ?? numberOrUndef(stats?.contributions),
+  );
+  return values;
+}
+
+function assignToken(
+  values: Partial<Record<StatsIncludeToken, number>>,
+  token: StatsIncludeToken,
+  value: number | undefined,
+): void {
+  if (value !== undefined) {
+    values[token] = value;
+  }
 }
 
 function formatCount(value: number): string {
@@ -92,27 +131,6 @@ function formatCount(value: number): string {
   return String(value);
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value != null && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  return null;
-}
-
-function asArray(value: unknown): readonly unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function stringField(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
 function numberField(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-
-function numberOrUndef(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : undefined;
 }

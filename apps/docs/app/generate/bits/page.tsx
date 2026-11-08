@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { BitIsolator } from "@/src/generate/bit-isolator";
+import { CARD_HEIGHT, CARD_WIDTH } from "@/src/generate/constants";
 import { GENERATE_PATH_PREFIX } from "@/src/preview/permalink";
 import { PREVIEW_BIT_IDS, type PreviewBitName } from "@/src/preview/types";
 
@@ -17,7 +19,7 @@ export function bitHref(bit: (typeof PREVIEW_BIT_IDS)[number]): string {
   return `${BITS_HREF}/${bit}`;
 }
 
-/** Theme through Divider. Names and hrefs only while samples are absent. */
+/** Theme through Time. Each entry is a 480×160 sample, not a name-only pill. */
 export function bitEntries(): BitEntry[] {
   return BIT_IDS.map((bit) => ({
     id: bit,
@@ -29,7 +31,7 @@ export function bitEntries(): BitEntry[] {
 export const metadata: Metadata = {
   title: "Bits",
   description:
-    "v0 bit primitives: Theme, Frame, Stack, Row, Text, Muted, Stat, Bar, Chip, Avatar, Divider.",
+    "Bit primitives with 480×160 samples: Theme, Frame, Stack, Row, Text, Muted, Stat, Bar, Chip, Avatar, Divider, Image, Heatmap, Board, Icon, Grid, List, Time.",
 };
 
 const BITS_INDEX_CSS = `
@@ -49,37 +51,68 @@ const BITS_INDEX_CSS = `
   font-size: 0.875rem;
 }
 [data-slot="generate-bits-list"] {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  display: grid;
+  gap: 1.25rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+[data-slot="generate-bits-item"] {
+  display: grid;
+  gap: 0.5rem;
+}
 [data-slot="generate-bits-link"] {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--color-fd-border);
-  border-radius: 999px;
-  background: var(--color-fd-muted);
+  font-weight: 600;
   color: var(--color-fd-foreground);
-  padding: 0.25rem 0.75rem;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
   text-decoration: none;
 }
 [data-slot="generate-bits-link"]:hover,
 [data-slot="generate-bits-link"]:focus-visible {
-  background: var(--color-fd-accent);
-  color: var(--color-fd-accent-foreground);
+  text-decoration: underline;
 }
 [data-slot="generate-bits-link"]:focus-visible {
   outline: 2px solid var(--color-fd-ring, currentColor);
   outline-offset: 2px;
 }
+[data-slot="generate-bits-sample"] {
+  display: grid;
+}
+[data-slot="bit-stage"] {
+  box-sizing: border-box;
+  width: ${CARD_WIDTH}px;
+  height: ${CARD_HEIGHT}px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-fd-border);
+  border-radius: 0.375rem;
+  background: var(--color-fd-muted);
+  overflow: hidden;
+  position: relative;
+}
+[data-slot="bit-stage"] img,
+[data-slot="bit-stage"] [data-slot="skeleton"] {
+  display: block;
+  width: ${CARD_WIDTH}px;
+  height: ${CARD_HEIGHT}px;
+  max-width: none;
+  animation: none;
+}
+[data-slot="bit-stage"] figcaption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="bit-stage"] img {
+    animation: none;
+  }
+}
 `;
 
-/** `/generate/bits` — v0 bit index. No extra plugins. */
+/** `/generate/bits` — Frozen 11 plus README-card samples. No extra plugins. */
 export default function GenerateBitsPage() {
   const entries = bitEntries();
 
@@ -87,6 +120,7 @@ export default function GenerateBitsPage() {
     <nav
       data-slot="generate-bits"
       data-href={BITS_HREF}
+      data-samples="true"
       aria-labelledby="generate-bits-heading"
     >
       <style href="profile-bits-generate-bits" precedence="default">
@@ -96,14 +130,19 @@ export default function GenerateBitsPage() {
         Bits
       </h2>
       <p data-slot="generate-bits-lede">
-        v0 primitives for the <code>github</code> pack. Card size is 480×160.
+        v0 primitives for the <code>github</code> pack plus README-card bits
+        Image, Heatmap, Board, Icon, Grid, List, and Time. Each bit is a{" "}
+        {CARD_WIDTH}×{CARD_HEIGHT} sample, not a names-only index.
       </p>
       <ul data-slot="generate-bits-list">
         {entries.map((entry) => (
-          <li key={entry.id} data-bit={entry.id}>
+          <li key={entry.id} data-bit={entry.id} data-slot="generate-bits-item">
             <a data-slot="generate-bits-link" href={entry.href}>
               {entry.name}
             </a>
+            <div data-slot="generate-bits-sample">
+              <BitIsolator bit={entry.id} />
+            </div>
           </li>
         ))}
       </ul>

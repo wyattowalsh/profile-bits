@@ -1,19 +1,59 @@
 /**
  * Docs playground preview renderer (POST body → files).
  * Missing App token → T110 fixtures, zero outbound GitHub.
+ * coding/feed/json/chips default to non-empty pack fixtures.
+ * Optional live: App token, WakaTime preview env, rss/http SSRF visitor URL,
+ * HTML scrape via the shared scrape client. Not an embed API.
  * Live GitHub uses one server-side client per request (never visitor tokens).
  */
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
+  CHIPS_FILENAME_DEFAULT,
+  CODING_API_DOMAIN_DEFAULT,
+  CODING_FILENAME_DEFAULT,
+  CODING_INCLUDE_DEFAULT,
+  CODING_LIMIT_DEFAULT,
+  CODING_RANGE_DEFAULT,
+  type CodingIncludeToken,
+  type CodingRange,
   classifyGithubHttp,
   decideIncludePrivate,
+  FEED_FILENAME_DEFAULT,
+  FEED_LIMIT_DEFAULT,
+  HTTP_CHIP_PRESETS,
+  HTTP_CHIP_TYPES,
   isMissingToken,
+  JSON_FILENAME_DEFAULT,
+  JSON_JMESPATH_DEFAULT,
   type ThemeConfig,
   themeMembersFor,
   usesGithubIntegration,
 } from "@profile-bits/core";
-import { githubPreviewElement } from "@profile-bits/plugins";
+import {
+  type CodingPayload,
+  chipFixture,
+  createHttpClient,
+  createRssClient,
+  createWakatimeClient,
+  expandChipsRequest,
+  type NormalizedBadge,
+  normalizeBadgeJson,
+  selectCodingPayload,
+  type WakatimeStatsData,
+  WakatimeStatsEnvelopeSchema,
+} from "@profile-bits/integrations";
+import {
+  codingTemplate,
+  type FeedItem,
+  feedTemplate,
+  githubPreviewNode,
+  sliceFeedItems,
+  toCodingViewModel,
+} from "@profile-bits/plugins";
 import type { WidgetTheme } from "@profile-bits/renderer";
 import {
   assertTakumiTree,
@@ -22,25 +62,71 @@ import {
   render,
   renderAnimation,
   renderSvg,
+  resolveWidgetTheme,
 } from "@profile-bits/renderer";
+import { createElement } from "react";
+import { createHtmlScrapeClient } from "../../../../../packages/integrations/src/html-scrape/index";
+import { isGithubOwnedHost } from "../../../../../packages/integrations/src/rss/hosts";
+import { ChipsWidget } from "../../../../../packages/plugins/src/http/widgets/chips/index";
+import {
+  isEmptyJsonResult,
+  jsonTemplate,
+  searchJson,
+} from "../../../../../packages/plugins/src/http/widgets/json/index";
 import { bitSampleElement } from "../../generate/bit-samples";
-import type {
-  PreviewBitName,
-  PreviewFile,
-  PreviewOptions,
-  PreviewOutputFormat,
-  PreviewProvenance,
-  PreviewRequest,
-  PreviewResponse,
-  PreviewTheme,
-  PreviewWidgetId,
+import {
+  isPreviewCodingRange,
+  isPreviewGithubWidgetId,
+  type PreviewBitName,
+  type PreviewChipPreset,
+  type PreviewChipType,
+  type PreviewFile,
+  type PreviewOptions,
+  type PreviewOutputFormat,
+  type PreviewProvenance,
+  type PreviewRequest,
+  type PreviewResponse,
+  type PreviewTheme,
+  type PreviewWidgetId,
+  pluginScopeWidgets,
 } from "../types";
 import { loadPreviewFixtures } from "./fixtures";
+import { loadRssPreviewItems } from "./rss-fixtures";
+
+/** Committed http `json` sample. Fixtures only — never a live URL. */
+const JSON_PREVIEW_SAMPLE = {
+  name: "octocat",
+  count: 3,
+} as const;
+
+const DEFAULT_CHIP_PRESET: PreviewChipPreset = "shieldcn";
+const DEFAULT_CHIP_TYPES: readonly PreviewChipType[] = ["npm"];
+
+const CHIP_PRESET_SET = new Set<string>(HTTP_CHIP_PRESETS);
+const CHIP_TYPE_SET = new Set<string>(HTTP_CHIP_TYPES);
+
+const LAST_7_DAYS_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../../../packages/integrations/src/wakatime/fixtures/last_7_days.json",
+);
+
+let last7DaysStats: WakatimeStatsData | undefined;
 
 export const GITHUB_PREVIEW_CACHE_TTL_MS = 60_000;
 
 /** Docs live preview: GitHub App installation tokens only. Never GITHUB_TOKEN. */
 const APP_TOKEN_ENV_KEYS = ["GITHUB_APP", "GITHUB_APP_TOKEN"] as const;
+
+/** Docs live WakaTime. Never Action WAKATIME_TOKEN and never visitor tokens. */
+const WAKATIME_PREVIEW_TOKEN_ENV_KEYS = [
+  "WAKATIME_PREVIEW_TOKEN",
+  "WAKATIME_APP",
+] as const;
+
+/** Gate for live chips via the allowlisted http client. Not a secret. */
+const HTTP_LIVE_ENV_KEY = "PREVIEW_HTTP_LIVE";
+
+type PreviewPayloadSource = "fixture" | "live";
 
 const STILL_MIME: Record<
   Exclude<PreviewOutputFormat, "gif" | "apng">,
@@ -90,14 +176,56 @@ export type PreviewRenderInput = {
   user: string;
 };
 
+export type PreviewWakatimeClient = {
+  fetchStats: (input: {
+    range: CodingRange;
+    include: readonly CodingIncludeToken[];
+    limit: number;
+  }) => Promise<unknown>;
+};
+
+export type PreviewRssClient = {
+  fetchFeed: (url: string) => Promise<unknown>;
+};
+
+export type PreviewHttpClient = {
+  fetchJson: (request: {
+    url: string;
+    timeout_ms?: number;
+    auth?: "none";
+  }) => Promise<unknown>;
+};
+
+export type PreviewHtmlScrapeClient = {
+  scrape: (url: string) => Promise<unknown>;
+};
+
 export type RenderPreviewHost = {
   now?: () => Date;
   readToken?: () => string | undefined | null;
+  readWakatimeToken?: () => string | undefined | null;
+  readHttpLive?: () => boolean | undefined | null;
   loadFixtures?: () => unknown | Promise<unknown>;
   createGithubClient?: (
     token: string,
     configuredUser: string,
   ) => PreviewGithubClient | Promise<PreviewGithubClient | null> | null;
+  createWakatimeClient?: (
+    token: string,
+    apiDomain: string,
+  ) => PreviewWakatimeClient | Promise<PreviewWakatimeClient | null> | null;
+  createRssClient?: () =>
+    | PreviewRssClient
+    | Promise<PreviewRssClient | null>
+    | null;
+  createHttpClient?: () =>
+    | PreviewHttpClient
+    | Promise<PreviewHttpClient | null>
+    | null;
+  createHtmlScrapeClient?: () =>
+    | PreviewHtmlScrapeClient
+    | Promise<PreviewHtmlScrapeClient | null>
+    | null;
   renderStill?: (
     input: PreviewRenderInput,
   ) => Uint8Array | Promise<Uint8Array | null> | null;
@@ -115,14 +243,17 @@ export async function renderPreview(
   host: RenderPreviewHost = {},
 ): Promise<PreviewResponse> {
   const generatedAt = isoNow(host);
-  const token = host.readToken?.() ?? readAppToken();
-
-  if (isMissingToken(token)) {
-    return fixtureResponse(body, host, generatedAt, "fixture");
-  }
-
   const widgets = requestedWidgets(body);
   const needsGithub = widgets.some(usesGithubIntegration);
+
+  if (!needsGithub) {
+    return renderOptionalLivePreview(body, widgets, host, generatedAt);
+  }
+
+  const token = host.readToken?.() ?? readAppToken();
+  if (token == null || isMissingToken(token)) {
+    return fixtureResponse(body, host, generatedAt, "fixture");
+  }
 
   let client: PreviewGithubClient | null = null;
   if (needsGithub) {
@@ -157,6 +288,332 @@ function readAppToken(): string | undefined {
   return undefined;
 }
 
+function readWakatimePreviewToken(host: RenderPreviewHost): string | undefined {
+  const fromHost = host.readWakatimeToken?.();
+  if (!isMissingToken(fromHost)) {
+    return fromHost ?? undefined;
+  }
+  for (const key of WAKATIME_PREVIEW_TOKEN_ENV_KEYS) {
+    const value = process.env[key];
+    if (!isMissingToken(value)) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function isHttpLiveEnabled(host: RenderPreviewHost): boolean {
+  const flagged = host.readHttpLive?.();
+  if (flagged === true) {
+    return true;
+  }
+  if (flagged === false) {
+    return false;
+  }
+  return !isMissingToken(process.env[HTTP_LIVE_ENV_KEY]);
+}
+
+/**
+ * Visitor-typed https URL only. Rejects userinfo and GitHub-owned hosts so
+ * docs preview never sends unauthenticated GitHub.
+ */
+function visitorHttpsUrl(value: string | undefined): string | undefined {
+  if (value == null) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    return undefined;
+  }
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:") {
+      return undefined;
+    }
+    if (url.username !== "" || url.password !== "") {
+      return undefined;
+    }
+    if (isGithubOwnedHost(url.hostname)) {
+      return undefined;
+    }
+    return url.href;
+  } catch {
+    return undefined;
+  }
+}
+
+function canAttemptLive(
+  body: PreviewRequest,
+  widgets: readonly PreviewWidgetId[],
+  host: RenderPreviewHost,
+): boolean {
+  for (const widget of widgets) {
+    if (widget === "coding" && readWakatimePreviewToken(host) != null) {
+      return true;
+    }
+    if (widget === "feed" && visitorHttpsUrl(body.options.feed?.url) != null) {
+      return true;
+    }
+    if (widget === "json" && visitorHttpsUrl(body.options.json?.url) != null) {
+      return true;
+    }
+    if (widget === "chips" && isHttpLiveEnabled(host)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+type LiveClientHub = {
+  wakatime: () => Promise<PreviewWakatimeClient | null>;
+  rss: () => Promise<PreviewRssClient | null>;
+  http: () => Promise<PreviewHttpClient | null>;
+  scrape: () => Promise<PreviewHtmlScrapeClient | null>;
+};
+
+function createLiveClientHub(host: RenderPreviewHost): LiveClientHub {
+  let wakatime: PreviewWakatimeClient | null | undefined;
+  let rss: PreviewRssClient | null | undefined;
+  let http: PreviewHttpClient | null | undefined;
+  let scrape: PreviewHtmlScrapeClient | null | undefined;
+
+  return {
+    async wakatime() {
+      if (wakatime !== undefined) {
+        return wakatime;
+      }
+      const token = readWakatimePreviewToken(host);
+      if (token == null) {
+        wakatime = null;
+        return null;
+      }
+      if (host.createWakatimeClient != null) {
+        wakatime =
+          (await host.createWakatimeClient(token, CODING_API_DOMAIN_DEFAULT)) ??
+          null;
+        return wakatime;
+      }
+      try {
+        wakatime = createWakatimeClient({
+          token,
+          apiDomain: CODING_API_DOMAIN_DEFAULT,
+        });
+      } catch {
+        wakatime = null;
+      }
+      return wakatime;
+    },
+    async rss() {
+      if (rss !== undefined) {
+        return rss;
+      }
+      if (host.createRssClient != null) {
+        rss = (await host.createRssClient()) ?? null;
+        return rss;
+      }
+      rss = createRssClient();
+      return rss;
+    },
+    async http() {
+      if (http !== undefined) {
+        return http;
+      }
+      if (host.createHttpClient != null) {
+        http = (await host.createHttpClient()) ?? null;
+        return http;
+      }
+      http = createHttpClient();
+      return http;
+    },
+    async scrape() {
+      if (scrape !== undefined) {
+        return scrape;
+      }
+      if (host.createHtmlScrapeClient != null) {
+        scrape = (await host.createHtmlScrapeClient()) ?? null;
+        return scrape;
+      }
+      scrape = createHtmlScrapeClient();
+      return scrape;
+    },
+  };
+}
+
+async function renderOptionalLivePreview(
+  body: PreviewRequest,
+  widgets: readonly PreviewWidgetId[],
+  host: RenderPreviewHost,
+  generatedAt: string,
+): Promise<PreviewResponse> {
+  if (body.scope === "bit" || widgets.length === 0) {
+    return fixtureResponse(body, host, generatedAt, "fixture");
+  }
+  if (!canAttemptLive(body, widgets, host)) {
+    return fixtureResponse(body, host, generatedAt, "fixture");
+  }
+
+  const live = createLiveClientHub(host);
+  try {
+    const files: PreviewFile[] = [];
+    let usedLive = false;
+    const fixturePayload = await loadFixturePayload(host);
+
+    for (const widget of widgets) {
+      try {
+        const loaded = await loadLiveWidgetPayload(widget, body, live, host);
+        if (loaded != null) {
+          files.push(
+            ...(await filesForTarget(body, { widget }, loaded, host, "live")),
+          );
+          usedLive = true;
+          continue;
+        }
+      } catch (error) {
+        if (isRateLimitedFailure(error)) {
+          throw error;
+        }
+      }
+      files.push(
+        ...(await filesForTarget(
+          body,
+          { widget },
+          fixturePayload,
+          host,
+          "fixture",
+        )),
+      );
+    }
+
+    return {
+      files,
+      provenance: usedLive ? "live" : "fixture",
+      generatedAt,
+    };
+  } catch (error) {
+    if (isRateLimitedFailure(error)) {
+      return fixtureResponse(body, host, generatedAt, "rate_limited");
+    }
+    return fixtureResponse(body, host, generatedAt, "fixture");
+  }
+}
+
+async function loadLiveWidgetPayload(
+  widget: PreviewWidgetId,
+  body: PreviewRequest,
+  live: LiveClientHub,
+  host: RenderPreviewHost,
+): Promise<unknown | null> {
+  if (widget === "coding") {
+    const client = await live.wakatime();
+    if (client == null) {
+      return null;
+    }
+    return client.fetchStats({
+      range: codingRange(body.options),
+      include: codingInclude(body.options),
+      limit: codingLimit(body.options),
+    });
+  }
+  if (widget === "feed") {
+    const url = visitorHttpsUrl(body.options.feed?.url);
+    if (url == null) {
+      return null;
+    }
+    const client = await live.rss();
+    if (client == null) {
+      return null;
+    }
+    return client.fetchFeed(url);
+  }
+  if (widget === "json") {
+    const url = visitorHttpsUrl(body.options.json?.url);
+    if (url == null) {
+      return null;
+    }
+    return loadLiveJsonOrScrape(url, body, live);
+  }
+  if (widget === "chips") {
+    if (!isHttpLiveEnabled(host)) {
+      return null;
+    }
+    return loadLiveChips(body, live);
+  }
+  return null;
+}
+
+async function loadLiveJsonOrScrape(
+  url: string,
+  body: PreviewRequest,
+  live: LiveClientHub,
+): Promise<unknown> {
+  const client = await live.http();
+  if (client != null) {
+    try {
+      return await client.fetchJson({
+        url,
+        timeout_ms: body.options.json?.timeout_ms,
+        auth: "none",
+      });
+    } catch (error) {
+      if (!isInvalidJsonFailure(error)) {
+        throw error;
+      }
+    }
+  }
+  const scrape = await live.scrape();
+  if (scrape == null) {
+    throw Object.assign(new Error("html scrape unavailable"), {
+      outcome: "fail_widget",
+    });
+  }
+  return scrape.scrape(url);
+}
+
+async function loadLiveChips(
+  body: PreviewRequest,
+  live: LiveClientHub,
+): Promise<unknown> {
+  const client = await live.http();
+  if (client == null) {
+    throw Object.assign(new Error("http client unavailable"), {
+      outcome: "fail_widget",
+    });
+  }
+  const types = chipTypes(body.options);
+  const preset = chipPreset(body.options);
+  const payloads: unknown[] = [];
+  for (const type of types) {
+    const { url } = expandChipsRequest({
+      preset,
+      type,
+      user: body.user,
+      repo: body.options.chips?.repo ?? null,
+      packageName: body.options.chips?.package ?? null,
+      workflow: body.options.chips?.workflow,
+    });
+    payloads.push(
+      await client.fetchJson({
+        url: url.href,
+        timeout_ms: body.options.chips?.timeout_ms,
+        auth: "none",
+      }),
+    );
+  }
+  return payloads;
+}
+
+function isInvalidJsonFailure(error: unknown): boolean {
+  return readField(error, "code") === "invalid_json";
+}
+
+function codingRange(options: PreviewOptions): CodingRange {
+  const range = options.coding?.range;
+  if (range !== undefined && isPreviewCodingRange(range)) {
+    return range;
+  }
+  return CODING_RANGE_DEFAULT;
+}
+
 async function fixtureResponse(
   body: PreviewRequest,
   host: RenderPreviewHost,
@@ -177,6 +634,105 @@ async function loadFixturePayload(host: RenderPreviewHost): Promise<unknown> {
   } catch {
     return null;
   }
+}
+
+function last7DaysData(): WakatimeStatsData {
+  if (last7DaysStats !== undefined) {
+    return last7DaysStats;
+  }
+  const raw = readFileSync(LAST_7_DAYS_PATH, "utf8");
+  last7DaysStats = WakatimeStatsEnvelopeSchema.parse(JSON.parse(raw)).data;
+  return last7DaysStats;
+}
+
+function statsDataFromUnknown(payload: unknown): WakatimeStatsData | undefined {
+  const envelope = WakatimeStatsEnvelopeSchema.safeParse(payload);
+  if (envelope.success) {
+    return envelope.data.data;
+  }
+  const asData = WakatimeStatsEnvelopeSchema.safeParse({ data: payload });
+  if (asData.success) {
+    return asData.data.data;
+  }
+  return undefined;
+}
+
+function codingInclude(options: PreviewOptions): readonly CodingIncludeToken[] {
+  const include = options.coding?.include;
+  if (include != null && include.length > 0) {
+    return include;
+  }
+  return CODING_INCLUDE_DEFAULT;
+}
+
+function codingLimit(options: PreviewOptions): number {
+  return options.coding?.limit ?? CODING_LIMIT_DEFAULT;
+}
+
+function codingPayloadFrom(
+  payload: unknown,
+  options: PreviewOptions,
+): CodingPayload {
+  const data = statsDataFromUnknown(payload) ?? last7DaysData();
+  return selectCodingPayload(
+    data,
+    codingInclude(options),
+    codingLimit(options),
+  );
+}
+
+function feedLimit(options: PreviewOptions): number {
+  return options.feed?.limit ?? FEED_LIMIT_DEFAULT;
+}
+
+function feedItemsFrom(
+  payload: unknown,
+  options: PreviewOptions,
+): readonly FeedItem[] {
+  const items = Array.isArray(payload)
+    ? (payload as FeedItem[])
+    : loadRssPreviewItems();
+  return sliceFeedItems(items, feedLimit(options));
+}
+
+function jsonValueFrom(options: PreviewOptions): unknown {
+  const jmespath = options.json?.jmespath ?? JSON_JMESPATH_DEFAULT;
+  return searchJson(JSON_PREVIEW_SAMPLE, jmespath);
+}
+
+function chipPreset(options: PreviewOptions): PreviewChipPreset {
+  const preset = options.chips?.preset;
+  if (preset !== undefined && CHIP_PRESET_SET.has(preset)) {
+    return preset;
+  }
+  return DEFAULT_CHIP_PRESET;
+}
+
+function chipTypes(options: PreviewOptions): PreviewChipType[] {
+  const types = options.chips?.types;
+  if (types == null || types.length === 0) {
+    return [...DEFAULT_CHIP_TYPES];
+  }
+  const selected = types.filter((type) => CHIP_TYPE_SET.has(type));
+  return selected.length > 0 ? selected : [...DEFAULT_CHIP_TYPES];
+}
+
+function chipPayloadsFrom(
+  payload: unknown,
+  options: PreviewOptions,
+): readonly unknown[] {
+  if (Array.isArray(payload) && payload.length > 0) {
+    return payload;
+  }
+  const preset = chipPreset(options);
+  return chipTypes(options).map((type) => chipFixture(preset, type));
+}
+
+function badgesFromPayload(payload: unknown): NormalizedBadge[] {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+  return payload.map((item) => normalizeBadgeJson(item));
 }
 
 async function resolveGithubClient(
@@ -405,6 +961,7 @@ async function filesForTarget(
   target: { widget?: PreviewWidgetId; bit?: PreviewBitName },
   payload: unknown,
   host: RenderPreviewHost,
+  source: PreviewPayloadSource = "fixture",
 ): Promise<PreviewFile[]> {
   const files: PreviewFile[] = [];
   for (const member of themeMembersFor({
@@ -417,7 +974,7 @@ async function filesForTarget(
     const mime = mimeFor(body.format);
     const resolvedPayload =
       target.widget !== undefined
-        ? payloadForWidget(target.widget, payload)
+        ? payloadForWidget(target.widget, payload, body.options, source)
         : payload;
     const input: PreviewRenderInput = {
       id,
@@ -498,18 +1055,62 @@ async function defaultRenderMotion(
 
 async function previewNode(input: PreviewRenderInput) {
   if (input.bit !== undefined) {
-    const node = await fromJsx(bitSampleElement(input.bit, input.theme));
+    const node = await fromJsx(
+      bitSampleElement(input.bit, input.theme) as Parameters<typeof fromJsx>[0],
+    );
     assertTakumiTree(node);
     return node;
   }
-  const node = await fromJsx(
-    githubPreviewElement({
-      widget: input.widget,
-      theme: input.theme,
-      payload: input.payload,
-      options: input.options,
-    }),
-  );
+  const widget = input.widget;
+  const palette = resolveWidgetTheme(input.theme);
+  if (widget === "coding") {
+    const node = codingTemplate(
+      toCodingViewModel(
+        input.payload as CodingPayload,
+        codingInclude(input.options),
+        codingLimit(input.options),
+      ),
+      palette,
+    );
+    assertTakumiTree(node);
+    return node;
+  }
+  if (widget === "feed") {
+    const items = Array.isArray(input.payload)
+      ? (input.payload as FeedItem[])
+      : feedItemsFrom(input.payload, input.options);
+    const node = feedTemplate(items, palette);
+    assertTakumiTree(node);
+    return node;
+  }
+  if (widget === "json") {
+    const value = input.payload;
+    const node = jsonTemplate({
+      value,
+      empty: isEmptyJsonResult(value),
+      theme: palette,
+    });
+    assertTakumiTree(node);
+    return node;
+  }
+  if (widget === "chips") {
+    const node = await fromJsx(
+      createElement(ChipsWidget, {
+        badges: badgesFromPayload(input.payload),
+        theme: input.theme,
+      }) as Parameters<typeof fromJsx>[0],
+    );
+    assertTakumiTree(node);
+    return node;
+  }
+  const githubWidget =
+    widget !== undefined && isPreviewGithubWidgetId(widget) ? widget : "demo";
+  const node = await githubPreviewNode({
+    widget: githubWidget,
+    theme: input.theme,
+    payload: input.payload,
+    options: input.options,
+  });
   assertTakumiTree(node);
   return node;
 }
@@ -530,14 +1131,55 @@ function requestedWidgets(body: PreviewRequest): PreviewWidgetId[] {
   if (body.widget !== undefined) {
     return [body.widget];
   }
-  return ["demo", "stats", "languages"];
+  if (body.scope === "plugin") {
+    return [...pluginScopeWidgets(body.plugin)];
+  }
+  return [...pluginScopeWidgets("github")];
 }
 
-function payloadForWidget(widget: PreviewWidgetId, payload: unknown): unknown {
-  if (widget !== "repo") {
-    return payload;
+function payloadForWidget(
+  widget: PreviewWidgetId,
+  payload: unknown,
+  options: PreviewOptions,
+  source: PreviewPayloadSource = "fixture",
+): unknown {
+  if (widget === "coding") {
+    if (source === "live") {
+      const data = statsDataFromUnknown(payload);
+      if (data !== undefined) {
+        return selectCodingPayload(
+          data,
+          codingInclude(options),
+          codingLimit(options),
+        );
+      }
+      return payload;
+    }
+    return codingPayloadFrom(payload, options);
   }
-  return withFixtureRepository(payload);
+  if (widget === "feed") {
+    if (source === "live" && Array.isArray(payload)) {
+      return sliceFeedItems(payload as FeedItem[], feedLimit(options));
+    }
+    return feedItemsFrom(payload, options);
+  }
+  if (widget === "json") {
+    if (source === "live") {
+      const jmespath = options.json?.jmespath ?? JSON_JMESPATH_DEFAULT;
+      return searchJson(payload, jmespath);
+    }
+    return jsonValueFrom(options);
+  }
+  if (widget === "chips") {
+    if (source === "live" && Array.isArray(payload) && payload.length > 0) {
+      return payload;
+    }
+    return chipPayloadsFrom(payload, options);
+  }
+  if (widget === "repo") {
+    return withFixtureRepository(payload);
+  }
+  return payload;
 }
 
 /** Map static octocat `repos[0]` (Hello-World) when loadPayload omitted `repository`. */
@@ -633,6 +1275,18 @@ function animateFor(
   if (widget === "repo") {
     return options.repo?.animate === true;
   }
+  if (widget === "coding") {
+    return options.coding?.animate === true;
+  }
+  if (widget === "feed") {
+    return options.feed?.animate === true;
+  }
+  if (widget === "json") {
+    return options.json?.animate === true;
+  }
+  if (widget === "chips") {
+    return options.chips?.animate === true;
+  }
   return false;
 }
 
@@ -672,6 +1326,18 @@ function filenameStem(
   }
   if (target.widget === "demo") {
     return "demo";
+  }
+  if (target.widget === "coding") {
+    return body.options.coding?.filename ?? CODING_FILENAME_DEFAULT;
+  }
+  if (target.widget === "feed") {
+    return body.options.feed?.filename ?? FEED_FILENAME_DEFAULT;
+  }
+  if (target.widget === "json") {
+    return body.options.json?.filename ?? JSON_FILENAME_DEFAULT;
+  }
+  if (target.widget === "chips") {
+    return body.options.chips?.filename ?? CHIPS_FILENAME_DEFAULT;
   }
   if (target.bit !== undefined) {
     return String(target.bit);
@@ -753,10 +1419,13 @@ function isRateLimitedFailure(error: unknown): boolean {
   if (declared === "fail_after_backoff") {
     return true;
   }
+  const status = readStatus(error);
+  if (status === 429) {
+    return true;
+  }
   if (declared != null) {
     return false;
   }
-  const status = readStatus(error);
   if (status == null) {
     return false;
   }

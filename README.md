@@ -122,7 +122,7 @@ After the Action commits files, embed relatives that match `output_dir` + widget
 ![](./profile-bits/languages.svg)
 ```
 
-With `output_pair: false` (default), `stats.svg` is the **dark** card. With `output_pair: true`, the unsuffixed file is **light** and `filename-dark` is dark — pair embeds should use `<picture>` (same pattern as the hero above), not a lone `stats.svg`.
+With `output_pair: false` (default), `stats.svg` is the **selected flavor**. With `output_pair: true`, the unsuffixed file is **light** and `filename-dark` is dark — pair embeds should use `<picture>` (same pattern as the hero above), not a lone `stats.svg`.
 
 <details>
 <summary>Default <code>.github/profile-bits.yml</code> (github <code>stats</code> + <code>languages</code>) — yaml is the option SSOT; no flattened <code>plugin_*_*_*</code> Action inputs</summary>
@@ -213,7 +213,7 @@ Marketplace default `output_action` is **`commit`**.
 | `http_token_env` | **Name** of the env var holding an optional HTTP Bearer token. **No default.** |
 | `format` | Optional override: `svg`, `png`, `jpeg`, `webp`, `ico`, `gif`, `apng`. |
 | `theme` | Optional named theme id. `theme: custom` as an Action input fails. |
-| `output_pair` | Optional. Write `filename` and `filename-dark`. |
+| `output_pair` | Optional. `true` writes unsuffixed `filename` (light) and `filename-dark` (dark). `false` writes the **selected** flavor only. |
 | `animated` | Optional animated output override. |
 | `output_action` | `none` \| `commit` \| `pull-request` \| `gist`. Default `commit`. Gist is SVG-only. |
 | `committer_branch` | Branch to commit to. Default current branch. |
