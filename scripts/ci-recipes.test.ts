@@ -97,7 +97,7 @@ describe("W1-D-13 CI recipes", () => {
 
   it("finishes docs-full-catalog-playground in place including task 5.2", () => {
     const tasks = read(
-      "openspec/changes/docs-full-catalog-playground/tasks.md",
+      "openspec/changes/archive/2026-11-08-docs-full-catalog-playground/tasks.md",
     );
     expect(existsSync(join(ROOT, "openspec/changes/marketplace-release"))).toBe(
       true,

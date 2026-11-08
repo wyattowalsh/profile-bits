@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CHANGE = join(ROOT, "openspec/changes/leetcode");
+const CHANGE = join(ROOT, "openspec/changes/archive/2026-11-08-leetcode");
 const TYPES = join(ROOT, "packages/core/src/types.ts");
 
 function readChange(relativePath: string): string {
@@ -14,10 +14,16 @@ function readChange(relativePath: string): string {
 }
 
 describe("OpenSpec change leetcode", () => {
-  it("keeps the change in openspec/changes/ (not archived, not a new docs id)", () => {
+  it("archives leetcode under 2026-11-08 and does not mint a docs id", () => {
     expect(existsSync(join(CHANGE, ".openspec.yaml"))).toBe(true);
+    expect(existsSync(join(ROOT, "openspec/changes/leetcode"))).toBe(false);
     expect(
-      existsSync(join(ROOT, "openspec/changes/docs-full-catalog-playground")),
+      existsSync(
+        join(
+          ROOT,
+          "openspec/changes/archive/2026-11-08-docs-full-catalog-playground",
+        ),
+      ),
     ).toBe(true);
     expect(existsSync(join(ROOT, "openspec/specs/leetcode"))).toBe(false);
     expect(existsSync(join(ROOT, "openspec/changes/archive/leetcode"))).toBe(

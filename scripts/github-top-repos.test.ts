@@ -4,7 +4,10 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CHANGE = join(ROOT, "openspec/changes/github-top-repos");
+const CHANGE = join(
+  ROOT,
+  "openspec/changes/archive/2026-11-08-github-top-repos",
+);
 const WIDGET = join(ROOT, "packages/plugins/src/github/widgets/top-repos");
 const PLUGIN = join(ROOT, "packages/plugins/src/github/plugin.ts");
 const ACTION_YML = join(ROOT, "action.yml");
@@ -17,10 +20,18 @@ function read(path: string): string {
 const READER_FILES = ["view-model.ts", "render.ts", "widget.tsx"] as const;
 
 describe("OpenSpec change github-top-repos", () => {
-  it("keeps the change in openspec/changes/ (not archived, not a new docs id)", () => {
+  it("archives github-top-repos under 2026-11-08 and does not mint a docs id", () => {
     expect(existsSync(join(CHANGE, ".openspec.yaml"))).toBe(true);
+    expect(existsSync(join(ROOT, "openspec/changes/github-top-repos"))).toBe(
+      false,
+    );
     expect(
-      existsSync(join(ROOT, "openspec/changes/docs-full-catalog-playground")),
+      existsSync(
+        join(
+          ROOT,
+          "openspec/changes/archive/2026-11-08-docs-full-catalog-playground",
+        ),
+      ),
     ).toBe(true);
     expect(existsSync(join(ROOT, "openspec/specs/github-top-repos"))).toBe(
       false,

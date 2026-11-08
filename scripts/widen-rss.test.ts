@@ -4,13 +4,16 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CHANGE = join(ROOT, "openspec/changes/widen-rss");
+const CHANGE = join(ROOT, "openspec/changes/archive/2026-11-08-widen-rss");
 const MAIN_INTEGRATION = join(
   ROOT,
   "openspec/specs/integration-contract/spec.md",
 );
 const MAIN_WIDGET = join(ROOT, "openspec/specs/widget-contract/spec.md");
-const DOCS_CHANGE = join(ROOT, "openspec/changes/docs-full-catalog-playground");
+const DOCS_CHANGE = join(
+  ROOT,
+  "openspec/changes/archive/2026-11-08-docs-full-catalog-playground",
+);
 
 function readChange(relativePath: string): string {
   const absolutePath = join(CHANGE, relativePath);
@@ -19,16 +22,22 @@ function readChange(relativePath: string): string {
 }
 
 describe("OpenSpec change widen-rss", () => {
-  it("keeps the change in openspec/changes/ (not archived, not a new docs id)", () => {
+  it("archives widen-rss under 2026-11-08 and does not mint a docs id", () => {
     expect(existsSync(join(CHANGE, ".openspec.yaml"))).toBe(true);
+    expect(existsSync(join(ROOT, "openspec/changes/widen-rss"))).toBe(false);
     expect(existsSync(DOCS_CHANGE)).toBe(true);
     expect(existsSync(join(ROOT, "openspec/specs/widen-rss"))).toBe(false);
     expect(
-      existsSync(join(ROOT, "openspec/changes/docs-full-catalog-playground")),
+      existsSync(
+        join(
+          ROOT,
+          "openspec/changes/archive/2026-11-08-docs-full-catalog-playground",
+        ),
+      ),
     ).toBe(true);
   });
 
-  it("does not rewrite docs-full-catalog-playground or main specs yet", () => {
+  it("syncs the feed dump into main specs and leaves the docs change archived", () => {
     const proposal = readChange("proposal.md");
     const docsTasks = readFileSync(join(DOCS_CHANGE, "tasks.md"), "utf8");
     const mainIntegration = readFileSync(MAIN_INTEGRATION, "utf8");
@@ -39,14 +48,17 @@ describe("OpenSpec change widen-rss", () => {
     expect(docsTasks).toContain(
       "Exclusive: `packages/core/src/codegen/docs-fields.ts`",
     );
-    expect(mainIntegration).toContain(
+    expect(mainIntegration).not.toContain(
       "### Requirement: rss payload is a frozen item list",
     );
-    expect(mainIntegration).toContain(
+    expect(mainIntegration).not.toContain(
       "The payload MUST be an `Object.freeze`d array of frozen items `{ title: string, url: string, published_at: string | null }`",
     );
+    expect(mainIntegration).toContain(
+      "### Requirement: rss payload is a feed and item dump",
+    );
     expect(mainWidget).toContain("### Requirement: Frozen feed widget options");
-    expect(mainWidget).not.toContain(
+    expect(mainWidget).toContain(
       "leftover frozen triple `{ title, url, published_at }` MUST be the feed widget reader",
     );
   });

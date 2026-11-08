@@ -5,23 +5,24 @@ Defines the fixtures-only `/playground/http` chips explorer: preset and type tun
 
 ## Requirements
 
-### Requirement: Http playground route is fixtures-only chips explorer
-The docs app MUST serve `/playground/http` as a chips explorer for pack `http` widget `chips`. The explorer MUST offer a preset switcher (`shieldcn` | `shields`), type checkboxes (`npm` | `stars` | `forks` | `license` | `release` | `issues` | `prs` | `ci`), and package, repo, and workflow fields. Preview MUST render baked Takumi SVG from chip fixture JSON. The explorer MUST NOT fetch `shieldcn.dev`, `img.shields.io`, or any other live URL. The explorer MUST NOT proxy vendor images or embed live vendor URLs.
+### Requirement: Http playground route is a first-class pack
+The docs app MUST serve `/playground/http` as the codegen playground for pack `http` (widgets `json` and `chips`) using the shared PlaygroundShell. Fixtures MUST remain the no-network default (`chipFixture` for chips; a committed json sample for `json`). Live vendor fetch MUST use the http client origin allowlist / SSRF path only (env `PREVIEW_HTTP_LIVE` for chips; typed https `url` for json). The explorer MUST NOT proxy arbitrary vendor images or embed live vendor image URLs in the README rail.
 
 #### Scenario: Visitor opens http playground
 - **WHEN** a visitor requests `/playground/http`
-- **THEN** the app MUST serve the chips explorer for pack `http` with preset, types, package, repo, and workflow controls
+- **THEN** the app MUST serve the codegen playground for pack `http` with json and chips widget tuners
 
-#### Scenario: Preview uses chip fixtures only
-- **WHEN** the explorer renders a chips preview
+#### Scenario: Preview uses chip fixtures by default
+- **WHEN** chips preview runs without `PREVIEW_HTTP_LIVE`
 - **THEN** it MUST use chip fixture JSON for the selected preset and types and MUST NOT perform an outbound HTTP request
 
-#### Scenario: Vendor hosts are not fetch targets
-- **WHEN** the explorer source and runtime are inspected
-- **THEN** they MUST NOT use `shieldcn.dev` or `img.shields.io` as fetch targets and MUST NOT embed live vendor image URLs
+#### Scenario: Vendor hosts are not GET embed targets
+- **WHEN** the explorer README rail is inspected
+- **THEN** it MUST NOT embed live `shieldcn.dev` or `img.shields.io` image URLs
 
 ### Requirement: Dual pane baked SVG and copy rail
-The http playground MUST show dual-pane baked SVG produced by chips render from fixture payloads (`renderChipsFromPayloads` / `renderChipsSvg` or equivalent baked bytes). The codegen rail MUST include yaml under `plugins.http.widgets.chips` and README markdown `![](./profile-bits/chips.svg)`. Primary CTA MUST be Copy. The rail MUST NOT emit live vendor URLs or token fields.
+
+The http playground MUST show dual-pane baked SVG produced by chips/json render. The codegen rail MUST include yaml under `plugins.http.widgets` and README markdown with relative `profile-bits/` embeds. Primary CTA MUST be Copy.
 
 #### Scenario: Dual pane shows baked SVG
 - **WHEN** the explorer has at least one selected type
@@ -35,16 +36,20 @@ The http playground MUST show dual-pane baked SVG produced by chips render from 
 - **WHEN** the explorer emits README markdown
 - **THEN** the markdown MUST include `![](./profile-bits/chips.svg)` and MUST NOT include a remote image URL
 
-### Requirement: Preview plugin ids append http without changing github catalog
-Docs `PREVIEW_PLUGIN_IDS` MUST be `["github", "http"]` (append, not replace). `CATALOG_PLUGIN_ID` MUST remain `github` (`PREVIEW_PLUGIN_IDS[0]`). Github-only `PREVIEW_WIDGET_IDS` MUST remain `demo`, `stats`, and `languages`. Http playground widget ids MUST stay local to `/playground/http` (`json` and/or `chips`) and MUST NOT be added to `PREVIEW_WIDGET_IDS`. `http_token_env` and `http_token` MUST remain in `PREVIEW_TOKEN_QUERY_KEYS`. `PLAYGROUND_PLUGIN` MUST remain `github`.
+#### Scenario: Yaml rail names http widgets
+- **WHEN** the explorer emits config yaml for chips
+- **THEN** the yaml MUST include `plugins.http.widgets.chips` with the selected preset and types
 
-#### Scenario: Preview plugin ids include github then http
+### Requirement: Preview plugin ids are all first-party packs
+Docs `PREVIEW_PLUGIN_IDS` MUST be `["github", "wakatime", "rss", "http"]`. Catalog MUST list all four packs and eight widgets. Github-only widget ids MUST remain `demo`, `stats`, `languages`, and `repo`. Http widgets MUST stay off the github preview widget list. `http_token_env` and `http_token` MUST remain in `PREVIEW_TOKEN_QUERY_KEYS`.
+
+#### Scenario: Preview plugin ids include four packs
 - **WHEN** docs preview plugin ids are read
-- **THEN** they MUST equal `["github", "http"]`
+- **THEN** they MUST equal `["github", "wakatime", "rss", "http"]`
 
-#### Scenario: Catalog stays github pack
+#### Scenario: Catalog lists all packs
 - **WHEN** `/generate/catalog` is shown
-- **THEN** the catalog plugin MUST be `github` and catalog widgets MUST remain `demo`, `stats`, and `languages`
+- **THEN** it MUST list packs `github`, `wakatime`, `rss`, and `http` and widgets `demo`, `stats`, `languages`, `repo`, `coding`, `feed`, `json`, and `chips`
 
 #### Scenario: Http widgets stay off the github preview union
 - **WHEN** github preview widget ids are read

@@ -18,18 +18,20 @@ A plugin SHALL be a collection of widgets plus a derived union of integrations, 
 - **THEN** the system MUST register it as a widget on that plugin rather than creating a new plugin
 
 ### Requirement: First-party github plugin catalog
-The first plugin id MUST be `github`. That plugin MUST include widgets `demo`, `stats`, `languages`, and opt-in `repo`. The `github` plugin MUST declare integrations used by those widgets (`static` for `demo`, `github` for `stats`, `languages`, and `repo`). First-party plugin ids MUST be `github`, `wakatime`, `rss`, and `http`. The github v0 widget set MUST remain `demo`, `stats`, and `languages`. Widget `repo` MUST be additive on pack `github` and MUST NOT be a fifth first-party plugin id. The system MUST NOT describe the catalog as `github` and `rss` only.
+
+The first plugin id MUST be `github`. That plugin MUST include widgets `demo`, `stats`, `languages`, opt-in `repo`, opt-in `top-repos`, and opt-in `contributions`. The `github` plugin MUST declare integration `static` for `demo` and integration `github` for `stats`, `languages`, `repo`, `top-repos`, and `contributions`. First-party plugin ids MUST be `github`, `wakatime`, `rss`, `http`, `spotify`, `leetcode`, `chess`, and `steam`. The github v0 widget set MUST remain `demo`, `stats`, and `languages`. Widgets `repo`, `top-repos`, and `contributions` MUST be additive on pack `github` and MUST NOT be new plugin ids. The system MUST NOT describe the catalog as `github` and `rss` only.
 
 #### Scenario: github plugin widgets
 - **WHEN** the `github` plugin is enabled
-- **THEN** widgets `demo`, `stats`, `languages`, and `repo` MUST be available on that pack, github v0 widgets MUST remain `demo`, `stats`, and `languages`, widget `repo` MUST NOT be a new plugin id, and first-party plugin ids MUST be `github`, `wakatime`, `rss`, and `http`
+- **THEN** widgets `demo`, `stats`, `languages`, `repo`, `top-repos`, and `contributions` MUST be available on that pack, github v0 widgets MUST remain `demo`, `stats`, and `languages`, reuse widgets MUST NOT be new plugin ids, and first-party plugin ids MUST be `github`, `wakatime`, `rss`, `http`, `spotify`, `leetcode`, `chess`, and `steam`
 
 #### Scenario: repo is not a fifth pack
 - **WHEN** widget `repo` is registered
-- **THEN** the plugin id MUST remain `github` and first-party plugin ids MUST stay `github`, `wakatime`, `rss`, and `http`
+- **THEN** the plugin id MUST remain `github` and first-party plugin ids MUST include `github`, `wakatime`, `rss`, `http`, `spotify`, `leetcode`, `chess`, and `steam`
 
 ### Requirement: Default widget list when plugin is on
-When the `github` plugin is on and no widget list is specified, the system MUST enable `stats` and `languages`. Widget `demo` MUST be opt-in (playground smoke / explicit yaml), not part of pack defaults. Widget `repo` MUST be opt-in like `demo` and MUST NOT become a pack default.
+
+When the `github` plugin is on and no widget list is specified, the system MUST enable `stats` and `languages`. Widget `demo` MUST be opt-in (playground smoke / explicit yaml), not part of pack defaults. Widgets `repo`, `top-repos`, and `contributions` MUST be opt-in like `demo` and MUST NOT become pack defaults.
 
 #### Scenario: Pack defaults omit demo
 - **WHEN** the github plugin is enabled with no widget list
@@ -42,6 +44,10 @@ When the `github` plugin is on and no widget list is specified, the system MUST 
 #### Scenario: plugin_github true without yaml does not enable repo
 - **WHEN** the config file is absent and `plugin_github` is true
 - **THEN** the Action MUST enable github pack defaults `stats` and `languages` and MUST NOT enable `repo`
+
+#### Scenario: Pack defaults omit github reuse widgets
+- **WHEN** the github plugin is enabled with no widget list
+- **THEN** `top-repos` and `contributions` MUST remain disabled until explicitly enabled
 
 ### Requirement: Committed yaml is config SSOT
 Committed `.github/profile-bits.yml` MUST be the configuration source of truth for plugin/widget/option trees, filenames, and format/theme defaults. Yaml parse MUST use `additionalProperties: false`. Widget options MUST live in yaml and MAY change without a Marketplace input bump.
@@ -231,7 +237,8 @@ If every github widget is skipped and `allow_skipped` is false, the Action MUST 
 - **THEN** the job MUST fail
 
 ### Requirement: First-party rss plugin pack
-The plugin id `rss` MUST be a first-party pack with widgets `[feed]` and integrations `[rss]`. The pack MUST be off unless yaml `plugins.rss` is present. The Action MUST NOT expose a `plugin_rss` bool input. The Action MUST NOT expose flattened `plugin_rss_*` inputs. `widgets.feed.url` MUST be required; `plugins: { rss: {} }` MUST fail parse. Defaults MUST be `filename: feed`, `limit: 5` (range 1–8), `animate: false`. `widgets.feed.url` MUST be https without username or password.
+
+The plugin id `rss` MUST be a first-party pack with widgets `[feed, latest]` and integrations `[rss]`. The pack MUST be off unless yaml `plugins.rss` is present. Pack defaults MUST remain `[feed]`; widget `latest` MUST be opt-in. The Action MUST NOT expose a `plugin_rss` bool input. The Action MUST NOT expose flattened `plugin_rss_*` inputs. `widgets.feed.url` MUST be required when the rss pack is present; `plugins: { rss: {} }` MUST fail parse. Feed defaults MUST stay `filename: feed`, `limit: 5` (range 1–8), `animate: false`. Latest defaults MUST be `filename: latest`, `limit: 1` (range 1–8), `animate: false`. Both `widgets.feed.url` and `widgets.latest.url` MUST be https without username or password. Pack-level `bitsUsed` MUST include `Time` once `latest` is registered. This change MUST NOT add a new first-party plugin id. Pack agents MUST NOT edit `packages/core/src/types.ts`.
 
 Example:
 
@@ -244,11 +251,16 @@ plugins:
         url: https://example.com/feed.xml
         limit: 5
         animate: false
+      latest:
+        filename: latest
+        url: https://example.com/feed.xml
+        limit: 1
+        animate: false
 ```
 
 #### Scenario: rss pack off unless yaml present
 - **WHEN** committed yaml omits `plugins.rss`
-- **THEN** the rss pack MUST be disabled and no feed widget MUST run
+- **THEN** the rss pack MUST be disabled and no feed or latest widget MUST run
 
 #### Scenario: empty rss plugin fails parse
 - **WHEN** yaml contains `plugins.rss` without `widgets.feed.url`
@@ -259,7 +271,7 @@ plugins:
 - **THEN** it MUST NOT contain `plugin_rss` or any `plugin_rss_*` input and MUST still contain `plugin_github`
 
 #### Scenario: rss does not join github all-skipped rule
-- **WHEN** an rss feed widget fails or is skipped and github widgets are not all skipped
+- **WHEN** an rss feed or latest widget fails or is skipped and github widgets are not all skipped
 - **THEN** the Action MUST NOT fail the job solely because of the rss widget and MUST NOT treat rss as a github widget for the all-github-widgets-skipped rule
 
 #### Scenario: rss fail_widget does not fail the job when other widgets rendered
@@ -269,6 +281,14 @@ plugins:
 #### Scenario: rss-only 404 does not fail the job
 - **WHEN** yaml enables rss `feed` and no github widgets, and the feed URL returns HTTP 404
 - **THEN** the Action MUST succeed with no rss output files and MUST NOT fail the job solely because of the rss widget
+
+#### Scenario: latest is opt-in
+- **WHEN** yaml enables `plugins.rss` with `widgets.feed.url` and omits `widgets.latest`
+- **THEN** pack defaults MUST still enable `feed` only and MUST NOT require `latest`
+
+#### Scenario: rss widgets include latest
+- **WHEN** `rssPlugin` is read
+- **THEN** `widgets` MUST be `[feed, latest]`, `integrations` MUST be `[rss]`, and `defaults.widgets` MUST be `[feed]`
 
 ### Requirement: Compose routes chips through the existing json http adapter
 The Action compositor MUST route widget ids `json` and `chips` to the existing json http adapter slot. The compositor MUST NOT add a separate chips adapter key and MUST NOT rename that json slot. Widget `stats` MUST still route to github. Widget `feed` MUST remain on the feed adapter when injected.
@@ -307,7 +327,7 @@ The first-party `http` pack MUST keep widgets `[json, chips]` and MUST declare `
 - **THEN** widgets MUST be `[json, chips]` and `bitsUsed` MUST be `["Theme","Frame","Muted","Chip"]`
 
 ### Requirement: Http pack widgets are json and chips
-The plugin id `http` MUST remain a first-party pack with widgets `[json, chips]` and integrations `[http]`. This change MUST add widget id `chips` and MUST NOT add a new plugin id or a new integration id. Widget `json` MUST remain. First-party plugin ids MUST stay `github`, `wakatime`, `rss`, and `http`. The pack MUST be off unless yaml `plugins.http` is present. The Action MUST NOT expose a `plugin_http` bool input. The Action MUST NOT expose flattened `plugin_http_*` inputs. `plugins.http: {}` MUST parse and MUST enable zero widgets. Json MUST be on only when `plugins.http.widgets.json` is present. Chips MUST be on only when `plugins.http.widgets.chips` is present. Yaml MUST NOT accept a `bits` key. Yaml MUST NOT accept `url` or `headers` on `widgets.chips`. There MUST be no yaml pack defaults that auto-enable json or chips.
+The plugin id `http` MUST remain a first-party pack with widgets `[json, chips]` and integrations `[http]`. This change MUST add widget id `chips` and MUST NOT add a new plugin id or a new integration id. Widget `json` MUST remain. First-party plugin ids MUST include `github`, `wakatime`, `rss`, and `http`. The pack MUST be off unless yaml `plugins.http` is present. The Action MUST NOT expose a `plugin_http` bool input. The Action MUST NOT expose flattened `plugin_http_*` inputs. `plugins.http: {}` MUST parse and MUST enable zero widgets. Json MUST be on only when `plugins.http.widgets.json` is present. Chips MUST be on only when `plugins.http.widgets.chips` is present. Yaml MUST NOT accept a `bits` key. Yaml MUST NOT accept `url` or `headers` on `widgets.chips`. There MUST be no yaml pack defaults that auto-enable json or chips.
 
 Example:
 
@@ -549,3 +569,184 @@ plugins:
 #### Scenario: chips remains a different surface
 - **WHEN** yaml enables http `chips` and github `repo` in the same document
 - **THEN** parse MUST treat them as distinct widgets on packs `http` and `github` and MUST NOT alias `repo` to `chips`
+
+### Requirement: Yaml token_env is an environment variable name
+Yaml `plugins.http` MAY include optional `token_env` (http pattern). `token_env` MUST be a process environment variable **name**, not a token value. The name MUST match `TokenEnvSchema` (trimmed POSIX-ish `[A-Za-z_][A-Za-z0-9_]*`, not `INPUT_*`). Omitting `token_env` MUST parse. Present `token_env` that is empty, whitespace-only, `INPUT_*`, or not an env name MUST fail parse. Yaml keys `token`, `api_key`, and other secret values under `plugins.http` MUST fail parse (`additionalProperties: false`). Action `http_token_env` remains the thin Action env-name input. This change MUST NOT add first-party pack ids.
+
+#### Scenario: Optional plugins.http.token_env parses
+- **WHEN** yaml includes `plugins.http.token_env` set to `HTTP_JSON_TOKEN`
+- **THEN** parse MUST succeed and MUST treat the value as an environment variable name
+
+#### Scenario: Omitted token_env still parses
+- **WHEN** yaml includes `plugins.http: {}` or `plugins.http` with widgets and omits `token_env`
+- **THEN** parse MUST succeed
+
+#### Scenario: Token values in yaml fail
+- **WHEN** yaml `plugins.http` includes `token`, `api_key`, or `token_env: "Bearer secret"`
+- **THEN** parse MUST fail
+
+### Requirement: Thin required-auth Action tokens
+Root `action.yml` MUST include optional `spotify_token` and `steam_token` with **no default** (wakatime_token pattern) in addition to optional `wakatime_token` and `http_token_env`. The Action MUST NOT expose `plugin_spotify`, `plugin_steam`, `plugin_wakatime`, `plugin_rss`, or `plugin_http` bools. `plugin_github` remains the only pack bool. Skills MUST read live `ActionInputsSchema` and MUST NOT invent thin names or flattened `plugin_<plugin>_<widget>_<option>` inputs.
+
+#### Scenario: spotify_token and steam_token are thin with no default
+- **WHEN** root `action.yml` is generated
+- **THEN** it MUST contain optional `spotify_token` and `steam_token` with no `default:` key and MUST NOT contain `plugin_spotify` or `plugin_steam`
+
+#### Scenario: No extra pack bools
+- **WHEN** `ActionInputsSchema` is validated
+- **THEN** it MUST NOT include `plugin_wakatime`, `plugin_rss`, `plugin_http`, `plugin_spotify`, or `plugin_steam`
+
+### Requirement: First-party elbow plugin packs
+First-party plugin ids MUST include `spotify`, `leetcode`, `chess`, and `steam` in addition to `github`, `wakatime`, `rss`, and `http`. Chess MUST be one pack with integrations `chesscom` and `lichess` (no integration id `chess`). Pack agents MUST complete these existing catalog ids and MUST NOT append `FIRST_PARTY_PLUGIN_IDS`. The Action MUST NOT expose `plugin_spotify`, `plugin_leetcode`, `plugin_chess`, or `plugin_steam` bools. The system MUST NOT add `plugin_<plugin>_<widget>_<option>` inputs.
+
+#### Scenario: Elbow packs are first-party ids
+- **WHEN** live `FIRST_PARTY_PLUGIN_IDS` is read
+- **THEN** it MUST contain `github`, `wakatime`, `rss`, `http`, `spotify`, `leetcode`, `chess`, and `steam` in that relative membership
+
+#### Scenario: Chess is one pack two integrations
+- **WHEN** pack `chess` is registered
+- **THEN** its integrations MUST be `chesscom` and `lichess` and MUST NOT include an integration id `chess`
+
+#### Scenario: No extra pack bools or flatten
+- **WHEN** root `action.yml` is generated
+- **THEN** it MUST NOT contain `plugin_spotify`, `plugin_leetcode`, `plugin_chess`, `plugin_steam`, or any `plugin_<plugin>_<widget>_<option>` input
+
+### Requirement: Yaml may include optional elbow pack siblings
+A valid yaml document MAY include optional `plugins.spotify`, `plugins.leetcode`, `plugins.chess`, and `plugins.steam` as siblings of `plugins.github` (unknown keys still fail parse). Default committed yaml MUST remain github-only. Spotify and steam yaml MAY include optional `token_env` (http pattern: env **name**, not a token value, not `INPUT_*`). Yaml MUST NOT store refresh tokens, Steam keys, client secrets, or `plugin_*_*_*` keys.
+
+#### Scenario: Optional elbow plugin siblings parse
+- **WHEN** yaml includes `plugins.spotify`, `plugins.leetcode`, `plugins.chess`, or `plugins.steam` as a sibling of `plugins.github`
+- **THEN** parse MUST succeed when those objects match their option schemas and MUST keep the github widget tree
+
+#### Scenario: Default yaml stays github-only
+- **WHEN** a consumer commits the default `.github/profile-bits.yml`
+- **THEN** parse MUST succeed without requiring elbow packs
+
+#### Scenario: token_env is an env name
+- **WHEN** yaml `plugins.spotify.token_env` or `plugins.steam.token_env` is set
+- **THEN** the value MUST be a process environment variable name and MUST NOT be a token value or `INPUT_*`
+
+### Requirement: Spotify pack owns now-playing and top
+Pack id `spotify` MUST already exist in live `FIRST_PARTY_PLUGIN_IDS`. The pack MUST declare widgets `now-playing` and `top` and integration `spotify` only. Pack defaults when the pack is on with no widget list MUST be `now-playing` (opt-in `top`). `demo` MUST NOT be a Spotify default. Pack-level `SPOTIFY_BITS_USED` MUST include `Image` when cover art is rendered. The Action MUST NOT expose a `plugin_spotify` bool. The system MUST NOT add `plugin_<plugin>_<widget>_<option>` inputs. Pack agents MUST NOT edit `packages/core/src/types.ts`.
+
+#### Scenario: Pack registry
+- **WHEN** `spotifyPlugin` is read
+- **THEN** `id` MUST be `spotify`, `widgets` MUST include `now-playing` and `top`, `integrations` MUST equal `["spotify"]`, and `defaults.widgets` MUST be `["now-playing"]`
+
+#### Scenario: No extra pack bool
+- **WHEN** the Spotify pack is registered
+- **THEN** root `action.yml` MUST NOT gain `plugin_spotify` or flattened widget option inputs
+
+### Requirement: Spotify yaml stays token_env plus widget options
+A valid yaml document MAY include optional `plugins.spotify` with optional `token_env` (http pattern) and optional widgets `now-playing` / `top` (`filename`, `animate`; `top` also `limit`). Yaml MUST NOT store refresh tokens, client id, client secret, or `plugin_*_*_*` keys. Default committed yaml MUST remain github-only.
+
+#### Scenario: token_env is an env name
+- **WHEN** yaml sets `plugins.spotify.token_env`
+- **THEN** the value MUST be a process env name, MUST NOT be `INPUT_*`, and MUST NOT be a token value
+
+#### Scenario: Unknown flatten keys fail parse
+- **WHEN** yaml includes `plugin_spotify_now_playing_filename` or `plugins.spotify.client_id`
+- **THEN** parse MUST fail
+
+### Requirement: LeetCode pack binds integration leetcode only
+Pack `leetcode` MUST declare integration `leetcode` only. That plugin MUST include widgets `solved` and opt-in `heatmap`. When the pack is on and no widget list is specified, the system MUST enable `solved` and MUST NOT enable `heatmap` until explicitly enabled. The Action MUST NOT expose a `plugin_leetcode` bool. The system MUST NOT add `plugin_<plugin>_<widget>_<option>` inputs. Pack agents MUST complete the existing catalog id and MUST NOT append `FIRST_PARTY_PLUGIN_IDS`. Pack agents MUST NOT edit `packages/core/src/types.ts`.
+
+#### Scenario: Pack default is solved
+- **WHEN** the leetcode plugin is enabled with no widget list
+- **THEN** the enabled widgets MUST be `solved` and `heatmap` MUST remain disabled until explicitly enabled
+
+#### Scenario: Heatmap is opt-in
+- **WHEN** yaml enables `plugins.leetcode.widgets.heatmap`
+- **THEN** widget `heatmap` MUST be available on pack `leetcode` and MUST NOT become a pack default
+
+#### Scenario: No extra pack bool or flatten
+- **WHEN** root `action.yml` is generated
+- **THEN** it MUST NOT contain `plugin_leetcode` or any `plugin_<plugin>_<widget>_<option>` input
+
+#### Scenario: Pack agents do not mint ids
+- **WHEN** a pack agent authors `leetcode`
+- **THEN** it MUST complete the existing catalog id, MUST NOT append `FIRST_PARTY_PLUGIN_IDS`, and MUST NOT edit `packages/core/src/types.ts`
+
+### Requirement: chess is one pack with chesscom and lichess
+Plugin id `chess` MUST be one pack. Its widgets MUST be `ratings` and
+`game`. Its integrations MUST be the derived union `chesscom` and `lichess`
+and MUST NOT include an integration id `chess`. Pack defaults when the pack
+is on with no widget list MUST be `ratings` only (`game` opt-in). Pack-level
+`bitsUsed` MUST include `Stat` (ratings) and `Board` (game) in addition to
+layout bits. Pack agents MUST complete these existing catalog ids and MUST
+NOT append `FIRST_PARTY_PLUGIN_IDS` and MUST NOT edit
+`packages/core/src/types.ts`. The Action MUST NOT expose `plugin_chess`,
+flattened `plugin_*_*_*` inputs, or `plugin_<plugin>_<widget>_<option>`
+inputs. `docsPath` MUST NOT be hardcoded
+as `/generate/chess/`.
+
+#### Scenario: chess pack identity
+- **WHEN** pack `chess` is registered
+- **THEN** widgets MUST be `ratings` and `game`, integrations MUST be
+  `chesscom` and `lichess`, and defaults MUST be `ratings`
+
+#### Scenario: chess does not flatten Action inputs
+- **WHEN** root `action.yml` is generated
+- **THEN** it MUST NOT contain `plugin_chess` or any
+  `plugin_chess_<widget>_<option>` input
+
+### Requirement: chess yaml user prefers chess.com then lichess
+A valid yaml document MAY include optional `plugins.chess` with optional
+`user` and widgets `ratings` / `game`. When only `user` is set, load MUST
+try integration `chesscom` first and MUST fall back to `lichess` only on
+HTTP 404. 403, 429, and 5xx MUST NOT fall back. Missing/blank `user` MUST
+`fail_widget` without HTTP. Default committed yaml MUST remain github-only.
+`POST /api/preview` remains layout preview, not a public embed API.
+
+#### Scenario: unknown chess.com user falls back to lichess
+- **WHEN** yaml `plugins.chess.user` is set and chess.com returns 404
+- **THEN** the pack MUST load the lichess dump for that user
+
+#### Scenario: chess.com rate limit does not fall back
+- **WHEN** chess.com returns 429
+- **THEN** the pack MUST NOT call lichess as a substitute
+
+#### Scenario: blank user does not HTTP
+- **WHEN** yaml chess `user` is missing, `""`, or whitespace
+- **THEN** load MUST fail the widget and MUST NOT send HTTP
+
+### Requirement: steam pack yaml uses token_env and thin steam_token
+First-party plugin `steam` MUST declare widgets `player` and `recent`
+and integration `steam`. When the pack is on with no widget list, the
+system MUST enable `player` only; `recent` MUST be opt-in like github
+`repo`. Yaml MAY include optional `plugins.steam` as a sibling of
+`plugins.github`. That object MAY include optional `token_env` (http
+pattern: process env **name**, not a token value, not `INPUT_*`) and
+optional `user` (Steam vanity or steamid64). Yaml MUST NOT store Steam
+Web API keys. Thin Action input `steam_token` MUST remain optional with
+**no default**. The Action MUST NOT expose a `plugin_steam` bool. The
+system MUST NOT add `plugin_<plugin>_<widget>_<option>` inputs. Default
+committed yaml MUST remain github-only. Pack agents MUST complete this
+existing catalog id and MUST NOT append `FIRST_PARTY_PLUGIN_IDS` or edit
+`packages/core/src/types.ts`.
+
+#### Scenario: steam pack default is player
+- **WHEN** the steam plugin is enabled with no widget list
+- **THEN** the enabled widgets MUST be `player` and `recent` MUST remain
+  disabled until explicitly enabled
+
+#### Scenario: token_env is an env name
+- **WHEN** yaml `plugins.steam.token_env` is set
+- **THEN** the value MUST be a process environment variable name and
+  MUST NOT be a token value or `INPUT_*`
+
+#### Scenario: yaml must not store the steam key
+- **WHEN** a consumer commits `.github/profile-bits.yml` with
+  `plugins.steam`
+- **THEN** parse MUST succeed without a Web API key in yaml and MUST
+  reject unknown flatten keys
+
+#### Scenario: no plugin_steam bool or flatten
+- **WHEN** root `action.yml` is generated
+- **THEN** it MUST NOT contain `plugin_steam` or any
+  `plugin_<plugin>_<widget>_<option>` input
+
+#### Scenario: steam_token has no default
+- **WHEN** Action input `steam_token` is read
+- **THEN** it MUST be optional with no default and pack-off MUST NOT
+  require it

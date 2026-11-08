@@ -13,7 +13,10 @@ import {
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
 const ACTION_YML = join(ROOT, "action.yml");
-const DOCS_CHANGE = join(ROOT, "openspec/changes/docs-full-catalog-playground");
+const DOCS_CHANGE = join(
+  ROOT,
+  "openspec/changes/archive/2026-11-08-docs-full-catalog-playground",
+);
 
 const EXTRA_PACK_BOOLS = [
   "plugin_wakatime",
@@ -126,9 +129,11 @@ describe("W2-A-04 schema keys ≡ action.yml", () => {
 
   it("finishes docs-full-catalog-playground in place (no new docs id)", () => {
     expect(existsSync(join(DOCS_CHANGE, "tasks.md"))).toBe(true);
-    expect(existsSync(join(ROOT, "openspec/changes/action-token-env"))).toBe(
-      true,
-    );
+    expect(
+      existsSync(
+        join(ROOT, "openspec/changes/archive/2026-11-08-action-token-env"),
+      ),
+    ).toBe(true);
     const tasks = readFileSync(join(DOCS_CHANGE, "tasks.md"), "utf8");
     expect(tasks).not.toMatch(/^- \[ \]/m);
   });

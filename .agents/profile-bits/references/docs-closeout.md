@@ -18,8 +18,10 @@ Use these exactly:
   consumer relative README embeds.
 - **docsPath:** `"{{DOCS_PATH}}"` on **new** packs only. Do not rewrite a live
   inventoried `docsPath`.
-- **Playground wall:** do not edit `DESIGN.md` or `apps/docs/**` while
-  `openspec/changes/docs-full-catalog-playground` owns those files.
+- **Playground wall:** `docs-full-catalog-playground` is archived at
+  `openspec/changes/archive/2026-11-08-docs-full-catalog-playground`. Do not
+  invent a new docs change id. `just generate-docs` still does not rewrite
+  `DESIGN.md`.
 
 ## Matrix
 
@@ -39,5 +41,5 @@ Use these exactly:
 2. Tell the author to run `just generate-action` and `just generate-docs` when
    those recipes exist. State that generate-docs is the playground-fields
    snapshot only.
-3. Do not run `just generate-docs` from this skill while a sibling docs
-   playground change owns the snapshot.
+3. `just generate-docs` remains the playground-fields snapshot only. The
+   exclusive `docs-full-catalog-playground` lock is archived.

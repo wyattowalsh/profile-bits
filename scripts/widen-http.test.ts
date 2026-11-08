@@ -24,7 +24,12 @@ describe("OpenSpec change widen-http", () => {
   it("keeps the change in openspec/changes/ (not archived, not a new docs id)", () => {
     expect(existsSync(join(CHANGE, ".openspec.yaml"))).toBe(true);
     expect(
-      existsSync(join(ROOT, "openspec/changes/docs-full-catalog-playground")),
+      existsSync(
+        join(
+          ROOT,
+          "openspec/changes/archive/2026-11-08-docs-full-catalog-playground",
+        ),
+      ),
     ).toBe(true);
     expect(existsSync(join(ROOT, "openspec/specs/widen-http"))).toBe(false);
   });

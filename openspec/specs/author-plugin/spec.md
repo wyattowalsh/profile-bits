@@ -109,7 +109,8 @@ Skill templates MUST live under the plugin root in their owning skill. Template 
 - **THEN** pack templates MUST use `{{PLUGIN_ID}}` / `{{PLUGIN_ID_UPPER}}` (emitting `<id>Plugin` / `<ID>_BITS_USED`), widget templates MUST use `{{PACK_ID}}` / `{{WIDGET_*}}`, integration templates MUST use `{{id}}` / `{{Id}}` / `{{ID}}` / `{{auth}}` / `{{scheme}}`, dialects MUST NOT be unified, and substituted ids MUST match `^[a-z][a-z0-9-]*$` with no `..` and no `/`
 
 ### Requirement: Harness trees are relative symlinks not a second skills SSOT
-`.agents/skills/author`, `.agents/skills/author-integration`, `.agents/skills/author-widget`, and `.agents/skills/author-plugin` MUST be relative symlinks to `.agents/profile-bits/skills/<id>`. Those harness trees MUST NOT be a copied or hand-edited second skills SSOT. Generated OpenSpec skill trees (`openspec-*`) under `.agents/skills` MUST NOT be rewritten by this capability. `.cursor/skills/` MUST NOT be written as a second authoring-skills tree. This capability MUST NOT require `.claude/skills/<id>` to exist, and MUST NOT create or document `.claude/` or `.claude/skills` as authoring-skill projections.
+
+`.agents/skills/author`, `.agents/skills/author-bit`, `.agents/skills/author-palette`, `.agents/skills/author-integration`, `.agents/skills/author-widget`, and `.agents/skills/author-plugin` MUST be relative symlinks to `.agents/profile-bits/skills/<id>`. Those harness trees MUST NOT be a copied or hand-edited second skills SSOT. Generated OpenSpec skill trees (`openspec-*`) under `.agents/skills` MUST NOT be rewritten by this capability. `.cursor/skills/` MUST NOT be written as a second authoring-skills tree. This capability MUST NOT require `.claude/skills/<id>` to exist, and MUST NOT create or document `.claude/` or `.claude/skills` as authoring-skill projections.
 
 #### Scenario: Harness author skill is a symlink
 - **WHEN** `.agents/skills/author` is resolved after migrate
@@ -154,7 +155,8 @@ A change to the public API — yaml schema, thin Action inputs, or the first-par
 - **THEN** the skills MUST allow that work and MUST NOT treat it as a silent catalog expand
 
 ### Requirement: Fail closed on stale codegen
-Plugin validation MUST fail closed when generated Action or docs surfaces are stale. If the repo root `justfile` has `generate-action`, validation MUST run `just generate-action --check` from the repo root and MUST fail on mismatch. Validation MAY walk up to the repo root at runtime; that walk MUST NOT count as a plugin-relative `../` template path. When those recipes exist, skills MUST tell the author to run `just generate-action` and `just generate-docs`.
+
+Plugin validation MUST fail closed when generated Action or docs surfaces are stale. If the repo root `justfile` has `generate-action`, validation MUST run `just generate-action --check` from the repo root and MUST fail on mismatch. If the repo root `justfile` has `generate-docs`, validation MUST run `just generate-docs --check` from the repo root and MUST fail on mismatch. Validation MAY walk up to the repo root at runtime; that walk MUST NOT count as a plugin-relative `../` template path. When those recipes exist, skills MUST tell the author to run `just generate-action` and `just generate-docs`, and MUST describe `just generate-docs` as the playground-fields snapshot only.
 
 #### Scenario: generate-action --check fails on stale action.yml
 - **WHEN** generated `action.yml` is stale or contains flattened `plugin_<plugin>_<widget>_<option>` inputs
@@ -162,7 +164,11 @@ Plugin validation MUST fail closed when generated Action or docs surfaces are st
 
 #### Scenario: Skills instruct codegen refresh
 - **WHEN** an authoring skill completes a change that requires codegen and `generate-action` / `generate-docs` recipes exist
-- **THEN** the skill MUST tell the author to run `just generate-action` and `just generate-docs`
+- **THEN** the skill MUST tell the author to run `just generate-action` and `just generate-docs` and MUST NOT claim generate-docs rewrites `AGENTS.md`, `README.md`, or `DESIGN.md`
+
+#### Scenario: generate-docs --check fails on stale playground fields
+- **WHEN** `playground-fields.json` is missing or would drift from live option schemas
+- **THEN** `just generate-docs --check` MUST fail and plugin validation MUST fail
 
 ### Requirement: WakaTime-class integration uses existing architecture
 A WakaTime-class add for a **new** data source MUST reuse the existing integration architecture, not invent a plugin pack and not invent a new integration stack. WakaTime-class is the architecture name for new data sources, not a freeze of pack ids. The integration skill MUST generate a client, auth, scopes, inputs, and mocked HTTP tests using the existing `integration-contract` model (`static` = none; `github` = token required in the Action; shared client per run; REST cache key `(method, url, params)`; GraphQL cache key `(query, variables)`). Auth MAY also be constrained per widget option. Dest MUST be `packages/integrations/src/<id>/`. Completing an id already in `FIRST_PARTY_*` MUST be allowed. Skills MUST NOT create a second pack for an id already in `FIRST_PARTY_PLUGIN_IDS`.
@@ -260,7 +266,8 @@ Each skill MUST ship Agent Skills evals (`evals/evals.json`) with `skill_name` a
 - **THEN** they MUST include an ideate case that ranks without writing or copying and an empty-args case that lists all six roles without inventory
 
 ### Requirement: Plugin validation suite
-The plugin MUST ship a validate script (`scripts/validate.sh`) that validates `plugin.json` against Agent Plugins 1.0.0, rejects recursive `mcp.json`, runs `pnpm dlx skills-ref@0.1.5 validate skills/<id>` on each of exactly six allowed skill directories, requires every frontmatter name to match its directory, runs `just generate-action --check` when that recipe exists, enforces template containment with Node 24 `fs.realpathSync` and `path.relative`, and asserts manifest identity (`profile-bits`, `0.1.0`, MIT).
+
+The plugin MUST ship a validate script (`scripts/validate.sh`) that validates `plugin.json` against Agent Plugins 1.0.0, rejects recursive `mcp.json`, runs `pnpm dlx skills-ref@0.1.5 validate skills/<id>` on each of exactly six allowed skill directories, requires every frontmatter name to match its directory, runs `just generate-action --check` when that recipe exists, runs `just generate-docs --check` when that recipe exists, enforces template containment with Node 24 `fs.realpathSync` and `path.relative`, and asserts manifest identity (`profile-bits`, `0.1.0`, MIT).
 
 #### Scenario: Validate script fails on mcp.json or parent template paths
 - **WHEN** `mcp.json` is present anywhere under the plugin root or a template path contains `../` or resolves outside the plugin root via `realpathSync`
@@ -281,6 +288,10 @@ The plugin MUST ship a validate script (`scripts/validate.sh`) that validates `p
 #### Scenario: Template containment uses realpathSync
 - **WHEN** plugin validation checks template paths
 - **THEN** it MUST resolve with Node `fs.realpathSync` and `path.relative` and MUST fail if the relative path starts with `..`
+
+#### Scenario: generate-docs --check runs when the recipe exists
+- **WHEN** the repo root `justfile` has `generate-docs` and plugin validation runs
+- **THEN** the validate script MUST run `just generate-docs --check` (or `pnpm generate-docs --check`) from the repo root
 
 ### Requirement: Pack-level bitsUsed on the pack plugin object
 Authoring skills MUST treat `bitsUsed` as pack-level. Pack templates MUST use `{{PLUGIN_ID}}` / `{{PLUGIN_ID_UPPER}}` and MUST export `<id>Plugin` and `<ID>_BITS_USED`, and MUST set `bitsUsed` on that pack object using `satisfies PluginIdentity & { bitsUsed: typeof … }` because `PluginIdentitySchema` has no `bitsUsed`. Starter `BITS_USED` MUST be Theme, Frame, Stack, Row, Text, and Muted. Frozen 11 is a membership allow-list only. The widget skill MUST union widget bits into that pack-level array. When a live pack is missing pack-level `bitsUsed`, skills MUST union widget-entry `bitsUsed` onto that pack, MUST keep any widget registry, and MUST use the six-name starter for new packs only. GitHub (`githubWidgetRegistry`) is an example, not the only law. `bitsUsed` MUST NOT be yaml, MUST NOT live on a widget-entry-only SSOT, and MUST NOT require a `widget-bits.ts` module in `packages/core`. Skills MUST NOT edit `packages/core` to add `bitsUsed` to the core schema. Pack templates MUST use `docsPath: "{{DOCS_PATH}}"` and MUST NOT hardcode `/generate/<id>/`. Pack templates MUST NOT `export const plugin` as the pack identity.
@@ -304,3 +315,288 @@ Authoring skills MUST treat `bitsUsed` as pack-level. Pack templates MUST use `{
 #### Scenario: Missing pack-level bitsUsed unions widget-entry bits
 - **WHEN** a live pack is missing pack-level `bitsUsed` and widget entries already declare `bitsUsed` (github `githubWidgetRegistry` is an example, not the only law)
 - **THEN** the skills MUST union those widget-entry names onto pack-level `{{PLUGIN_ID_UPPER}}_BITS_USED` on `{{PLUGIN_ID}}Plugin`, MUST keep any widget registry, MUST NOT copy the six-name starter over that live pack, and MUST use the six-name starter for new packs only
+
+### Requirement: Docs closeout after mutating authoring
+After a mutating authoring success, the destination skill MUST load `.agents/profile-bits/references/docs-closeout.md` and MUST update the nested package `AGENTS.md` it owns when that file’s facts changed (`packages/bits/AGENTS.md` for bits, `packages/themes/AGENTS.md` for palettes, `packages/integrations/AGENTS.md` for integrations, `packages/plugins/AGENTS.md` for widgets and packs). Skills MUST describe `just generate-docs` as refreshing the playground-fields snapshot only and MUST NOT claim it rewrites `AGENTS.md`, `README.md`, or `DESIGN.md`. Skills MUST NOT copy templates into `apps/docs/**` or `/generate/widgets`. Empty arguments, help, refuse, route-away, and complete-existing stop MUST skip docs-closeout. The umbrella `author` skill MUST remain read-only and MUST name docs-closeout as the destination skill’s job.
+
+#### Scenario: Mutating bit updates bits AGENTS.md
+- **WHEN** `author-bit` lands an approved 12th bit or changes a frozen-11 fact
+- **THEN** it MUST update `packages/bits/AGENTS.md` and MUST NOT edit `DESIGN.md` or `apps/docs/**`
+
+#### Scenario: Complete-existing skips docs-closeout
+- **WHEN** `author-bit` finds Theme already exported and stops as complete-existing
+- **THEN** it MUST NOT rewrite `packages/bits/AGENTS.md`
+
+#### Scenario: generate-docs is snapshot-only
+- **WHEN** an authoring skill tells the author to refresh docs codegen
+- **THEN** it MUST say `just generate-docs` refreshes playground-fields.json only and MUST NOT say it rewrites `AGENTS.md`, `README.md`, or `DESIGN.md`
+
+#### Scenario: Empty args skip closeout
+- **WHEN** an authoring skill is invoked with empty arguments
+- **THEN** it MUST show its gallery and stop without loading docs-closeout or writing files
+
+#### Scenario: Umbrella does not mutate docs
+- **WHEN** `author` classifies a request or ranks ideate
+- **THEN** it MUST NOT write files and MUST hand docs-closeout to the destination skill
+
+### Requirement: Plugin validation is a repo gate
+The repo MUST expose `just validate-agent-plugins` that runs `.agents/profile-bits/scripts/validate.sh` and `.agents/profile-bits-readme/scripts/validate.sh`. CI MUST invoke that gate (or the two scripts) so plugin validation is not a human-only step.
+
+#### Scenario: just recipe runs both plugins
+- **WHEN** a maintainer runs `just validate-agent-plugins`
+- **THEN** both plugin validate scripts MUST run and MUST fail the recipe if either fails
+
+#### Scenario: CI runs plugin validation
+- **WHEN** CI runs the lint or check job that already runs `generate-docs --check`
+- **THEN** it MUST also run both plugin validate scripts (or `just validate-agent-plugins`)
+
+### Requirement: Author-bit may copy Bit.template for approved README-card names
+`author-bit` MUST treat `Image`, `Heatmap`, `Board`, `Icon`, `Grid`, `List`, and `Time` as OpenSpec-approved 12th+ names. After this delta, adding one of those names MUST copy the single generic `templates/Bit.template` to `packages/bits/src/<BitName>.tsx` (substitute `{{BitName}}`), then a later barrel node MUST add the named export and `BIT_EXPORTS` entry. The skill MUST NOT ship one template per Frozen 11 bit. The skill MUST NOT copy `Bit.template` onto Frozen 11 files. Completing Frozen 11 MUST still inventory live source plus export and stop as complete-existing when they exist. Ranking alias `Cover` MUST route to `Image` and MUST NOT create `Cover.tsx`. This change MUST NOT itself copy templates or edit `packages/bits/**`.
+
+#### Scenario: Approved Image may use Bit.template after this delta
+- **WHEN** a later node adds OpenSpec-approved `Image`
+- **THEN** `author-bit` MUST copy `templates/Bit.template` to `packages/bits/src/Image.tsx` and MUST NOT stop as an unapproved 12th name
+
+#### Scenario: Frozen 11 still do not use Bit.template
+- **WHEN** `author-bit` is asked to complete `Chip` or `Theme`
+- **THEN** it MUST inventory live source and MUST NOT copy `Bit.template` onto that file
+
+#### Scenario: Cover routes to Image
+- **WHEN** an author asks for a Cover bit
+- **THEN** the skill MUST name `Image` and MUST NOT write `packages/bits/src/Cover.tsx`
+
+#### Scenario: This node does not copy templates
+- **WHEN** W3-B-01 lands the OpenSpec change
+- **THEN** it MUST NOT copy `Bit.template` and MUST NOT edit `packages/bits/src/index.ts`
+
+### Requirement: Author-bit refuses overlay primitives
+`author-bit` MUST stop when asked for `Dialog`, `Toast`, `Popover`, `Dropdown`, or `Command`. It MUST NOT create those source files, MUST NOT add them to `BIT_EXPORTS`, and MUST NOT create `author-dialog` or another seventh skill. Overlay widgets MUST NOT enter pack `bitsUsed`.
+
+#### Scenario: Dialog stops
+- **WHEN** an author asks `author-bit` for Dialog
+- **THEN** the skill MUST stop and MUST NOT write `packages/bits/src/Dialog.tsx`
+
+#### Scenario: Toast Popover Dropdown Command stop
+- **WHEN** an author asks for Toast, Popover, Dropdown, or Command as a shared bit
+- **THEN** the skill MUST stop and MUST NOT add a seventh skill directory
+
+### Requirement: bitsUsed membership may include approved 12th names after they land
+Pack-level `bitsUsed` membership MUST allow Frozen 11 plus OpenSpec-approved `Image`, `Heatmap`, `Board`, `Icon`, `Grid`, `List`, and `Time` after those bits exist. Starter `BITS_USED` for new packs MUST remain Theme, Frame, Stack, Row, Text, and Muted. Dialog, Toast, Popover, Dropdown, and Command MUST NOT appear in `bitsUsed`. This change MUST NOT edit live pack `bitsUsed` arrays, MUST NOT put `bits:` in yaml, and MUST NOT add flattened `plugin_<plugin>_<widget>_<option>` Action inputs. Wave 3 MUST NOT run `author-integration add` for `github`, `wakatime`, `rss`, or `http`. `POST /api/preview` MUST remain layout preview, not a public embed API.
+
+#### Scenario: Approved names may join bitsUsed after they land
+- **WHEN** `Image` exists as a bit export
+- **THEN** a pack MUST be allowed to list `Image` in pack-level `bitsUsed` and MUST NOT list `Dialog`
+
+#### Scenario: Starter six is unchanged
+- **WHEN** `author-plugin` generates a new pack registry
+- **THEN** `{{PLUGIN_ID_UPPER}}_BITS_USED` MUST still start as Theme, Frame, Stack, Row, Text, and Muted
+
+#### Scenario: No flatten and no live dest add
+- **WHEN** this change lands
+- **THEN** the system MUST NOT add `plugin_<plugin>_<widget>_<option>` inputs and MUST NOT run `author-integration add` for github, wakatime, rss, or http
+
+### Requirement: author-integration copies query-key from a named scheme file
+`author-integration` MUST treat `query-key` as a named allowed `{{scheme}}` alongside `none`, `github-bearer`, `wakatime-basic`, and `http-optional`. When OpenSpec names `query-key` for a **new** dest, the skill MUST copy `assets/templates/auth.query-key.ts.template` onto `packages/integrations/src/<id>/auth.ts`. The skill MUST use that literal filename. The skill MUST NOT interpolate `auth.{{scheme}}.ts.template` as a path. The skill MUST NOT invent a default `auth.ts.template`. Unknown scheme names, including `oauth2`, MUST **stop**. A new id whose named scheme is `query-key` MUST NOT stop. If dest `client.ts` exists, the skill MUST **stop** and MUST NOT emit a parallel `auth.ts`. Completing github, wakatime, rss, or http MUST NOT run `author-integration add` against those live dests. Wave 2 MUST extend those live `client.ts` files by hand when dumps need it. The query-key template MUST keep shared export names (`{{ID}}_AUTH`, `is{{Id}}TokenMissing`, `assert{{Id}}ActionToken`, `{{id}}AuthorizationHeader`, `{{id}}RequiresAuthorization`) and MUST return `{}` from the header function (never `{ Authorization: "" }`, never Bearer). `{{id}}RequiresAuthorization()` MUST be true. Catalog `{{auth}}` for query-key sources MUST be `required`. The skill MUST NOT infer `query-key` from catalog `required` (wakatime is also `required` and stays `wakatime-basic`). The skill MUST NOT infer `http-optional` for Steam-class keys.
+
+#### Scenario: OpenSpec-named query-key copies the query-key template
+- **WHEN** the author adds a new integration id that is not in live `INTEGRATION_AUTH` and OpenSpec names `{{scheme}}` `query-key`
+- **THEN** the skill MUST copy `assets/templates/auth.query-key.ts.template` onto dest `auth.ts` and MUST NOT stop as an unknown scheme
+
+#### Scenario: unknown scheme oauth2 still stops
+- **WHEN** OpenSpec names scheme `oauth2` (not `oauth-refresh` and not `query-key`)
+- **THEN** the skill MUST stop and MUST NOT invent a template path
+
+#### Scenario: live dest client.ts still stops
+- **WHEN** dest `packages/integrations/src/<id>/client.ts` already exists
+- **THEN** the skill MUST stop and MUST NOT copy `auth.query-key.ts.template` onto that dest
+
+#### Scenario: query-key is not inferred from catalog required
+- **WHEN** catalog auth is `required` and OpenSpec did not name `query-key`
+- **THEN** the skill MUST NOT copy `auth.query-key.ts.template` and MUST NOT treat wakatime-basic sources as query-key
+
+#### Scenario: query-key header export is empty
+- **WHEN** the query-key auth template is copied
+- **THEN** `{{id}}AuthorizationHeader` MUST return `{}` and `{{id}}RequiresAuthorization()` MUST be true
+
+### Requirement: Named scheme oauth-refresh is copyable
+`author-integration` MUST treat `oauth-refresh` as a named allowed `{{scheme}}`. When OpenSpec names `{{scheme}}` `oauth-refresh` for a new integration id and destination `packages/integrations/src/<id>/client.ts` is absent, the skill MUST copy `assets/templates/auth.oauth-refresh.ts.template` onto `packages/integrations/src/<id>/auth.ts`. The skill MUST NOT interpolate `auth.{{scheme}}.ts.template` as a path. The skill MUST NOT invent `auth.ts.template`. Completing a live dest that already has `client.ts` MUST still stop and MUST NOT emit a parallel `auth.ts`. Wave 2 MUST NOT run `author-integration add` for `github`, `wakatime`, `rss`, or `http`.
+
+#### Scenario: New id with named oauth-refresh copies the scheme file
+- **WHEN** OpenSpec names `{{scheme}}` `oauth-refresh` for a new integration id whose dest `client.ts` is absent
+- **THEN** `author-integration` MUST copy `assets/templates/auth.oauth-refresh.ts.template` onto `packages/integrations/src/<id>/auth.ts` and MUST NOT stop as unknown scheme
+
+#### Scenario: Live dest with client.ts still stops
+- **WHEN** `author-integration add` targets an id whose dest `client.ts` already exists
+- **THEN** the skill MUST stop and MUST NOT emit a parallel `auth.ts`
+
+#### Scenario: Scheme path is not interpolated
+- **WHEN** the skill copies the oauth-refresh auth file
+- **THEN** it MUST use the named scheme→filename table entry `auth.oauth-refresh.ts.template` and MUST NOT interpolate `auth.{{scheme}}.ts.template` as a path and MUST NOT invent `auth.ts.template`
+
+#### Scenario: Wave 2 does not add live first-party integrations
+- **WHEN** wave 2 extends github, wakatime, rss, or http
+- **THEN** it MUST NOT run `author-integration add` for those ids
+
+### Requirement: Alias oauth2 stays unknown
+The scheme id MUST be `oauth-refresh`. `oauth2` MUST remain an unknown scheme. When an author or OpenSpec names scheme `oauth2`, `author-integration` MUST stop. The skill MUST NOT invent `auth.oauth2.ts.template`.
+
+#### Scenario: oauth2 stops
+- **WHEN** OpenSpec or an author names scheme `oauth2`
+- **THEN** `author-integration` MUST stop and MUST NOT invent `auth.oauth2.ts.template`
+
+#### Scenario: Scheme id is oauth-refresh not oauth2
+- **WHEN** a Spotify-class integration is named in OpenSpec
+- **THEN** `{{scheme}}` MUST be `oauth-refresh` and MUST NOT be `oauth2`
+
+### Requirement: oauth-refresh does not flatten Action inputs
+Applying `oauth-refresh` MUST NOT add flattened Action inputs of the form `plugin_<plugin>_<widget>_<option>`. Client id and client secret MUST be named environment variables, not yaml keys, and MUST NOT become extra Marketplace Action inputs. Refresh-token Action names MUST be read from live `ActionInputsSchema` / `types.ts` after a later schema change; this change MUST NOT invent thin Action input names. A later ActionInputsSchema change MUST use yaml `token_env` (http pattern) if it adds a refresh-token input.
+
+#### Scenario: No flattened plugin inputs
+- **WHEN** oauth-refresh is specified or applied
+- **THEN** the system MUST NOT add `plugin_<plugin>_<widget>_<option>` Action inputs and MUST NOT add a `plugin_spotify` bool
+
+#### Scenario: Client credentials stay named env
+- **WHEN** an oauth-refresh consumer needs a client id and client secret
+- **THEN** those values MUST come from named environment variables and MUST NOT appear in yaml or as extra Marketplace flatten names
+
+#### Scenario: Thin token names are not invented here
+- **WHEN** this change lands
+- **THEN** skills MUST NOT invent a new thin Action input name and MUST wait for live `ActionInputsSchema` / `types.ts`
+
+### Requirement: Thin Action token names are read from live ActionInputsSchema
+Authoring skills MUST read live `ActionInputsSchema` / `types.ts` for thin Action input names, including optional `wakatime_token`, `http_token_env`, `spotify_token`, and `steam_token` (no defaults). Skills MUST NOT invent flattened Action inputs of the form `plugin_<plugin>_<widget>_<option>`. Skills MUST NOT invent pack-enable bools `plugin_wakatime`, `plugin_rss`, `plugin_http`, `plugin_spotify`, or `plugin_steam`. Yaml `token_env` MUST be an environment variable name (http pattern), not a token value, and MUST NOT be `INPUT_*`. This change MUST NOT add ids to `FIRST_PARTY_PLUGIN_IDS`, `FIRST_PARTY_WIDGET_IDS`, or `FIRST_PARTY_INTEGRATION_IDS`. Wave 2 MUST NOT run `author-integration add` for `github`, `wakatime`, `rss`, or `http`.
+
+#### Scenario: Skills do not invent thin names
+- **WHEN** a skill needs an Action token input
+- **THEN** it MUST read live `ActionInputsSchema` / `types.ts` and MUST NOT invent `plugin_*_*_*` or extra pack bools
+
+#### Scenario: Yaml token_env is not a secret
+- **WHEN** a skill writes or documents yaml `token_env`
+- **THEN** the value MUST be an environment variable name and MUST NOT be a token, `api_key`, or `INPUT_*` name
+
+#### Scenario: Wave 2 does not add live first-party integrations
+- **WHEN** wave 2 extends github, wakatime, rss, or http
+- **THEN** it MUST NOT run `author-integration add` for those ids
+
+#### Scenario: No first-party id in this change
+- **WHEN** this change lands
+- **THEN** `FIRST_PARTY_PLUGIN_IDS`, `FIRST_PARTY_WIDGET_IDS`, and `FIRST_PARTY_INTEGRATION_IDS` MUST NOT gain a new id from this change
+
+### Requirement: Pack agents complete elbow ids without editing types.ts
+After this change, `spotify`, `leetcode`, `chess`, `steam`, `chesscom`, `lichess`, and the Wave 3 widget ids listed in `widget-contract` MUST already be present in live `FIRST_PARTY_*`. Authoring skills MUST treat those ids as complete-existing catalog members. Pack agents MUST NOT edit `packages/core/src/types.ts`. Skills MUST NOT silently append `FIRST_PARTY_PLUGIN_IDS`, `FIRST_PARTY_WIDGET_IDS`, or `FIRST_PARTY_INTEGRATION_IDS`. Wave 2 MUST NOT run `author-integration add` for `github`, `wakatime`, `rss`, or `http`. Wave 3 MAY run `author-integration add` for a new id only when dest `client.ts` is absent. Skills MUST NOT invent `plugin_<plugin>_<widget>_<option>` inputs or extra pack bools.
+
+#### Scenario: Elbow ids are complete-existing
+- **WHEN** a pack agent authors `spotify`, `leetcode`, `chess`, or `steam`
+- **THEN** it MUST complete the existing catalog id and MUST NOT append `FIRST_PARTY_*`
+
+#### Scenario: types.ts is single-writer
+- **WHEN** a Wave 3 pack, widget, or bit agent runs
+- **THEN** it MUST NOT edit `packages/core/src/types.ts`
+
+#### Scenario: No live dest add in wave 2
+- **WHEN** skills are asked to add github, wakatime, rss, or http
+- **THEN** they MUST NOT run `author-integration add` for those ids
+
+#### Scenario: Preview is not an embed API
+- **WHEN** docs preview an elbow or reuse widget
+- **THEN** `POST /api/preview` MUST remain layout preview, not a public embed API
+
+### Requirement: author-integration add spotify only when dest client.ts is absent
+`author-integration add spotify` MUST run only when dest `packages/integrations/src/spotify/client.ts` is absent. When that dest is absent and OpenSpec names `{{scheme}}` `oauth-refresh`, the skill MUST copy `assets/templates/auth.oauth-refresh.ts.template` onto `packages/integrations/src/spotify/auth.ts` and MUST NOT stop as unknown scheme. The skill MUST NOT interpolate `auth.{{scheme}}.ts.template` as a path. The skill MUST NOT invent `auth.oauth2.ts.template` or `auth.ts.template`. If dest `client.ts` exists, the skill MUST **stop** and MUST NOT emit a parallel `auth.ts`. Wave 2 MUST NOT run `author-integration add` for `github`, `wakatime`, `rss`, or `http`. Pack agents MUST NOT edit `packages/core/src/types.ts`. Completing live catalog ids MUST NOT append `FIRST_PARTY_*`.
+
+#### Scenario: Absent dest copies oauth-refresh
+- **WHEN** dest `packages/integrations/src/spotify/client.ts` is absent and OpenSpec names `oauth-refresh`
+- **THEN** `author-integration` MUST copy `auth.oauth-refresh.ts.template` onto dest `auth.ts`
+
+#### Scenario: Live dest still stops
+- **WHEN** dest `packages/integrations/src/spotify/client.ts` already exists
+- **THEN** `author-integration add spotify` MUST stop and MUST NOT overwrite complete existing sources
+
+#### Scenario: Wave 2 does not add live first-party integrations
+- **WHEN** wave 2 extends github, wakatime, rss, or http
+- **THEN** it MUST NOT run `author-integration add` for those ids
+
+### Requirement: Spotify authoring does not flatten Action inputs
+Applying Spotify MUST NOT add `plugin_spotify` or `plugin_<plugin>_<widget>_<option>` Action inputs. Client id and client secret MUST stay named env `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`. Skills MUST read live `ActionInputsSchema` for `spotify_token` (no default) and MUST NOT invent thin names. `docs-full-catalog-playground` MUST stay in place.
+
+#### Scenario: No flattened plugin inputs
+- **WHEN** Spotify is authored
+- **THEN** the system MUST NOT add `plugin_spotify` or `plugin_<plugin>_<widget>_<option>` inputs
+
+#### Scenario: Client credentials stay named env
+- **WHEN** Spotify needs a client id and client secret
+- **THEN** those values MUST come from `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` and MUST NOT appear in yaml
+
+### Requirement: Wave 3 may author-integration add leetcode when dest client.ts is absent
+`leetcode` is a complete-existing catalog id. When dest `packages/integrations/src/leetcode/client.ts` is absent, Wave 3 MAY run `author-integration add leetcode`. OpenSpec names `{{scheme}}` `none` for that dest. The skill MUST copy `assets/templates/auth.none.ts.template` onto `packages/integrations/src/leetcode/auth.ts`. The skill MUST NOT interpolate `auth.{{scheme}}.ts.template` as a path. Completing a live dest that already has `client.ts` MUST still stop and MUST NOT emit a parallel `auth.ts`. Wave 2 MUST NOT run `author-integration add` for `github`, `wakatime`, `rss`, or `http`. Pack agents MUST NOT edit `packages/core/src/types.ts`. Skills MUST NOT invent `plugin_<plugin>_<widget>_<option>` inputs or a `plugin_leetcode` bool. `POST /api/preview` remains layout preview, not a public embed API.
+
+#### Scenario: Absent dest copies auth none
+- **WHEN** Wave 3 runs `author-integration add leetcode` and dest `client.ts` is absent
+- **THEN** the skill MUST copy `auth.none.ts.template` and MUST NOT stop as unknown scheme
+
+#### Scenario: Live dest with client.ts still stops
+- **WHEN** `author-integration add` targets an id whose dest `client.ts` already exists
+- **THEN** the skill MUST stop and MUST NOT emit a parallel `auth.ts`
+
+#### Scenario: Wave 2 does not add live first-party integrations
+- **WHEN** wave 2 extends github, wakatime, rss, or http
+- **THEN** it MUST NOT run `author-integration add` for those ids
+
+#### Scenario: types.ts stays single-writer
+- **WHEN** a Wave 3 leetcode pack agent runs
+- **THEN** it MUST NOT edit `packages/core/src/types.ts` and MUST NOT append `FIRST_PARTY_*`
+
+#### Scenario: No flatten
+- **WHEN** leetcode is authored
+- **THEN** the system MUST NOT add `plugin_<plugin>_<widget>_<option>` Action inputs and MUST NOT add a `plugin_leetcode` bool
+
+#### Scenario: Preview is not an embed API
+- **WHEN** docs preview a leetcode widget
+- **THEN** `POST /api/preview` MUST remain layout preview, not a public embed API
+
+### Requirement: author-integration add steam copies query-key when dest client.ts is absent
+`author-integration add steam` MUST run only when dest
+`packages/integrations/src/steam/client.ts` is absent. OpenSpec names
+`{{scheme}}` `query-key` for steam. The skill MUST copy
+`assets/templates/auth.query-key.ts.template` onto dest `auth.ts` using
+that literal filename. The skill MUST NOT interpolate
+`auth.{{scheme}}.ts.template` as a path. The skill MUST NOT copy
+`auth.http-optional.ts.template` for steam. Unknown scheme names,
+including `oauth2`, MUST still **stop**. If dest `client.ts` exists, the
+skill MUST **stop** and MUST NOT emit a parallel `auth.ts`. Completing
+github, wakatime, rss, or http MUST NOT run `author-integration add`
+against those live dests. Pack agents MUST NOT edit
+`packages/core/src/types.ts` and MUST NOT append `FIRST_PARTY_*`. Skills
+MUST NOT invent `plugin_<plugin>_<widget>_<option>` inputs or a
+`plugin_steam` bool. `POST /api/preview` remains layout preview, not a public embed API.
+Skills MUST NOT run `npx skills add`.
+
+#### Scenario: OpenSpec-named query-key copies the query-key template for steam
+- **WHEN** dest `packages/integrations/src/steam/client.ts` is absent and
+  OpenSpec names `{{scheme}}` `query-key` for steam
+- **THEN** the skill MUST copy `assets/templates/auth.query-key.ts.template`
+  onto dest `auth.ts` and MUST NOT stop as an unknown scheme
+
+#### Scenario: live dest client.ts still stops
+- **WHEN** dest `packages/integrations/src/steam/client.ts` already
+  exists
+- **THEN** the skill MUST stop and MUST NOT copy
+  `auth.query-key.ts.template` onto that dest
+
+#### Scenario: steam is not http-optional
+- **WHEN** the author adds steam
+- **THEN** the skill MUST NOT copy `auth.http-optional.ts.template` and
+  MUST NOT send Steam keys as Bearer
+
+#### Scenario: Wave 2 dests stay add-forbidden
+- **WHEN** skills are asked to add github, wakatime, rss, or http
+- **THEN** they MUST NOT run `author-integration add` for those ids
+
+#### Scenario: types.ts stays single-writer
+- **WHEN** a steam pack, widget, or integration agent runs
+- **THEN** it MUST NOT edit `packages/core/src/types.ts` and MUST NOT
+  append `FIRST_PARTY_*`
+
+#### Scenario: Preview is not an embed API
+- **WHEN** docs preview a steam widget
+- **THEN** `POST /api/preview` MUST remain layout preview, not a public embed API

@@ -37,9 +37,11 @@ describe("archived add-github-repo-widget contract", () => {
     expect(plugin).toContain(
       "### Requirement: Github pack widget repo is yaml opt-in",
     );
-    expect(plugin).toContain("Widget `repo` MUST be opt-in like `demo`");
     expect(plugin).toContain(
-      "widgets `demo`, `stats`, `languages`, and `repo`",
+      "Widgets `repo`, `top-repos`, and `contributions` MUST be opt-in like `demo`",
+    );
+    expect(plugin).toContain(
+      "widgets `demo`, `stats`, `languages`, opt-in `repo`",
     );
     expect(plugin).toContain("`plugin_github_repo_include`");
     expect(plugin).toContain("MUST NOT contain `plugin_github_repo`");
@@ -74,7 +76,7 @@ describe("archived add-github-repo-widget contract", () => {
       "### Requirement: Http pack widgets are json and chips",
     );
     expect(plugin).toContain(
-      "first-party plugin ids MUST be `github`, `wakatime`, `rss`, and `http`",
+      "first-party plugin ids MUST be `github`, `wakatime`, `rss`, `http`, `spotify`, `leetcode`, `chess`, and `steam`",
     );
 
     expect(widget).toContain("### Requirement: Frozen feed widget options");

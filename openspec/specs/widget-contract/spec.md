@@ -93,14 +93,15 @@ A skipped widget MUST NOT write files, MUST NOT overwrite existing widget files,
 - **THEN** the Action MUST NOT write or overwrite that widget’s output file and MUST NOT treat it as `data-changed`
 
 ### Requirement: Frozen feed widget options
-Widget `feed` MUST use integration `rss` only. Options MUST be: `filename` (default `feed`); `url` (required; https only; no username or password); `limit` 1–8 default 5; `animate` bool default false. The widget MUST bind to exactly one Takumi template. Card size MUST be 480×160. Default format MUST be svg (baked still: no `<style>`, `@keyframes`, SMIL, or `foreignObject`). Theme tokens MUST be limited to `bg`, `card`, `text`, `muted`, `accent`, `border`, and `font`. The widget MUST consume the cached rss payload and MUST NOT perform HTTP itself. Empty payload MUST render a “No feed items” card, not crash. `animate` MUST be plumbed; gif/apng motion for `feed` is not required. A skipped `feed` widget MUST NOT write files (inherited skip-without-write). A 404 feed URL MUST fail the widget. Malformed XML MUST fail the widget (not skip). `http://` MUST fail yaml parse. URL userinfo MUST fail yaml parse. Redirect-to-http MUST fail fetch (not parse).
+
+Widget `feed` MUST use integration `rss` only. Options MUST be: `filename` (default `feed`); `url` (required; https only; no username or password); `limit` 1–8 default 5; `animate` bool default false. The widget MUST bind to exactly one Takumi template. Card size MUST be 480×160. Default format MUST be svg (baked still: no `<style>`, `@keyframes`, SMIL, or `foreignObject`). Theme tokens MUST be limited to `bg`, `card`, `text`, `muted`, `accent`, `border`, and `font`. The widget MUST consume the cached rss **feed+item dump** and MUST NOT perform HTTP itself. The leftover frozen triple `{ title, url, published_at }` MUST be the feed widget reader (not the cache schema). Extra dump fields (`id`, `content`, `summary`, `authors`, `categories`, `updated`, `enclosures`, feed metadata) MUST remain available on the dump and MUST NOT be required for `feed` to render. The widget MUST slice dump `items` to `limit`. The widget MAY still render title, url, and date. Empty dump `items` MUST render a “No feed items” card, not crash. `animate` MUST be plumbed; gif/apng motion for `feed` is not required. A skipped `feed` widget MUST NOT write files (inherited skip-without-write). A 404 feed URL MUST fail the widget. Malformed XML MUST fail the widget (not skip). `http://` MUST fail yaml parse. URL userinfo MUST fail yaml parse. Redirect-to-http MUST fail fetch (not parse). The system MUST NOT add flattened `plugin_<plugin>_<widget>_<option>` Action inputs such as `plugin_rss_feed_url`. This change MUST NOT add a new first-party widget id.
 
 #### Scenario: Feed defaults
 - **WHEN** `feed` is enabled with `url` and no other option overrides
 - **THEN** `filename` MUST be `feed`, `limit` MUST be 5, `animate` MUST be false, the card MUST be 480×160 svg, and the widget MUST NOT perform HTTP
 
 #### Scenario: Empty feed items card
-- **WHEN** the cached rss payload has no items
+- **WHEN** the cached rss dump has no items
 - **THEN** the widget MUST render a “No feed items” card and MUST NOT crash
 
 #### Scenario: http url fails parse
@@ -127,12 +128,25 @@ Widget `feed` MUST use integration `rss` only. Options MUST be: `filename` (defa
 - **WHEN** the feed widget is skipped per inherited skip-without-write policy
 - **THEN** the Action MUST NOT write or overwrite that widget’s output file and MUST NOT treat it as `data-changed`
 
+#### Scenario: leftover triple is the feed widget reader
+- **WHEN** the cached dump includes id, content, summary, authors, categories, updated, enclosures, and feed metadata in addition to title, url, and published_at
+- **THEN** the feed widget MUST read `{ title, url, published_at }` from dump items, MAY still render title / url / date, and MUST NOT require the extra dump fields to render
+
+#### Scenario: feed widget slices dump items to limit
+- **WHEN** dump `items` length exceeds `limit`
+- **THEN** the widget MUST slice `items` to `limit` and MUST NOT ask the rss client to drop dump fields
+
+#### Scenario: No flattened feed Action inputs
+- **WHEN** this change lands
+- **THEN** the Action MUST NOT declare `plugin_rss_feed_url` or any `plugin_rss_feed_*` input
+
 ### Requirement: Frozen json widget options
-Widget `json` MUST use integration `http` only. Options MUST be: `filename` (default `json`); `url` (required; https only); `headers` (optional string record; forbidden names `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and names matching `/token/i`; forbidden values matching `/^(Bearer|token|Basic)\s/i`); `jmespath` (default `@`); `timeout_ms` (integer 1–20000, default 10000); `method` MUST be `GET` only; `animate` bool default false. The widget MUST bind to exactly one Takumi template. Card size MUST be 480×160. Default format MUST be svg (baked still: no `<style>`, `@keyframes`, SMIL, or `foreignObject`). Theme tokens MUST be limited to `bg`, `card`, `text`, `muted`, `accent`, `border`, and `font`. The widget MUST consume the cached http JSON payload and MUST NOT perform HTTP itself. Object keys MUST truncate to 16 characters and values to 48 characters, with at most 3 object rows. The muted hostname label MUST be the URL hostname or `"JSON"` when no hostname is available. `animate` MUST be plumbed; gif/apng motion for `json` is not required. A skipped `json` widget MUST NOT write files (inherited skip-without-write).
+
+Widget `json` MUST use integration `http` only. Options MUST be: `filename` (default `json`); `url` (required; https only); `headers` (optional string record; forbidden names `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and names matching `/token/i`; forbidden values matching `/^(Bearer|token|Basic)\s/i`); `jmespath` (default `@`); `timeout_ms` (integer 1–20000, default 10000); `method` MUST be `GET` only; `animate` bool default false. The widget MUST bind to exactly one Takumi template. Card size MUST be 480×160. Default format MUST be svg (baked still: no `<style>`, `@keyframes`, SMIL, or `foreignObject`). Theme tokens MUST be limited to `bg`, `card`, `text`, `muted`, `accent`, `border`, and `font`. The widget MUST consume the cached http JSON payload (the full parsed JSON value) and MUST NOT perform HTTP itself. `jmespath` MUST run in the widget as a reader on that dump and MUST NOT drop keys at fetch. Object keys MUST truncate to 16 characters and values to 48 characters, with at most 3 object rows, at render only. The muted hostname label MUST be the URL hostname or `"JSON"` when no hostname is available. `animate` MUST be plumbed; gif/apng motion for `json` is not required. A skipped `json` widget MUST NOT write files (inherited skip-without-write).
 
 #### Scenario: Json defaults
 - **WHEN** `json` is enabled with `url` and no other option overrides
-- **THEN** `filename` MUST be `json`, `jmespath` MUST be `@`, `timeout_ms` MUST be 10000, `method` MUST be `GET`, `animate` MUST be false, the card MUST be 480×160 svg, and the widget MUST NOT perform HTTP
+- **THEN** `filename` MUST be `json`, `jmespath` MUST be `@`, `timeout_ms` MUST be `10000`, `method` MUST be `GET`, `animate` MUST be false, the card MUST be 480×160 svg, and the widget MUST NOT perform HTTP
 
 #### Scenario: http url fails parse
 - **WHEN** `widgets.json.url` is an `http://` URL
@@ -149,6 +163,10 @@ Widget `json` MUST use integration `http` only. Options MUST be: `filename` (def
 #### Scenario: allowed yaml headers are forwarded
 - **WHEN** `widgets.json.headers` contains allowed extra headers
 - **THEN** the widget MUST pass those headers to the http client GET
+
+#### Scenario: jmespath is widget-side
+- **WHEN** yaml `jmespath` is not `@`
+- **THEN** the cached dump MUST still be the full JSON value and the widget MUST apply that expression as a reader
 
 ### Requirement: json empty, zero, and fail outcomes
 Empty after a **successful** jmespath search (`null`, `undefined`, `""`, `[]`, or `{}`) MUST render a “No data” card and MUST NOT crash. `0` and `false` MUST render. An invalid jmespath expression MUST fail the widget (not skip). A 404 URL MUST fail the widget. JSON parse errors MUST fail the widget (not skip).
@@ -214,9 +232,10 @@ Chips render from the injected http client MUST accept an optional theme on the 
 - **THEN** the two SVG strings MUST differ
 
 ### Requirement: Frozen chips widget options
+
 Widget `chips` MUST use integration `http` only. Options MUST be: `filename` (default `chips`); `preset` (`shieldcn` or `shields`; required; one preset per widget); `types` (list of `npm`, `stars`, `forks`, `license`, `release`, `issues`, `prs`, `ci`; min 1, max 8; duplicates MUST be removed while preserving first-seen order); optional `package`; optional `repo`; optional `workflow` (default `ci.yml`, used for shields `ci` only); `timeout_ms` (integer 1–20000, default 10000); `animate` bool default false. Yaml MUST NOT accept `url`, `headers`, `method`, or `bits` on chips. Parse MUST allow omitting `package`, `repo`, and `workflow`. Missing package or owner after expand (Action `user` as owner when `repo` has no `/`) MUST fail the widget, not parse. Unknown preset or type MUST fail parse. Empty `types` MUST fail parse. Extra keys MUST fail parse.
 
-The widget MUST bind to exactly one Takumi template. Card size MUST be 480×160. Default format MUST be svg (baked still: no `<style>`, `@keyframes`, SMIL, or `foreignObject`). Theme tokens MUST be limited to `bg`, `card`, `text`, `muted`, `accent`, `border`, and `font`. The template MUST render a wrapping row of horizontal split Chips (`label` + `message` + `messageColor`). The widget MUST NOT wrap `Stat` for this chrome. Children-only Chip MUST remain valid for github stats. The widget MUST consume normalized `{ label, message, color? }` payloads and MUST NOT perform HTTP itself. A load helper in the widget folder MUST call the injected http client; the template MUST have fetch none. `animate` MUST be plumbed; gif/apng motion for `chips` is not required. A skipped `chips` widget MUST NOT write files (inherited skip-without-write).
+The widget MUST bind to exactly one Takumi template. Card size MUST be 480×160. Default format MUST be svg (baked still: no `<style>`, `@keyframes`, SMIL, or `foreignObject`). Theme tokens MUST be limited to `bg`, `card`, `text`, `muted`, `accent`, `border`, and `font`. The template MUST render a wrapping row of horizontal split Chips (`label` + `message` + `messageColor`). The widget MUST NOT wrap `Stat` for this chrome. Children-only Chip MUST remain valid for github stats. The widget MUST consume the cached raw badge JSON dump (`label`, `message`, `color`, `name`, `value`, `link` when present) and MUST NOT perform HTTP itself. A widget-side reader MUST map `message = message ?? value` to `{ label, message, color? }` for the template. A load helper in the widget folder MUST call the injected http client with per-request auth `none`; the template MUST have fetch none. `animate` MUST be plumbed; gif/apng motion for `chips` is not required. A skipped `chips` widget MUST NOT write files (inherited skip-without-write).
 
 #### Scenario: Chips defaults
 - **WHEN** `chips` is enabled with `preset` and `types` and no other option overrides
@@ -242,8 +261,13 @@ The widget MUST bind to exactly one Takumi template. Card size MUST be 480×160.
 - **WHEN** yaml `preset` is not `shieldcn` or `shields`
 - **THEN** parse MUST fail
 
+#### Scenario: cache keeps link and value
+- **WHEN** shieldcn JSON is `{ "label": "npm", "value": "19.0.0", "link": "https://example.com" }`
+- **THEN** the cached dump MUST retain `value` and `link`; the widget reader MUST yield message `19.0.0` for render and MUST NOT treat `link` as a per-chip URL
+
 ### Requirement: chips Chip row, color, and empty card
-Each successful chip MUST render as a horizontal split Chip: muted label half plus message half. Message color MUST come from a closed named map `brightgreen`, `green`, `yellowgreen`, `yellow`, `orange`, `red`, `blue`, `lightgrey`, `success`, `important`, `critical`, `informational`, `inactive`, or from `#rgb` / `#rrggbb`. Any other color string, and a missing color, MUST use theme `accent`. Color MUST be applied with inline style only. The widget MUST ignore `link` and `href`. Empty after a successful fetch/normalize list (zero chips) MUST render a “No data” card and MUST NOT crash.
+
+Each successful chip MUST render as a horizontal split Chip: muted label half plus message half. Message color MUST come from a closed named map `brightgreen`, `green`, `yellowgreen`, `yellow`, `orange`, `red`, `blue`, `lightgrey`, `success`, `important`, `critical`, `informational`, `inactive`, or from `#rgb` / `#rrggbb`. Any other color string, and a missing color, MUST use theme `accent`. Color MUST be applied with inline style only. The widget MUST ignore `link` and `href` at render. Those keys MUST remain on the cached dump when present. Empty after a successful fetch/normalize list (zero chips) MUST render a “No data” card and MUST NOT crash.
 
 #### Scenario: split Chip uses label and message
 - **WHEN** a normalized chip has `label` and `message`
@@ -269,8 +293,13 @@ Each successful chip MUST render as a horizontal split Chip: muted label half pl
 - **WHEN** every type GET and normalize succeeds and the resulting chip list is empty
 - **THEN** the widget MUST render a “No data” card and MUST NOT crash
 
+#### Scenario: cache retains link while render ignores it
+- **WHEN** the cached dump includes `link` or `href`
+- **THEN** those keys MUST remain on the cached dump and the rendered chip MUST still ignore them as per-chip links
+
 ### Requirement: chips fail_widget matrix and fetch none
-Missing `message` after `message = message ?? value` MUST fail the widget. One type GET failure or normalize failure MUST fail the **entire** chips widget (`fail_widget`) with no partial card. Missing package or owner after expand MUST fail the widget. HTTP outcomes for each expanded URL MUST follow the existing http matrix (`fail_widget`, never github `fail_run`). The template MUST NOT call `fetch`. Tests MUST assert zero live network and MUST spy `globalThis.fetch` unused on the template.
+
+Missing `message` after widget-side `message = message ?? value` MUST fail the widget. One type GET failure or normalize failure MUST fail the **entire** chips widget (`fail_widget`) with no partial card. Missing package or owner after expand MUST fail the widget. HTTP outcomes for each expanded URL MUST follow the existing http matrix (`fail_widget`, never github `fail_run`). Normalize MUST be a widget reader and MUST NOT run inside http fetch. The template MUST NOT call `fetch`. Tests MUST assert zero live network and MUST spy `globalThis.fetch` unused on the template.
 
 #### Scenario: missing message fails widget
 - **WHEN** a type payload has neither `message` nor `value`, or both are empty
@@ -441,3 +470,500 @@ Empty or unusable payload after a successful fetch (missing `full_name`) MUST re
 #### Scenario: skipped repo does not write
 - **WHEN** the repo widget is skipped per inherited skip-without-write policy
 - **THEN** the Action MUST NOT write or overwrite that widget’s output file and MUST NOT treat it as `data-changed`
+
+### Requirement: GitHub widgets select from the cached dump
+Widgets `stats`, `languages`, and `repo` MUST consume the github cached dump and MUST NOT perform HTTP. `include`, `limit`, `min_pct`, and `exclude` MUST remain widget-side filters and MUST NOT drop fields at fetch. Extra dump keys MUST NOT fail widget parse. Frozen option schemas for those widgets MUST stay. Widget `demo` MUST keep integration `static` and MUST NOT call GitHub. Playground and docs preview MUST use fixtures or an App token and MUST NOT treat `POST /api/preview` as a public embed API.
+
+#### Scenario: Stats selects from the dump
+- **WHEN** widget `stats` renders
+- **THEN** it MUST read the cached github dump and MUST NOT perform HTTP
+
+#### Scenario: Languages selects from the dump
+- **WHEN** widget `languages` applies `limit`, `min_pct`, or `exclude`
+- **THEN** those filters MUST run in the widget against the cached dump and MUST NOT drop language nodes at fetch
+
+#### Scenario: Extra dump keys do not fail parse
+- **WHEN** the cached dump includes fields the current card does not render
+- **THEN** widgets `stats`, `languages`, and `repo` MUST still parse and MUST NOT fail because extra keys are present
+
+#### Scenario: Preview is not an embed API
+- **WHEN** the docs playground previews a github widget
+- **THEN** it MUST use fixtures or an App token and MUST NOT treat `POST /api/preview` as a public embed API
+
+### Requirement: Coding include/limit is the widget reader
+Widget `coding` MUST apply yaml `include` and `limit` when reading the
+cached wakatime dump. Include/limit MUST NOT drop fields at fetch. When
+`include` is `[languages]`, render MUST omit editors (and other
+unrequested slices) and the cache MUST still contain those slices when
+the source returned them. `limit` MUST cap rendered rows per included
+slice and MUST NOT truncate the cached dump. Yaml token `os` MUST map
+from dump field `operating_systems` in the widget reader. The widget
+MUST NOT invent `0` for omitted include tokens. The widget MUST stay
+HTTP-free. Empty rows after filters MUST still render a “No coding data”
+card (write the card; this is `render`, not skip). Frozen coding yaml
+defaults MUST stay `include: [languages, editors]` and `limit: 8`.
+Widget id MUST remain `coding` and MUST NOT become `stats`. This change
+MUST NOT add a new first-party widget id. The system MUST NOT add
+flattened `plugin_<plugin>_<widget>_<option>` Action inputs such as
+`plugin_wakatime_coding_range`.
+
+#### Scenario: Include languages omits editors in render not cache
+- **WHEN** `include` is `[languages]` and the cached dump still contains
+  `editors`
+- **THEN** the coding widget MUST omit editors in render and MUST NOT
+  drop `editors` from the cache
+
+#### Scenario: Limit caps render not cache
+- **WHEN** `limit` is `1` and the cached `languages` slice has more than
+  one row
+- **THEN** render MUST show at most one language row and the cache MUST
+  still contain the unsliced rows
+
+#### Scenario: os maps from operating_systems at the widget
+- **WHEN** `include` contains `os` and the dump has `operating_systems`
+- **THEN** the widget reader MUST map that field to yaml token `os` and
+  MUST NOT invent `0` when the field is absent
+
+#### Scenario: Widget stays HTTP-free
+- **WHEN** widget `coding` renders
+- **THEN** it MUST consume the cached dump and MUST NOT perform HTTP
+
+#### Scenario: Empty after filters still writes No coding data
+- **WHEN** the dump has no remaining rows after include/limit
+- **THEN** the widget MUST render a “No coding data” card, MUST write
+  the card, and MUST NOT skip
+
+#### Scenario: No flattened coding Action inputs
+- **WHEN** this change lands
+- **THEN** the Action MUST NOT declare `plugin_wakatime_coding_range` or
+  any `plugin_wakatime_coding_*` input
+
+### Requirement: json jmespath is a widget reader
+Widget `json` MUST apply `jmespath` to the cached full JSON dump and MUST NOT ask the http client to filter or drop keys. Truncation (object keys to 16 characters, values to 48, at most 3 object rows) MUST apply at render only. Empty after a successful search (`null`, `undefined`, `""`, `[]`, or `{}`) MUST still render a “No data” card. `0` and `false` MUST still render. An invalid `jmespath` MUST `fail_widget`. The widget MUST NOT perform HTTP itself.
+
+#### Scenario: jmespath runs on the cached dump
+- **WHEN** yaml `jmespath` is not `@`
+- **THEN** the widget MUST apply that expression to the cached full JSON value and MUST NOT ask the client to filter the dump
+
+#### Scenario: render truncation does not strip the dump
+- **WHEN** a JSON object has more than 3 keys
+- **THEN** the cached dump MUST keep every key and the card MUST truncate rows at render
+
+### Requirement: chips normalize is a widget reader
+Widget `chips` MUST read the cached raw badge JSON dump and MUST map `message = message ?? value` to `{ label, message, color? }` in a widget-side reader before the template. That reader MUST NOT run inside the http client fetch. Missing `message` after that map MUST `fail_widget`. Render MUST still use `label`, `message`, and `color` (theme `accent` when color is missing). `link` and `href` MUST remain on the cached dump when present and MUST be ignored as chrome (not per-chip URLs). A load helper in the widget folder MUST call the injected http client with per-request auth `none`; the template MUST have fetch none.
+
+#### Scenario: widget reader maps value to message
+- **WHEN** the cached dump is `{ "label": "npm", "value": "19.0.0", "link": "https://example.com" }` with no color
+- **THEN** the widget reader MUST yield message `19.0.0`, MUST omit color so render uses theme accent, and MUST leave `value` and `link` on the cached dump
+
+#### Scenario: template consumes normalized records
+- **WHEN** the chips template renders
+- **THEN** it MUST consume `{ label, message, color? }` records from the widget reader and MUST NOT call `fetch`
+
+### Requirement: Frozen latest widget options
+Widget `latest` MUST use integration `rss` only. Options MUST be: `filename` (default `latest`); `url` (required; https only; no username or password); `limit` 1–8 default 1; `animate` bool default false. The widget MUST bind to exactly one Takumi template. Card size MUST be 480×160. Default format MUST be svg (baked still: no `<style>`, `@keyframes`, SMIL, or `foreignObject`). Theme tokens MUST be limited to `bg`, `card`, `text`, `muted`, `accent`, `border`, and `font`. The widget MUST consume the cached rss **feed+item dump** and MUST NOT perform HTTP itself. The widget MUST compose the Time bit for item dates. Time `value` MUST be dump item `updated` when that field is a non-empty string, otherwise `published_at`. The widget MUST order dump `items` by that date descending (stable; missing dates last) and MUST slice to `limit`. Extra dump fields (`id`, `content`, `summary`, `authors`, `categories`, `enclosures`, feed metadata) MUST remain available on the dump and MUST NOT be required for `latest` to render. Empty dump `items` MUST render a “No latest item” card, not crash. `animate` MUST be plumbed; gif/apng motion for `latest` is not required. A skipped `latest` widget MUST NOT write files (inherited skip-without-write). A 404 feed URL MUST fail the widget. Malformed XML MUST fail the widget (not skip). `http://` MUST fail yaml parse. URL userinfo MUST fail yaml parse. The widget MUST share the run-scoped rss client with `feed` (same `fetchFeed`; no second client). The system MUST NOT add flattened `plugin_<plugin>_<widget>_<option>` Action inputs such as `plugin_rss_latest_url`. This change MUST NOT mint a new first-party widget id (`latest` is already in `FIRST_PARTY_WIDGET_IDS`). Pack agents MUST NOT edit `packages/core/src/types.ts`.
+
+#### Scenario: Latest defaults
+- **WHEN** `latest` is enabled with `url` and no other option overrides
+- **THEN** `filename` MUST be `latest`, `limit` MUST be 1, `animate` MUST be false, the card MUST be 480×160 svg, and the widget MUST NOT perform HTTP
+
+#### Scenario: Empty latest items card
+- **WHEN** the cached rss dump has no items
+- **THEN** the widget MUST render a “No latest item” card and MUST NOT crash
+
+#### Scenario: Time bit reads updated then published_at
+- **WHEN** a dump item has both `updated` and `published_at`
+- **THEN** the widget MUST pass `updated` to the Time bit and MUST NOT require `content` or feed metadata to render
+
+#### Scenario: Time bit falls back to published_at
+- **WHEN** a dump item has `published_at` and `updated` is null
+- **THEN** the widget MUST pass `published_at` to the Time bit
+
+#### Scenario: latest orders by recency then slices to limit
+- **WHEN** dump `items` length exceeds `limit` and dates are not already newest-first
+- **THEN** the widget MUST order by `updated ?? published_at` descending, MUST slice to `limit`, and MUST NOT ask the rss client to drop dump fields
+
+#### Scenario: latest shares the rss client with feed
+- **WHEN** `feed` and `latest` render in one run against the same feed URL
+- **THEN** both widgets MUST use the same run-scoped rss client and MUST NOT each construct a new client
+
+#### Scenario: http url fails parse
+- **WHEN** `widgets.latest.url` is an `http://` URL
+- **THEN** yaml parse MUST fail
+
+#### Scenario: userinfo url fails parse
+- **WHEN** `widgets.latest.url` is an https URL that includes a username or password
+- **THEN** yaml parse MUST fail
+
+#### Scenario: 404 feed url fails widget
+- **WHEN** the feed URL returns HTTP 404
+- **THEN** the widget MUST fail and MUST NOT skip or write output
+
+#### Scenario: malformed feed xml fails widget
+- **WHEN** the fetched body is malformed XML that cannot be parsed as a feed
+- **THEN** the widget MUST fail and MUST NOT skip
+
+#### Scenario: skipped latest does not write
+- **WHEN** the latest widget is skipped per inherited skip-without-write policy
+- **THEN** the Action MUST NOT write or overwrite that widget’s output file and MUST NOT treat it as `data-changed`
+
+#### Scenario: No flattened latest Action inputs
+- **WHEN** this change lands
+- **THEN** the Action MUST NOT declare `plugin_rss_latest_url` or any `plugin_rss_latest_*` input
+
+#### Scenario: latest declares rss only
+- **WHEN** widget `latest` is registered
+- **THEN** it MUST declare integration `rss` only
+
+### Requirement: Frozen top-repos widget options
+Widget `top-repos` MUST use integration `github` only. Options MUST be:
+`filename` (default `top-repos`); `limit` integer 1–16 default 8;
+`animate` bool default false. Yaml MUST NOT accept `url`, `headers`,
+`bits`, `include_private`, `include_forks`, `include_archived`, or `repo`
+on `top-repos`. Unknown keys MUST fail parse. Empty `limit` below 1 or
+above 16 MUST fail parse.
+
+The widget MUST bind to exactly one Takumi template. Card size MUST be
+480×160. Default format MUST be svg (baked still: no `<style>`,
+`@keyframes`, SMIL, or `foreignObject`). Theme tokens MUST be limited to
+`bg`, `card`, `text`, `muted`, `accent`, `border`, and `font`. The
+template MUST render a ranked owner-crawl list (name plus stars meta)
+using pack bits, including `List`. The widget MUST NOT use http `chips`
+split-Chip chrome and MUST NOT wrap http badge payloads. The widget MUST
+consume the cached github owner-crawl dump and MUST NOT perform HTTP
+itself. A load helper in the widget folder MAY map the cached payload;
+the template MUST have fetch none. `animate` MUST be plumbed; gif/apng
+motion for `top-repos` is not required. A skipped `top-repos` widget
+MUST NOT write files (inherited skip-without-write).
+
+`top-repos` MUST be opt-in on pack `github` like `demo` and `repo` and
+MUST NOT become a pack default. Playground preview for `top-repos` MUST
+use fixtures (or an App token) and MUST NOT treat `POST /api/preview` as
+a public embed API.
+
+#### Scenario: Top-repos defaults
+- **WHEN** `top-repos` is enabled with no option overrides
+- **THEN** `filename` MUST be `top-repos`, `limit` MUST be 8, `animate`
+  MUST be false, the card MUST be 480×160 svg, and the widget MUST NOT
+  perform HTTP
+
+#### Scenario: limit bounds
+- **WHEN** yaml `limit` is 0, 17, or a non-integer
+- **THEN** parse MUST fail
+
+#### Scenario: top-repos url headers bits fail parse
+- **WHEN** yaml `widgets.top-repos` includes `url`, `headers`, `bits`,
+  `include_private`, `include_forks`, `include_archived`, or `repo`
+- **THEN** parse MUST fail
+
+#### Scenario: widget declares github only
+- **WHEN** widget `top-repos` is registered
+- **THEN** it MUST declare integration `github` only and MUST NOT be a
+  new plugin id
+
+#### Scenario: pack defaults omit top-repos
+- **WHEN** the github plugin is enabled with no widget list
+- **THEN** the enabled widgets MUST be `stats` and `languages` and
+  `top-repos` MUST remain disabled until explicitly enabled
+
+#### Scenario: playground preview is not an embed API
+- **WHEN** the docs playground previews widget `top-repos`
+- **THEN** it MUST use fixtures or an App token, MUST go through
+  `POST /api/preview`, and MUST NOT document or cache that route as a
+  public embed API
+
+### Requirement: top-repos ranks the owner-crawl dump
+Widget `top-repos` MUST select from the cached github dump
+`repositories` list (owner crawl stars/forks already fetched). It MUST
+rank rows by stars descending, then forks descending, then title, and
+MUST apply `limit` widget-side. Ranking and `limit` MUST NOT drop
+repository fields at fetch. The widget MUST NOT call GitHub, MUST NOT
+call REST `/repos/{owner}/{repo}/languages`, and MUST NOT invent a
+second crawl. Extra dump keys MUST NOT fail widget parse. HTTP 200 with
+zero stars or forks MUST still rank and render those zeros when the row
+is included.
+
+#### Scenario: Ranks owner crawl by stars then forks
+- **WHEN** the cached dump includes owner repositories with stars and
+  forks
+- **THEN** the card MUST list them by stars descending, then forks
+  descending, then title, sliced to `limit`
+
+#### Scenario: limit stays widget-side
+- **WHEN** yaml `limit` is 1 and the dump has more than one repository
+- **THEN** the widget MUST render one row and MUST NOT refetch or shrink
+  the cached crawl
+
+#### Scenario: Extra dump keys do not fail parse
+- **WHEN** the cached dump includes fields the current card does not
+  render
+- **THEN** widget `top-repos` MUST still parse and MUST NOT fail because
+  extra keys are present
+
+#### Scenario: zeros render for included counts
+- **WHEN** a dump repository has zero stars
+- **THEN** the widget MUST still include that row when it ranks inside
+  `limit` and MUST render `0`
+
+#### Scenario: template performs no HTTP
+- **WHEN** the top-repos template renders
+- **THEN** it MUST NOT call `fetch` and MUST consume the already-fetched
+  owner-crawl dump
+
+### Requirement: top-repos empty card and fetch none
+Empty or unusable owner-crawl payload after a successful fetch (no
+named repositories) MUST render a “No repositories” card and MUST NOT
+crash. The template MUST NOT call `fetch`. Tests MUST assert zero live
+network and MUST spy `globalThis.fetch` unused on the template. A
+skipped `top-repos` widget MUST NOT write files.
+
+#### Scenario: empty payload renders No repositories
+- **WHEN** the owner-crawl dump has no usable repository names
+- **THEN** the widget MUST render a “No repositories” card and MUST NOT
+  crash
+
+#### Scenario: skipped top-repos does not write
+- **WHEN** the top-repos widget is skipped per inherited
+  skip-without-write policy
+- **THEN** the Action MUST NOT write or overwrite that widget’s output
+  file and MUST NOT treat it as `data-changed`
+
+### Requirement: Wave 3 widget ids are globally unique
+Widget ids MUST be globally unique across packs. Wave 3 MUST append these ids to `FIRST_PARTY_WIDGET_IDS` and `WIDGET_INTEGRATIONS`:
+
+- github reuse: `top-repos` → `github`; `contributions` → `github`
+- wakatime slices: `editors`, `projects`, `os`, `langs` → `wakatime`
+- rss: `latest` → `rss`
+- spotify: `now-playing`, `top` → `spotify`
+- leetcode: `solved`, `heatmap` → `leetcode`
+- chess: `ratings`, `game` → `chesscom` and `lichess`
+- steam: `player`, `recent` → `steam`
+
+Existing ids `demo`, `stats`, `languages`, `repo`, `coding`, `feed`, `json`, and `chips` MUST remain. Widget id `languages` MUST stay the github languages card. The WakaTime languages slice MUST use `langs`. Widget id `heatmap` MUST stay the leetcode submission heatmap. The github contribution heatmap MUST use `contributions`. Chess MUST NOT use widget id `stats`. Pack agents MUST NOT append `FIRST_PARTY_WIDGET_IDS`.
+
+#### Scenario: Catalog lists Wave 3 widget ids
+- **WHEN** live `FIRST_PARTY_WIDGET_IDS` is read
+- **THEN** it MUST contain `top-repos`, `contributions`, `editors`, `projects`, `os`, `langs`, `latest`, `now-playing`, `top`, `solved`, `heatmap`, `ratings`, `game`, `player`, and `recent` in addition to the eight shipped ids
+
+#### Scenario: languages stays github
+- **WHEN** widget `languages` is resolved
+- **THEN** `WIDGET_INTEGRATIONS.languages` MUST be `["github"]` and MUST NOT be wakatime
+
+#### Scenario: langs is the wakatime languages slice
+- **WHEN** widget `langs` is resolved
+- **THEN** `WIDGET_INTEGRATIONS.langs` MUST be `["wakatime"]`
+
+#### Scenario: heatmap stays leetcode
+- **WHEN** widget `heatmap` is resolved
+- **THEN** `WIDGET_INTEGRATIONS.heatmap` MUST be `["leetcode"]` and MUST NOT be github
+
+#### Scenario: contributions is the github heatmap widget
+- **WHEN** widget `contributions` is resolved
+- **THEN** `WIDGET_INTEGRATIONS.contributions` MUST be `["github"]`
+
+#### Scenario: chess does not reuse stats
+- **WHEN** chess widgets are registered
+- **THEN** their ids MUST be `ratings` and `game` and MUST NOT be `stats`
+
+### Requirement: Reuse widgets stay on existing packs
+Widgets `top-repos` and `contributions` MUST live on pack `github`. Widgets `editors`, `projects`, `os`, and `langs` MUST live on pack `wakatime`. Widget `latest` MUST live on pack `rss`. Those widgets MUST consume the existing integration dump and MUST NOT introduce a new integration id. Include/limit for wakatime slices MUST stay widget-side. Widgets MUST NOT perform HTTP.
+
+#### Scenario: github reuse widgets declare github only
+- **WHEN** widgets `top-repos` or `contributions` are registered
+- **THEN** they MUST declare integration `github` only
+
+#### Scenario: wakatime slice widgets declare wakatime only
+- **WHEN** widgets `editors`, `projects`, `os`, or `langs` are registered
+- **THEN** they MUST declare integration `wakatime` only and MUST NOT be id `stats`
+
+#### Scenario: rss latest declares rss only
+- **WHEN** widget `latest` is registered
+- **THEN** it MUST declare integration `rss` only
+
+### Requirement: Elbow pack widgets bind named integrations
+Widgets `now-playing` and `top` MUST declare integration `spotify` only. Widgets `solved` and `heatmap` MUST declare integration `leetcode` only. Widgets `ratings` and `game` MUST declare integrations `chesscom` and `lichess`. Widgets `player` and `recent` MUST declare integration `steam` only.
+
+#### Scenario: spotify widgets
+- **WHEN** widgets `now-playing` or `top` are resolved
+- **THEN** `WIDGET_INTEGRATIONS` MUST map them to `["spotify"]`
+
+#### Scenario: leetcode widgets
+- **WHEN** widgets `solved` or `heatmap` are resolved
+- **THEN** `WIDGET_INTEGRATIONS` MUST map them to `["leetcode"]`
+
+#### Scenario: chess widgets use both hosts
+- **WHEN** widgets `ratings` or `game` are resolved
+- **THEN** `WIDGET_INTEGRATIONS` MUST map them to `["chesscom", "lichess"]`
+
+#### Scenario: steam widgets
+- **WHEN** widgets `player` or `recent` are resolved
+- **THEN** `WIDGET_INTEGRATIONS` MUST map them to `["steam"]`
+
+### Requirement: now-playing and top read the Spotify dump
+Widgets `now-playing` and `top` MUST declare integration `spotify` only. They MUST consume the cached Spotify dump and MUST NOT perform HTTP. `now-playing` MUST prefer currently-playing and MUST fall back to recently-played when currently-playing is empty or `204`. `top` MUST apply `limit` in the widget (not by dropping dump fields at fetch). Empty now-playing MUST render “No now playing”. Empty top MUST render “No top tracks”. Extra dump keys MUST NOT fail the readers. Album art URLs in the dump MUST be readable for the Image bit. Card size MUST remain 480×160.
+
+#### Scenario: now-playing fallback
+- **WHEN** currently-playing is `null` or has no item and recently-played has a track
+- **THEN** `now-playing` MUST render that recently-played track and MUST NOT fetch
+
+#### Scenario: top limit is widget-side
+- **WHEN** the dump has more top tracks than yaml `limit`
+- **THEN** the widget MUST slice the dump and MUST NOT have caused the client to drop the extra tracks
+
+#### Scenario: Widgets never HTTP
+- **WHEN** `now-playing` or `top` render from a dump
+- **THEN** they MUST NOT call `fetch(` or construct an HTTP client
+
+#### Scenario: Cover art stays in the view-model
+- **WHEN** a dumped track has album image URLs
+- **THEN** the widget view-model MUST expose a cover URL for the Image bit
+
+### Requirement: LeetCode widgets select from the cached dump
+Widgets `solved` and `heatmap` MUST consume the leetcode cached dump and MUST NOT perform HTTP. They MUST declare integration `leetcode` only. Include/limit filters MUST stay widget-side and MUST NOT drop dump fields at fetch. Extra dump keys MUST NOT fail widget parse. Frozen option schemas (`filename`, `animate`) MUST stay. Widget id `heatmap` MUST stay the leetcode submission heatmap. The github contribution heatmap MUST remain widget id `contributions`. Playground and docs preview MUST use fixtures or skip live and MUST NOT treat `POST /api/preview` as a public embed API.
+
+#### Scenario: Solved selects from the dump
+- **WHEN** widget `solved` renders
+- **THEN** it MUST read the cached leetcode dump and MUST NOT perform HTTP
+
+#### Scenario: Heatmap selects from the dump
+- **WHEN** widget `heatmap` renders
+- **THEN** it MUST read `submissionCalendar` from the cached dump and MUST NOT perform HTTP
+
+#### Scenario: Extra dump keys do not fail parse
+- **WHEN** the cached dump includes fields the current card does not render
+- **THEN** widgets `solved` and `heatmap` MUST still parse and MUST NOT fail because extra keys are present
+
+#### Scenario: heatmap stays leetcode
+- **WHEN** widget `heatmap` is resolved
+- **THEN** it MUST declare integration `leetcode` only and MUST NOT be the github contribution heatmap
+
+#### Scenario: Preview is not an embed API
+- **WHEN** the docs playground previews a leetcode widget
+- **THEN** it MUST use fixtures or skip live and MUST NOT treat `POST /api/preview` as a public embed API
+
+### Requirement: Heatmap widget uses the Heatmap bit
+Widget `heatmap` MUST render LeetCode solved days with the shared `Heatmap` bit (day grid of intensity cells). It MUST NOT use `Board`. Widget `solved` MUST NOT invent a new bit for counts already covered by Frozen 11 `Stat`. This change MUST NOT enumerate bits in `packages/core/src/types.ts`.
+
+#### Scenario: LeetCode solved days use Heatmap not Board
+- **WHEN** widget `heatmap` shows LeetCode solved days
+- **THEN** it MUST use `Heatmap` and MUST NOT use `Board`
+
+#### Scenario: Solved does not mint a new bit
+- **WHEN** widget `solved` renders solved counts
+- **THEN** it MUST NOT add a new bit name beyond Frozen 11 plus the OpenSpec-approved README-card primitives
+
+### Requirement: ratings widget reads chess dumps with Stat
+Widget `ratings` MUST declare integrations `chesscom` and `lichess`. It MUST
+consume the cached dump and MUST NOT perform HTTP. It MUST render Stat chips
+for available time-class ratings (bullet, blitz, rapid, daily or classical,
+puzzle when present) and MUST NOT invent `0` for missing classes. Empty
+rating data MUST render a “No ratings data” card, not crash. Default card
+size MUST remain 480×160 SVG still. Widget id MUST be `ratings` and MUST NOT
+be `stats`. Pack agents MUST NOT append `FIRST_PARTY_WIDGET_IDS`.
+
+#### Scenario: ratings uses Stat and not stats id
+- **WHEN** the chess ratings card is registered
+- **THEN** its widget id MUST be `ratings`, it MUST NOT be `stats`, and its
+  template MUST use the Stat bit
+
+#### Scenario: ratings does not HTTP
+- **WHEN** `ratings` renders from a dump with extra keys
+- **THEN** it MUST NOT call `fetch` and MUST still render
+
+#### Scenario: missing classes are omitted not zeroed
+- **WHEN** the dump has blitz rating 2800 and no bullet object
+- **THEN** the card MUST show blitz and MUST NOT render bullet as `0`
+
+### Requirement: game widget renders Board from FEN or PGN
+Widget `game` MUST declare integrations `chesscom` and `lichess`. It MUST
+consume the cached dump and MUST NOT perform HTTP. It MUST prefer a `fen` or
+`lastFen` field, else a PGN `[FEN ""]` tag, and pass that FEN to the Board
+bit. It MUST NOT replay PGN moves with a chess engine. Missing position MUST
+render “No game data” (or player names without a starting-position Board)
+and MUST NOT crash. `game` is opt-in like github `demo` and MUST NOT become
+a pack default. Default card size MUST remain 480×160 SVG still.
+
+#### Scenario: game uses Board
+- **WHEN** the dump includes a current or recent game FEN
+- **THEN** the template MUST render the Board bit with that FEN
+
+#### Scenario: PGN FEN tag is a fallback
+- **WHEN** the dump has `pgn` with a `[FEN "…"]` tag and no `fen` field
+- **THEN** Board MUST receive that tagged FEN
+
+#### Scenario: empty game does not crash
+- **WHEN** the dump has no current or recent game position
+- **THEN** the widget MUST render a “No game data” card and MUST NOT throw
+
+#### Scenario: game does not HTTP
+- **WHEN** `game` renders from a dump
+- **THEN** it MUST NOT call `fetch`
+
+### Requirement: steam player widget selects from the dump
+Widget `player` MUST declare integration `steam` only. It MUST consume
+the cached steam dump (GetPlayerSummaries player object, plus
+ResolveVanityURL when used) and MUST NOT perform HTTP. The card MUST
+compose Frozen 11 `Stat` plus README-card `Image` (inventory Cover maps
+to `Image`; the system MUST NOT create `Cover.tsx`). Default options
+MUST be `filename` `player` and `animate` false. Empty or private
+profiles MUST render an empty-state card and MUST NOT crash. The widget
+MUST NOT invent `0` for omitted dump fields. `POST /api/preview` remains
+layout preview, not a public embed API. Extra dump keys MUST NOT fail
+parse.
+
+#### Scenario: player declares steam only
+- **WHEN** widget `player` is resolved
+- **THEN** `WIDGET_INTEGRATIONS.player` MUST be `["steam"]`
+
+#### Scenario: player reads the dump without HTTP
+- **WHEN** widget `player` renders
+- **THEN** it MUST select fields from the cached steam dump and MUST NOT
+  perform HTTP
+
+#### Scenario: player uses Stat and Image
+- **WHEN** widget `player` is registered
+- **THEN** it MUST use bits `Stat` and `Image` and MUST NOT create
+  `Cover.tsx`
+
+#### Scenario: empty player dump is an empty card
+- **WHEN** GetPlayerSummaries returns no players
+- **THEN** the widget MUST render an empty-state card, MUST NOT crash,
+  and MUST NOT invent `0`
+
+### Requirement: steam recent widget selects from the dump
+Widget `recent` MUST declare integration `steam` only. It MUST consume
+the cached GetRecentlyPlayedGames dump and MUST NOT perform HTTP. The
+card MUST compose Frozen 11 `Stat` plus README-card `Image` (game icon;
+Cover maps to `Image`). Yaml `limit` MUST be 1–16 default 5 and MUST
+apply in the widget reader, not by dropping `games[]` at fetch. Default
+`filename` MUST be `recent` and `animate` MUST default false. Empty
+`games[]` MUST render an empty-state card and MUST NOT invent `0`. Extra
+dump keys MUST NOT fail parse. `recent` MUST be opt-in (not a pack
+default). `POST /api/preview` remains layout preview, not a public embed
+API.
+
+#### Scenario: recent declares steam only
+- **WHEN** widget `recent` is resolved
+- **THEN** `WIDGET_INTEGRATIONS.recent` MUST be `["steam"]`
+
+#### Scenario: recent reads the dump without HTTP
+- **WHEN** widget `recent` renders
+- **THEN** it MUST select fields from the cached steam dump and MUST NOT
+  perform HTTP
+
+#### Scenario: recent limit is widget-side
+- **WHEN** yaml `limit` is `1` and the dump `games[]` has more than one
+  game
+- **THEN** the widget MUST apply `limit` while reading the dump and the
+  cached dump MUST still contain the unsliced list
+
+#### Scenario: empty recent dump is an empty card
+- **WHEN** GetRecentlyPlayedGames returns `total_count` 0 or an empty
+  `games[]`
+- **THEN** the widget MUST render an empty-state card, MUST NOT crash,
+  and MUST NOT invent `0`
+
+#### Scenario: recent uses Stat and Image
+- **WHEN** widget `recent` is registered
+- **THEN** it MUST use bits `Stat` and `Image` and MUST NOT create
+  `Cover.tsx`
