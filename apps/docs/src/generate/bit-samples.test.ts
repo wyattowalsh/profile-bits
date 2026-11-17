@@ -71,7 +71,7 @@ function sampleRoot(bit: (typeof PREVIEW_BIT_IDS)[number]): ReactElement {
 describe("bit-samples", () => {
   it("covers Frozen 11 plus README-card bit export names", () => {
     expect(BIT_SAMPLE_IDS).toEqual(PREVIEW_BIT_IDS);
-    expect(BIT_SAMPLE_IDS).toHaveLength(18);
+    expect(BIT_SAMPLE_IDS).toHaveLength(44);
     expect(BIT_SAMPLE_IDS.slice(0, 11)).toEqual([
       "Theme",
       "Frame",
@@ -85,7 +85,35 @@ describe("bit-samples", () => {
       "Avatar",
       "Divider",
     ]);
-    expect(BIT_SAMPLE_IDS.slice(11)).toEqual([...README_CARD_BIT_NAMES]);
+    expect(BIT_SAMPLE_IDS.slice(11, 18)).toEqual([...README_CARD_BIT_NAMES]);
+    expect(BIT_SAMPLE_IDS.slice(18)).toEqual([
+      "Sparkline",
+      "Meter",
+      "Duration",
+      "Relative",
+      "Delta",
+      "Ordinal",
+      "Quote",
+      "Timeline",
+      "Empty",
+      "Figure",
+      "Table",
+      "StackBar",
+      "Compare",
+      "Legend",
+      "Code",
+      "Callout",
+      "Dot",
+      "Rating",
+      "Strip",
+      "Wrap",
+      "Ring",
+      "AvatarStack",
+      "KeyValue",
+      "Banner",
+      "Eyebrow",
+      "Status",
+    ]);
     for (const bit of PREVIEW_BIT_IDS) {
       const element = bitSampleElement(bit, "dark");
       expect(element.type).toBe(Theme);

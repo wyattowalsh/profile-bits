@@ -49,6 +49,35 @@ const README_CARD_BITS = [
   "Time",
 ] as const;
 
+const USEFUL_BITS = [
+  "Sparkline",
+  "Meter",
+  "Duration",
+  "Relative",
+  "Delta",
+  "Ordinal",
+  "Quote",
+  "Timeline",
+  "Empty",
+  "Figure",
+  "Table",
+  "StackBar",
+  "Compare",
+  "Legend",
+  "Code",
+  "Callout",
+  "Dot",
+  "Rating",
+  "Strip",
+  "Wrap",
+  "Ring",
+  "AvatarStack",
+  "KeyValue",
+  "Banner",
+  "Eyebrow",
+  "Status",
+] as const;
+
 const REFUSED = [
   "Cover",
   "Dialog",
@@ -87,7 +116,11 @@ function findNode(
 
 describe("bits", () => {
   it("exports Frozen 11 plus approved README-card bits", () => {
-    expect(BIT_EXPORTS).toEqual([...FROZEN_11, ...README_CARD_BITS]);
+    expect(BIT_EXPORTS).toEqual([
+      ...FROZEN_11,
+      ...README_CARD_BITS,
+      ...USEFUL_BITS,
+    ]);
     expect(Image).toEqual(expect.any(Function));
     expect(Heatmap).toEqual(expect.any(Function));
     expect(Board).toEqual(expect.any(Function));

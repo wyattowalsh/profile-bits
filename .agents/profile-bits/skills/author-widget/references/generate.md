@@ -151,10 +151,9 @@ export const {{PACK_ID}}Plugin = {
 } as const satisfies PluginIdentity & { bitsUsed: typeof {{PACK_ID_UPPER}}_BITS_USED };
 ```
 
-Starter is the six layout names. Frozen 11
-(`Theme`, `Frame`, `Stack`, `Row`, `Text`, `Muted`, `Stat`, `Bar`, `Chip`,
-`Avatar`, `Divider`) is membership via `BIT_EXPORTS` only — do not stamp
-11 names into the starter. List only bits the template composes. Import
+Starter is the six layout names. Membership is live `BIT_EXPORTS`
+(Frozen 11, README-card bits, and useful bits). Do not stamp every
+exported name into the starter. List only bits the template composes. Import
 bits from `@profile-bits/bits` with typed props (`gap=`, `pct=`,
 `Avatar src`). Forbidden: `tw=` on bit tags, `Bar value=`, HTTP in fetch.
 
@@ -174,7 +173,9 @@ Theme, Frame, Stack, Row, Text, Muted array.
 Bits take typed props (`gap`, `size`, `weight`, `pct`, `src`). Never pass
 `tw` / `className` / `style` to bits. Use `tw` / `className` only on native
 `div` / `span` / `img`. Numeric `gap` / `size` / `weight`. `Avatar` requires
-`src: string`. `Bar` requires `pct: number`. `Stat` is the only `value` bit.
+`src: string`. `Bar` requires `pct: number` and does not take `value`.
+`Stat` is the stacked label/value pair. `Meter`, `Delta`, `Duration`,
+`Rating`, `Ring`, `KeyValue`, and `Compare` are separate value bits.
 
 ## Formats allow-list
 

@@ -30,7 +30,7 @@ export function deriveIntegrationUnion(
 
 const widgets = ["player", "recent"] as const;
 
-/** Pack-level union. author-widget adds Stat and Image. Not yaml. */
+/** Pack-level union. Recent playtime uses Duration. Not yaml. */
 export const STEAM_BITS_USED = [
   "Theme",
   "Frame",
@@ -40,6 +40,7 @@ export const STEAM_BITS_USED = [
   "Muted",
   "Stat",
   "Image",
+  "Duration",
 ] as const;
 
 export const steamPlugin = {

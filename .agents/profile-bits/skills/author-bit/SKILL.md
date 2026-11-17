@@ -42,8 +42,8 @@ a Shields.io README image does not. Yaml theme and named palettes route to
 
 Empty arguments and help sit above all reads. Show these modes and **stop**:
 
-1. Complete one of the frozen 11 bits.
-2. Propose a 12th shared bit through OpenSpec.
+1. Complete a shipped bit (Frozen 11, a README-card bit, or a useful bit).
+2. Propose a further shared bit through OpenSpec.
 3. Route yaml themes and named palettes to `author-palette`.
 4. Route data sources to `author-integration`.
 5. Route cards/packs to `author-widget` / `author-plugin`.
@@ -70,7 +70,23 @@ yaml keys. For any named frozen bit:
    `packages/bits/AGENTS.md` when frozen-11 / Chip facts changed.
 4. Do not copy `Bit.template`; it is for an approved 12th name only.
 
-Never grow the frozen 11 silently.
+Never grow the frozen 11 silently. README-card bits and useful bits are
+also complete-existing once their source and barrel export exist. A name
+outside that shipped set still needs an OpenSpec delta before code.
+
+## Shipped after Frozen 11
+
+README-card bits: `Image`, `Heatmap`, `Board`, `Icon`, `Grid`, `List`, `Time`.
+
+Useful bits: `Sparkline`, `Meter`, `Duration`, `Relative`, `Delta`,
+`Ordinal`, `Quote`, `Timeline`, `Empty`, `Figure`, `Table`, `StackBar`,
+`Compare`, `Legend`, `Code`, `Callout`, `Dot`, `Rating`, `Strip`, `Wrap`,
+`Ring`, `AvatarStack`, `KeyValue`, `Banner`, `Eyebrow`, `Status`.
+
+Completing any of those names inventories `packages/bits/src/<BitName>.tsx`
+and the barrel export, then stops as complete-existing when both exist.
+Do not copy `Bit.template` onto them. Ranking alias `Cover` is `Image`.
+`Dialog`, `Toast`, `Popover`, `Dropdown`, and `Command` stay refused.
 
 ## Complete Chip
 
@@ -92,7 +108,8 @@ route Chip to Shields.io or create `author-badge`.
 
 ## New bit workflow
 
-A 12th name changes the shared UI vocabulary and requires an OpenSpec delta
+A name that is not already shipped (Frozen 11, README-card seven, or the
+useful set) changes the shared UI vocabulary and requires an OpenSpec delta
 before code.
 
 1. Confirm the request is a reusable bit rather than a card, palette, or pack.
@@ -127,6 +144,8 @@ an approved new bit actually lands.
 ## Canonical terms
 
 - **Frozen 11:** Theme, Frame, Stack, Row, Text, Muted, Stat, Bar, Chip, Avatar, Divider.
+- **README-card bits:** Image, Heatmap, Board, Icon, Grid, List, Time.
+- **Useful bits:** Sparkline, Meter, Duration, Relative, Delta, Ordinal, Quote, Timeline, Empty, Figure, Table, StackBar, Compare, Legend, Code, Callout, Dot, Rating, Strip, Wrap, Ring, AvatarStack, KeyValue, Banner, Eyebrow, Status.
 - **Handwritten:** `packages/bits/AGENTS.md` after mutating success.
 - **Generated:** none for bits (`just generate-docs` does not rewrite AGENTS.md).
 
@@ -134,7 +153,7 @@ an approved new bit actually lands.
 
 1. Empty `$ARGUMENTS` / help show the gallery and stop (no reads, no writes).
 2. Complete-existing stops without rewriting `packages/bits/AGENTS.md`.
-3. A 12th bit requires OpenSpec first; never silently grow the frozen 11.
+3. A name outside Frozen 11, the README-card seven, and the useful set requires OpenSpec first; never silently grow `BIT_EXPORTS`.
 4. After mutating success, load docs-closeout and update `packages/bits/AGENTS.md`.
 5. Never copy into `DESIGN.md` or `apps/docs/**`.
 6. Never add MCP or flattened `plugin_*_*_*` inputs.

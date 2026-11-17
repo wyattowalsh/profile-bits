@@ -2,6 +2,8 @@
 
 Nits and speculative extras that lost the elbow or are honest substitutes for shipped packs.
 
+The useful bit set (Sparkline through Status) is not backlog. It is `openspec/changes/useful-bits` and `goals/e2e-refine/plan.md` wave 4.
+
 - Codeforces, AniList, Last.fm, YouTube, Stack Overflow, Strava, Bluesky, Twitch, Codewars, Mastodon as first-party packs
 - YouTube subscribers / Twitch live as extra `http` chips types
 - Hashnode / Dev.to / Medium as `rss` feeds

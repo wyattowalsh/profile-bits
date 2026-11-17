@@ -109,7 +109,7 @@ Tokens are `THEME_TOKENS` in `packages/core/src/types.ts` and palettes in `packa
 
 `Theme` fills `bg` and sets `text` + Geist. Github JSX cards sit on that canvas. `feed` / `json` / `coding` templates fill `card` and set `borderColor`. Compiled CSS vars: `--pb-bg`, `--pb-card`, `--pb-text`, `--pb-muted`, `--pb-accent`, `--pb-border`, `--pb-font`.
 
-`accent` is the only emphasis fill (`Bar`). `muted` is secondary copy and empty states. Do not invent extra hues.
+`accent` is the only emphasis fill (`Bar`, and the useful bits that share it). `muted` is secondary copy and empty states. Do not invent extra hues.
 
 ## Typography
 
@@ -153,7 +153,7 @@ Do not mix pill chips with a second radius language on the same card.
 
 ## Components
 
-v0 bits (`BIT_EXPORTS`): `Theme`, `Frame`, `Stack`, `Row`, `Text`, `Muted`, `Stat`, `Bar`, `Chip`, `Avatar`, `Divider`. Takumi-safe: `div` / `span` / `img` + `tw` / `style` / `className` only. No `react-dom`, `useEffect`, portals, or `document`.
+v0 bits (the start of `BIT_EXPORTS`): `Theme`, `Frame`, `Stack`, `Row`, `Text`, `Muted`, `Stat`, `Bar`, `Chip`, `Avatar`, `Divider`. Takumi-safe: `div` / `span` / `img` + `tw` / `style` / `className` only. No `react-dom`, `useEffect`, portals, or `document`.
 
 | Bit | Contract |
 | --- | --- |
@@ -168,6 +168,39 @@ v0 bits (`BIT_EXPORTS`): `Theme`, `Frame`, `Stack`, `Row`, `Text`, `Muted`, `Sta
 | `Chip` | Radius 999, font 11, pad 8×2, 1px `border`, `card` fill. |
 | `Avatar` | Size 36, round. |
 | `Divider` | 1px × 100% `border`. |
+
+README-card bits stay distinct: `Image` is a rectangle (not `Avatar`), `Heatmap` is a 7-row day grid, `Board` is 8×8, `Icon` is a compact mark, `Grid` is generic cells, `List` is title/meta rows, `Time` is an absolute timestamp.
+
+Useful bits extend that vocabulary without new hues, shadows, or overlays. Colors stay on the host palette. `accent` emphasis, `muted` secondary, `border` tracks. Text on an `accent` fill uses `readableInk`.
+
+| Bit | Contract |
+| --- | --- |
+| `Sparkline` | Column series. Peak scales the tallest bar. Zero is a 1px `border` stub. |
+| `Meter` | Labeled 10px track plus the numeric value. `max` default 100. Not `Bar`. |
+| `Duration` | Seconds as `45s`, `1m 30s`, `1h 1m`, or `1d 1h`. Not `Time`. |
+| `Relative` | Age of `value` against injected `now` (`2h`, `in 2h`, `just now`). |
+| `Delta` | Signed change. Positive `accent`, negative `text`, zero `muted`. |
+| `Ordinal` | `#` plus a positive integer rank. Invalid ranks render an em dash. |
+| `Quote` | Muted body, optional attribution. |
+| `Timeline` | Rail of `Dot` plus title and optional meta. Not `List`. |
+| `Empty` | Centered muted message. The widget still owns the exact empty string. |
+| `Figure` | Rectangular `Image` plus muted caption. |
+| `Table` | Header row and string cells. Not `Grid`. |
+| `StackBar` | One track, shares normalized by value. First stop `accent`, last stop `muted`. |
+| `Compare` | Two labeled values and a split track. |
+| `Legend` | Swatch plus label, same stops as `StackBar`. |
+| `Code` | Padded `card` block, 1px `border`, radius 3. |
+| `Callout` | 3px `accent` left rule plus text. Not an overlay. |
+| `Dot` | Circle. Tone is `accent`, `muted`, `border`, or `text`. |
+| `Rating` | Star row, default 5, filled with `accent`. |
+| `Strip` | One row of intensity cells. Not the 7-row `Heatmap`. |
+| `Wrap` | Wrapping row, gap 8. |
+| `Ring` | Circled value, 2px `accent` stroke. |
+| `AvatarStack` | Overlapping circles. Overflow renders `+N`. |
+| `KeyValue` | Single-line label and value. Not stacked `Stat`. |
+| `Banner` | Full-width `accent` strip. Ink is `readableInk`. |
+| `Eyebrow` | Uppercase muted 10 / 600 kicker. |
+| `Status` | `Dot` plus a short label. |
 
 Empty copy (exact strings): **No language data** · **No coding data** · **No feed items** · **No data**. Never invent `0` for omitted include keys.
 

@@ -31,7 +31,7 @@ export function bitEntries(): BitEntry[] {
 export const metadata: Metadata = {
   title: "Bits",
   description:
-    "Bit primitives with 480×160 samples: Theme, Frame, Stack, Row, Text, Muted, Stat, Bar, Chip, Avatar, Divider, Image, Heatmap, Board, Icon, Grid, List, Time.",
+    "Bit primitives with 480×160 samples, including Frozen 11, README-card bits, and useful bits.",
 };
 
 const BITS_INDEX_CSS = `
@@ -112,7 +112,7 @@ const BITS_INDEX_CSS = `
 }
 `;
 
-/** `/generate/bits` — Frozen 11 plus README-card samples. No extra plugins. */
+/** `/generate/bits` — Frozen 11, README-card bits, and useful bits. No extra plugins. */
 export default function GenerateBitsPage() {
   const entries = bitEntries();
 
@@ -131,8 +131,9 @@ export default function GenerateBitsPage() {
       </h2>
       <p data-slot="generate-bits-lede">
         v0 primitives for the <code>github</code> pack plus README-card bits
-        Image, Heatmap, Board, Icon, Grid, List, and Time. Each bit is a{" "}
-        {CARD_WIDTH}×{CARD_HEIGHT} sample, not a names-only index.
+        Image, Heatmap, Board, Icon, Grid, List, and Time, plus useful bits for
+        trends, durations, ranks, and tables. Each bit is a {CARD_WIDTH}×
+        {CARD_HEIGHT} sample, not a names-only index.
       </p>
       <ul data-slot="generate-bits-list">
         {entries.map((entry) => (

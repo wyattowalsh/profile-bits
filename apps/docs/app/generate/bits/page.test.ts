@@ -42,7 +42,40 @@ const README_CARD_BIT_NAMES = [
   "Time",
 ] as const;
 
-const ALL_BIT_NAMES = [...V0_BIT_NAMES, ...README_CARD_BIT_NAMES] as const;
+const USEFUL_BIT_NAMES = [
+  "Sparkline",
+  "Meter",
+  "Duration",
+  "Relative",
+  "Delta",
+  "Ordinal",
+  "Quote",
+  "Timeline",
+  "Empty",
+  "Figure",
+  "Table",
+  "StackBar",
+  "Compare",
+  "Legend",
+  "Code",
+  "Callout",
+  "Dot",
+  "Rating",
+  "Strip",
+  "Wrap",
+  "Ring",
+  "AvatarStack",
+  "KeyValue",
+  "Banner",
+  "Eyebrow",
+  "Status",
+] as const;
+
+const ALL_BIT_NAMES = [
+  ...V0_BIT_NAMES,
+  ...README_CARD_BIT_NAMES,
+  ...USEFUL_BIT_NAMES,
+] as const;
 
 const REFUSED_BIT_NAMES = [
   "Cover",
@@ -88,7 +121,7 @@ describe("/generate/bits page (server)", () => {
   it("locks Frozen 11 plus README-card bit names and hrefs without importing packages/bits", () => {
     expect(BIT_IDS).toEqual(ALL_BIT_NAMES);
     expect(BIT_IDS).toEqual(PREVIEW_BIT_IDS);
-    expect(BIT_IDS).toHaveLength(18);
+    expect(BIT_IDS).toHaveLength(ALL_BIT_NAMES.length);
     expect(BITS_HREF).toBe("/generate/bits");
     expect(bitHref("Theme")).toBe("/generate/bits/Theme");
     expect(bitHref("Divider")).toBe("/generate/bits/Divider");

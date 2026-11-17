@@ -1,9 +1,9 @@
 import {
+  Duration,
   Frame,
   Image,
   Row,
   Stack,
-  Stat,
   Text,
   Theme,
 } from "@profile-bits/bits";
@@ -33,12 +33,12 @@ export function RecentWidget({
                     height={32}
                   />
                 ) : null}
-                <Stat
-                  label={game.name}
-                  value={
-                    game.hours === undefined ? game.name : `${game.hours} h`
-                  }
-                />
+                <Stack gap={0}>
+                  <Text size={14}>{game.name}</Text>
+                  {game.hours !== undefined ? (
+                    <Duration seconds={Math.round(game.hours * 3600)} />
+                  ) : null}
+                </Stack>
               </Row>
             ))}
           </Stack>

@@ -4,7 +4,13 @@ Shared Takumi-safe widget UI index. Not a plugin and not a yaml layer. Users nev
 
 v0 exports: `Theme`, `Frame`, `Stack`, `Row`, `Text`, `Muted`, `Stat`, `Bar`, `Chip`, `Avatar`, `Divider`.
 
+README-card exports: `Image`, `Heatmap`, `Board`, `Icon`, `Grid`, `List`, `Time`.
+
+Useful exports: `Sparkline`, `Meter`, `Duration`, `Relative`, `Delta`, `Ordinal`, `Quote`, `Timeline`, `Empty`, `Figure`, `Table`, `StackBar`, `Compare`, `Legend`, `Code`, `Callout`, `Dot`, `Rating`, `Strip`, `Wrap`, `Ring`, `AvatarStack`, `KeyValue`, `Banner`, `Eyebrow`, `Status`.
+
 Rules: `div`/`span`/`img` + `tw`/`style`/`className` only. No `react-dom`, no `useEffect`, no portals, no `document`.
+
+Further names need an OpenSpec delta. Do not add `Dialog`, `Toast`, `Popover`, `Dropdown`, or `Command`. Ranking name `Cover` is `Image`, not a second export.
 
 ## Chip
 
@@ -19,4 +25,4 @@ Split: pill `borderRadius` 999. Missing `messageColor` → theme `accent`. Messa
 
 In-card Chip (children-only or split `label`+`message`) is `author-bit`, not Shields; never yaml `bits:`.
 
-- Split Chip message ink uses `readableInk` from `@profile-bits/themes` (not hardcoded white). Bits consume `ThemePalette` / context only; no flavor hex maps. Do not invent a 12th bit.
+- Split Chip message ink uses `readableInk` from `@profile-bits/themes` (not hardcoded white). Bits consume `ThemePalette` / context only; no flavor hex maps. A new bit name still needs OpenSpec. Do not invent overlay bits.

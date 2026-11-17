@@ -289,8 +289,10 @@ or `@takumi-rs/*` from widgets. Card **480×160**. Default format `svg`
 Takumi-safe: `tw` / `className` / `style` only on native `div` / `span` /
 `img`, never on bits. Bits use typed props (`gap`, `size`, `weight`, `pct`,
 `src`) and never take `tw` / `className` / `style`. Numeric `gap` / `size` /
-`weight`. `Avatar` requires `src: string`. `Bar` requires `pct: number`.
-`Stat` is the only `value` bit.
+`weight`. `Avatar` requires `src: string`. `Bar` requires `pct: number` and
+does not take `value`. `Stat` is the stacked label/value pair. `Meter`,
+`Delta`, `Duration`, `Rating`, `Ring`, `KeyValue`, and `Compare` are
+separate value bits.
 Hooks: server semantics only (`useState` initial, `useContext`, `use()`).
 **No** `react-dom`, `useEffect`, portals, Radix/shadcn DOM, `"use client"`,
 canvas/WebGL.

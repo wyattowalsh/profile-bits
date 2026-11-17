@@ -39,17 +39,20 @@ Starter `{{PLUGIN_ID_UPPER}}_BITS_USED` is the six layout names `Theme`,
 `Frame`, `Stack`, `Row`, `Text`, `Muted` **for new packs only**. Keep the
 comment “plus Stat, Bar, Chip, Avatar, Divider when the template imports
 them.” Do **not** stamp the frozen 11 names into the pack starter. Live
-packs are subsets of the frozen 11. MDX omits Avatar. Do not copy the
+packs are subsets of `BIT_EXPORTS` (Frozen 11, README-card bits, and the
+useful set). MDX omits Avatar. Do not copy the
 six-name starter over an existing pack.
 
-Frozen 11 names (membership allow-list, **not** the starter): `Theme`,
+Frozen 11 names (original vocabulary, **not** the whole allow-list and
+**not** the starter): `Theme`,
 `Frame`, `Stack`, `Row`, `Text`, `Muted`, `Stat`, `Bar`, `Chip`, `Avatar`,
-`Divider`.
+`Divider`. README-card and useful names in `BIT_EXPORTS` may join
+`bitsUsed` when a widget composes them.
 
 When unioning `bitsUsed`, update `plugin.test.ts`. Keep
 `toEqual({{PLUGIN_ID_UPPER}}_BITS_USED)`. Do not leave a hardcoded `Theme`,
 `Frame`, `Stack`, `Row`, `Text`, `Muted` literal array. Assert every entry
-is in the frozen 11.
+is in live `BIT_EXPORTS`.
 
 `docsPath: "{{DOCS_PATH}}"`. Do not hardcode `/generate/<id>/`. Live packs
 may differ; read them from disk.

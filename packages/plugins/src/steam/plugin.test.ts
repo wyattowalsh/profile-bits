@@ -24,6 +24,7 @@ describe("steamPlugin pack registry", () => {
     expect(steamPlugin.bitsUsed).toEqual(STEAM_BITS_USED);
     expect(steamPlugin.bitsUsed).toContain("Stat");
     expect(steamPlugin.bitsUsed).toContain("Image");
+    expect(steamPlugin.bitsUsed).toContain("Duration");
     expect(steamPlugin.integrations).toEqual(
       deriveIntegrationUnion(WIDGET_INTEGRATIONS, steamPlugin.widgets),
     );

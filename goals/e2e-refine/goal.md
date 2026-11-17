@@ -9,6 +9,6 @@ Shared understanding is [facts.md](facts.md). Execution order and workstreams ar
 - Wave 1 can start: docs-full-catalog-playground, README stills/copy, Marketplace operator checklist, archive `add-github-repo-widget`.
 - Facts are accepted and testable.
 - Each first-class plan names files/systems and verification.
-- `plan.md` passed Plannotator `--gate` (hyperfine DAG). Execution is `/e2e-refine-complete`.
+- `plan.md` is the audited parent. Waves 1–3 have landed on `main`. Wave 4 is the useful bit set in `openspec/changes/useful-bits`. Do not re-run the old unstarted DAG.
 - `/goal goals/e2e-refine/goal.md` is the launch command.
 - Workflow: `/e2e-refine` with `args.wave` = `1` | `2` | `3` | `all` and optional `args.rank` to rerun one barrier. One implementer per graph node; same-file writes stay sequential.

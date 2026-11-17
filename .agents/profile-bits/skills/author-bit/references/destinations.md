@@ -22,6 +22,15 @@ All 11 are exported by `packages/bits/src/index.ts`. If the named source and
 export already exist, stop as complete-existing. Do not copy the generic
 template onto a frozen bit or replace complete code.
 
+README-card bits (`Image`, `Heatmap`, `Board`, `Icon`, `Grid`, `List`,
+`Time`) and useful bits (`Sparkline`, `Meter`, `Duration`, `Relative`,
+`Delta`, `Ordinal`, `Quote`, `Timeline`, `Empty`, `Figure`, `Table`,
+`StackBar`, `Compare`, `Legend`, `Code`, `Callout`, `Dot`, `Rating`,
+`Strip`, `Wrap`, `Ring`, `AvatarStack`, `KeyValue`, `Banner`, `Eyebrow`,
+`Status`) follow the same complete-existing stop when
+`packages/bits/src/<BitName>.tsx` and the barrel export exist. Do not copy
+`Bit.template` onto them. `Cover` is `Image`. Overlay names stay refused.
+
 ## Chip APIs
 
 Completing Chip inventories **both** live APIs, then still stops as
@@ -48,7 +57,8 @@ After an approved OpenSpec delta:
   `packages/bits/src/index.ts`
 - Tests: focused behavior and frozen-export membership
 
-The template is generic and only for the approved 12th name.
+The template is generic and only for an OpenSpec-approved name that is not
+already shipped.
 
 ## Routing boundaries
 
