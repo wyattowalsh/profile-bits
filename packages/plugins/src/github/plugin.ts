@@ -50,9 +50,11 @@ export const TOP_REPOS_BITS_USED = [
   "Theme",
   "Frame",
   "Stack",
+  "Row",
   "Text",
-  "Muted",
   "List",
+  "Empty",
+  "Ordinal",
 ] as const;
 
 export const GITHUB_BITS_USED = [

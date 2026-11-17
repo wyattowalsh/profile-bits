@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "GitHub pack",
   description:
-    "Github pack usage: widgets demo, stats, and languages. Cards are 480×160. Other first-party packs: wakatime, rss, http.",
+    "Github pack usage. Cards are 480×160. Other first-party packs: wakatime, rss, http, spotify, leetcode, chess, steam.",
 };
 
 export default function GitHubPackDocsPage() {
@@ -17,9 +17,9 @@ export default function GitHubPackDocsPage() {
     <DocsPage toc={[]}>
       <DocsTitle>GitHub pack</DocsTitle>
       <DocsDescription>
-        Github pack widgets: demo, stats, and languages. Other first-party packs
-        are wakatime (<code>coding</code>), rss (<code>feed</code>), and http (
-        <code>json</code>, <code>chips</code>).
+        Github pack widgets include demo, stats, languages, repo, top-repos, and
+        contributions. Other first-party packs are wakatime, rss, http, spotify,
+        leetcode, chess, and steam.
       </DocsDescription>
       <DocsBody>
         <p>

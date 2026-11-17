@@ -76,7 +76,7 @@ Change id: `useful-bits`. One writer. Do not fan this wave across `packages/bits
 
 Color rule: host `ThemePalette` only. No new hue, no `boxShadow`, no `react-dom`, no `document`.
 
-Adoption in this wave is steam `recent` only. Playtime is `Duration` with `Math.round(hours * 3600)`. The icon stays `Image`. Frozen github cards stay on their current bits. `solved` stays on `Stat`. `ratings` stays on `Stat`.
+Adoption on this branch uses the new bits where the dump already has the numbers: WakaTime `Duration` / `Sparkline` / `StackBar`, LeetCode solved `Meter` and `StackBar` beside `Stat`, GitHub contributions `Empty` and top-repos `Ordinal`, RSS `latest` `Relative` only when the caller passes a real `now`. Steam recent already uses `Duration`. Chess and Spotify stay on `Stat` / `Image` / `Board` because their view-models have no extra pair to draw.
 
 Docs: `PREVIEW_BIT_IDS` and `/generate/bits` samples include the set. Samples are layout preview, not an embed API.
 

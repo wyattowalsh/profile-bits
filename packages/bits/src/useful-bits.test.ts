@@ -20,6 +20,7 @@ import { BIT_EXPORTS } from "./index.js";
 import { KeyValue } from "./KeyValue.js";
 import { Legend } from "./Legend.js";
 import { formatMeter, Meter, meterPercent } from "./Meter.js";
+import { percentShares } from "./mix.js";
 import { formatOrdinal, Ordinal } from "./Ordinal.js";
 import { Quote } from "./Quote.js";
 import { Rating, ratingFilled } from "./Rating.js";
@@ -119,21 +120,37 @@ describe("useful bit formatters", () => {
     expect(formatDuration(-4)).toBe("0s");
     expect(formatDuration(0)).toBe("0s");
     expect(formatDuration(45)).toBe("45s");
+    expect(formatDuration(59)).toBe("59s");
+    expect(formatDuration(60)).toBe("1m");
+    expect(formatDuration(61)).toBe("1m 1s");
     expect(formatDuration(90)).toBe("1m 30s");
+    expect(formatDuration(3599)).toBe("59m 59s");
     expect(formatDuration(3600)).toBe("1h");
     expect(formatDuration(3661)).toBe("1h 1m");
     expect(formatDuration(86400)).toBe("1d");
+    expect(formatDuration(86400 + 3600 + 60)).toBe("1d 1h");
     expect(formatDuration(90000)).toBe("1d 1h");
   });
 
   it("formats relative ages against an injected clock", () => {
     expect(formatRelative("not-a-date", NOW)).toBe("not-a-date");
+    expect(formatRelative("2026-08-16T10:00:00.000Z", "not-a-date")).toBe(
+      "2026-08-16T10:00:00.000Z",
+    );
     expect(formatRelative(NOW, NOW)).toBe("just now");
     expect(formatRelative("2026-08-16T11:59:30.000Z", NOW)).toBe("just now");
+    expect(formatRelative("2026-08-16T12:00:30.000Z", NOW)).toBe("just now");
+    expect(formatRelative("2026-08-16T12:00:44.000Z", NOW)).toBe("just now");
+    expect(formatRelative("2026-08-16T11:59:15.000Z", NOW)).toBe("1m");
+    expect(formatRelative("2026-08-16T12:00:45.000Z", NOW)).toBe("in 1m");
     expect(formatRelative("2026-08-16T11:58:30.000Z", NOW)).toBe("1m");
     expect(formatRelative("2026-08-16T10:00:00.000Z", NOW)).toBe("2h");
     expect(formatRelative("2026-08-13T12:00:00.000Z", NOW)).toBe("3d");
+    expect(formatRelative("2026-08-10T12:00:00.000Z", NOW)).toBe("6d");
+    expect(formatRelative("2026-08-09T12:00:00.000Z", NOW)).toBe("1w");
     expect(formatRelative("2026-08-06T12:00:00.000Z", NOW)).toBe("1w");
+    expect(formatRelative("2026-07-18T12:00:00.000Z", NOW)).toBe("4w");
+    expect(formatRelative("2026-07-17T12:00:00.000Z", NOW)).toBe("1mo");
     expect(formatRelative("2026-07-07T12:00:00.000Z", NOW)).toBe("1mo");
     expect(formatRelative("2025-07-12T12:00:00.000Z", NOW)).toBe("1y");
     expect(formatRelative("2026-08-16T14:00:00.000Z", NOW)).toBe("in 2h");
@@ -141,20 +158,40 @@ describe("useful bit formatters", () => {
 
   it("formats signed deltas, ranks, meter widths, and star counts", () => {
     expect(formatDelta(0)).toBe("0");
+    expect(formatDelta(-0)).toBe("0");
     expect(formatDelta(Number.NaN)).toBe("0");
+    expect(formatDelta(0.04)).toBe("+0");
     expect(formatDelta(1.25)).toBe("+1.3");
     expect(formatDelta(-2)).toBe("\u22122");
+    expect(formatDelta(1e21)).toBe("+1e+21");
+    expect(formatDelta(-1e21)).toBe("\u22121e+21");
     expect(formatOrdinal(12)).toBe("#12");
+    expect(formatOrdinal(1)).toBe("#1");
     expect(formatOrdinal(0)).toBe("\u2014");
+    expect(formatOrdinal(-3)).toBe("\u2014");
     expect(formatOrdinal(1.5)).toBe("\u2014");
+    expect(formatOrdinal(Number.POSITIVE_INFINITY)).toBe("\u2014");
     expect(formatMeter(42)).toBe("42");
     expect(formatMeter(1.26)).toBe("1.3");
     expect(formatMeter(Number.NaN)).toBe("0");
     expect(meterPercent(42, 100)).toBe(42);
     expect(meterPercent(150, 100)).toBe(100);
     expect(meterPercent(10, 0)).toBe(0);
+    expect(meterPercent(-25, 100)).toBe(0);
+    expect(meterPercent(25, -100)).toBe(0);
+    expect(meterPercent(-40, -50)).toBe(0);
     expect(ratingFilled(3.6, 5)).toBe(4);
+    expect(ratingFilled(2.5, 5)).toBe(3);
+    expect(ratingFilled(2.5, 1)).toBe(1);
+    expect(ratingFilled(2.5, 0)).toBe(0);
     expect(ratingFilled(-1, 5)).toBe(0);
+  });
+
+  it("treats non-positive shares as zero width", () => {
+    expect(percentShares([0, 0, 0])).toEqual([0, 0, 0]);
+    expect(percentShares([1, 0, 1])).toEqual([50, 0, 50]);
+    expect(percentShares([-2, 4, -1])).toEqual([0, 100, 0]);
+    expect(percentShares([-5, -1])).toEqual([0, 0]);
   });
 });
 
@@ -184,6 +221,13 @@ describe("useful bits render", () => {
       expect(source).not.toMatch(/\bfetch\b/);
       expect(source).not.toContain("boxShadow");
       expect(source).not.toMatch(/<svg|<canvas|<table/i);
+    }
+  });
+
+  it("keeps Duration and Relative off the system clock", () => {
+    for (const file of ["Duration.tsx", "Relative.tsx"]) {
+      const source = readFileSync(join(SRC, file), "utf8");
+      expect(source).not.toContain("Date.now");
     }
   });
 
@@ -401,5 +445,91 @@ describe("useful bits render", () => {
     await render(createElement(Sparkline, { values: [] }));
     await render(createElement(StackBar, { segments: [] }));
     await render(createElement(Strip, { cells: [] }));
+  });
+
+  it("omits zero and negative stack segments", async () => {
+    const zeros = await render(
+      createElement(StackBar, {
+        segments: [
+          { value: 0, label: "A" },
+          { value: 0, label: "B" },
+        ],
+      }),
+    );
+    expect(collectTexts(zeros)).toContain("\u2588");
+    expect(
+      findAll(
+        zeros,
+        (node) => node.style?.backgroundColor === DARK_THEME.accent,
+      ),
+    ).toHaveLength(0);
+
+    const middle = await render(
+      createElement(StackBar, {
+        segments: [
+          { value: 1, label: "A" },
+          { value: 0, label: "B" },
+          { value: 1, label: "C" },
+        ],
+      }),
+    );
+    const halves = findAll(middle, (node) => node.style?.width === "50%");
+    expect(halves).toHaveLength(2);
+    expect(halves[0]?.style?.backgroundColor).toBe(DARK_THEME.accent);
+    expect(halves[1]?.style?.backgroundColor).toBe(DARK_THEME.muted);
+    expect(findAll(middle, (node) => node.style?.width === "0%")).toHaveLength(
+      0,
+    );
+
+    const negatives = await render(
+      createElement(StackBar, {
+        segments: [
+          { value: -2, label: "A" },
+          { value: 4, label: "B" },
+          { value: -1, label: "C" },
+        ],
+      }),
+    );
+    expect(
+      findAll(
+        negatives,
+        (node) =>
+          node.style?.width === "100%" &&
+          node.style?.backgroundColor === DARK_THEME.accent,
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("reserves the only avatar slot for overflow", async () => {
+    const capped = await render(
+      createElement(AvatarStack, {
+        srcs: [
+          "https://example.com/a.png",
+          "https://example.com/b.png",
+          "https://example.com/c.png",
+        ],
+        max: 1,
+      }),
+    );
+    expect(findAll(capped, (node) => node.type === "image")).toHaveLength(0);
+    expect(collectTexts(capped)).toEqual(["+3"]);
+
+    const empty = await render(createElement(AvatarStack, { srcs: [] }));
+    expect(findAll(empty, (node) => node.type === "image")).toHaveLength(0);
+    expect(collectTexts(empty)).toEqual(["\u2588"]);
+  });
+
+  it("splits a zero-zero compare evenly", async () => {
+    const tied = await render(
+      createElement(Compare, {
+        left: { label: "White", value: 0 },
+        right: { label: "Black", value: 0 },
+      }),
+    );
+    expect(collectTexts(tied).join(" ")).toContain("White 0");
+    expect(collectTexts(tied).join(" ")).toContain("Black 0");
+    expect(findAll(tied, (node) => node.style?.width === "50%")).toHaveLength(
+      2,
+    );
   });
 });

@@ -7,7 +7,7 @@ Wave 3 README cards need shared Takumi-safe primitives Frozen 11 does not provid
 - Add capability `bits-contract`: Frozen 11 stay complete-existing; approve seven README-card primitives; refuse Dialog, Toast, Popover, Dropdown, Command.
 - Modify `author-plugin`: `author-bit` MAY copy generic `Bit.template` for those seven PascalCase names after this delta; MUST NOT copy onto Frozen 11; MUST stop on refused overlay names and the alias `Cover`.
 - Ranking name Cover maps to bit `Image` (rectangular cover art), not a `Cover` export and not `Avatar`.
-- This node is OpenSpec + exclusive tests only. Bit sources, `BIT_EXPORTS`, `/generate/bits` samples, and DESIGN.md land in later W3-B nodes.
+- The seven sources have landed at `packages/bits/src/{Image,Heatmap,Board,Icon,Grid,List,Time}.tsx` and are in `BIT_EXPORTS`. `BIT_EXPORTS` MAY also include later useful bits. `Cover` is not a bit. DESIGN.md stays the Frozen 11 visual SSOT.
 - No flattened `plugin_<plugin>_<widget>_<option>` inputs. No first-party pack, widget, or integration ids. MUST NOT `author-integration add` github / wakatime / rss / http.
 
 ## Capabilities
@@ -23,5 +23,5 @@ Wave 3 README cards need shared Takumi-safe primitives Frozen 11 does not provid
 ## Impact
 
 - Specs: new `bits-contract` plus ADDED `author-plugin` deltas under this change. Do not edit `openspec/specs/**` until archive. Finish `docs-full-catalog-playground` in place (do not rewrite that change id).
-- Later apply (not this node): W3-B-02…08 one `packages/bits/src/<Name>.tsx` each from `Bit.template`; W3-B-09 barrel `BIT_EXPORTS`; W3-B-10 `/generate/bits` samples.
+- Landed apply: W3-B-02…08 one `packages/bits/src/<Name>.tsx` each; W3-B-09 barrel `BIT_EXPORTS` (Frozen 11, the seven, and later useful bits MAY remain); W3-B-10 `/generate/bits` samples.
 - Out of scope: Frozen 11 rewrites, overlay primitives, `ActionInputsSchema`, elbow pack ids, tagging `v1` at `main`, unauthenticated GitHub, REST `/languages`, Playwright in the Action, `POST /api/preview` as an embed API, `npx skills add`, git commit.

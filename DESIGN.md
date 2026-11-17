@@ -265,7 +265,7 @@ Live catalog is `packages/core/src/types.ts` (`FIRST_PARTY_*`, `WIDGET_INTEGRATI
 
 Pack defaults: github on with no widget list → `stats` + `languages` (`demo` and `repo` opt-in). Wakatime on with no widget list → `coding`. `plugins.http: {}` is widget-less; `json` only when `widgets.json` is present (https `url`); `chips` only when `widgets.chips` is present (`preset` + `types`). Rss `feed` requires https `url`.
 
-Docs catalog: `/generate/catalog` lists all four packs and eight widgets. `/generate/{github,wakatime,rss,http}` pack pages (and `[widget]`) show that pack's `bitsUsed`. `/generate/bits` shows Frozen 11 samples, not names-only. `/generate/themes` lists `NAMED_THEME_IDS` via `listFamilies` (47 named ids). `/generate/catalog` is a first-party visual gallery, not a marketplace.
+Docs catalog: `/generate/catalog` lists all four packs and eight widgets. `/generate/{github,wakatime,rss,http}` pack pages (and `[widget]`) show that pack's `bitsUsed`. `/generate/bits` shows a 480×160 sample for every `BIT_EXPORTS` name, not names-only. `/generate/themes` lists `NAMED_THEME_IDS` via `listFamilies` (47 named ids). `/generate/catalog` is a first-party visual gallery, not a marketplace.
 
 ### Code vs archived spec vs in-flight
 

@@ -16,6 +16,15 @@ export type LatestItem = {
   readonly at: string | null;
 };
 
+/**
+ * Sliced items. `now` stays null unless a caller injects a real clock.
+ * The newest item is not "now": that would label an old post "just now".
+ */
+export type LatestViewModel = {
+  readonly items: readonly LatestItem[];
+  readonly now: string | null;
+};
+
 function isFeedDump(source: LatestReaderSource): source is RssFeedDump {
   return !Array.isArray(source);
 }
@@ -32,13 +41,45 @@ export function latestAt(item: LatestReaderItem): string | null {
   return nonEmpty(item.updated) ?? nonEmpty(item.published_at);
 }
 
-function latestInstant(item: LatestReaderItem): number {
-  const raw = latestAt(item);
-  if (raw == null) {
-    return Number.NEGATIVE_INFINITY;
+function parsedInstant(value: string | null | undefined): number | null {
+  if (value == null || value === "") {
+    return null;
   }
-  const time = Date.parse(raw);
-  return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time;
+  const time = Date.parse(value);
+  return Number.isNaN(time) ? null : time;
+}
+
+function latestInstant(item: LatestReaderItem): number {
+  return parsedInstant(latestAt(item)) ?? Number.NEGATIVE_INFINITY;
+}
+
+/**
+ * Newest parseable `at` in this card.
+ * Relative age is versus that item. No wall clock.
+ */
+export function latestNow(items: readonly LatestItem[]): string | null {
+  let bestAt: string | null = null;
+  let bestTime = Number.NEGATIVE_INFINITY;
+  for (const item of items) {
+    const time = parsedInstant(item.at);
+    if (time == null || time <= bestTime) {
+      continue;
+    }
+    bestAt = item.at;
+    bestTime = time;
+  }
+  return bestAt;
+}
+
+/** Injected Relative clock when both stamps parse. Raw strings stay on Time. */
+export function latestRelativeNow(
+  at: string | null,
+  now: string | null,
+): string | null {
+  if (now == null || parsedInstant(at) == null || parsedInstant(now) == null) {
+    return null;
+  }
+  return now;
 }
 
 export function readLatestItem(item: LatestReaderItem): LatestItem {
@@ -65,4 +106,16 @@ export function sliceLatestItems(
     ? dumpOrItems.items
     : dumpOrItems;
   return items.toSorted(compareLatest).slice(0, limit).map(readLatestItem);
+}
+
+/** Recency slice. Relative stays off until a caller passes a real `now`. */
+export function latestViewModel(
+  dumpOrItems: LatestReaderSource,
+  limit: number,
+): LatestViewModel {
+  const items = sliceLatestItems(dumpOrItems, limit);
+  return Object.freeze({
+    items,
+    now: null,
+  });
 }

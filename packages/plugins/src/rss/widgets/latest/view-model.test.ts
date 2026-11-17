@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   type LatestReaderItem,
   latestAt,
+  latestNow,
+  latestRelativeNow,
+  latestViewModel,
   readLatestItem,
   sliceLatestItems,
 } from "./view-model.js";
@@ -89,5 +92,33 @@ describe("latest view-model", () => {
     expect(sliceLatestItems(dump, 1)[0]?.title).toBe("RSS Item 1");
     expect(sliceLatestItems(dump, 8)).toHaveLength(8);
     expect(dump.items).toHaveLength(8);
+  });
+
+  it("leaves now null so an old lead item is not just now", () => {
+    const view = latestViewModel([OLD, NEW], 2);
+    expect(view.now).toBeNull();
+    expect(view.items.map((item) => item.title)).toEqual(["New", "Old"]);
+    expect(latestNow(view.items)).toBe(NEW.published_at);
+    expect(latestRelativeNow(OLD.published_at, latestNow(view.items))).toBe(
+      NEW.published_at,
+    );
+    expect(latestRelativeNow("not-a-date", latestNow(view.items))).toBeNull();
+    expect(latestRelativeNow(NEW.published_at, null)).toBeNull();
+  });
+
+  it("leaves now null when no item timestamp parses", () => {
+    const view = latestViewModel(
+      [
+        {
+          title: "Bad",
+          url: "https://example.com/bad",
+          published_at: "not-a-date",
+          updated: "also-bad",
+        },
+      ],
+      1,
+    );
+    expect(view.items[0]?.at).toBe("also-bad");
+    expect(view.now).toBeNull();
   });
 });

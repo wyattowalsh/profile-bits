@@ -1,4 +1,13 @@
-import { Frame, List, Muted, Stack, Text, Theme } from "@profile-bits/bits";
+import {
+  Empty,
+  Frame,
+  List,
+  Ordinal,
+  Row,
+  Stack,
+  Text,
+  Theme,
+} from "@profile-bits/bits";
 import type { WidgetTheme } from "@profile-bits/renderer";
 
 export const NO_REPOSITORIES = "No repositories";
@@ -23,9 +32,19 @@ export function TopReposWidget({
         <Stack gap={6}>
           <Text size={14}>Top repos</Text>
           {empty || items.length === 0 ? (
-            <Muted>{NO_REPOSITORIES}</Muted>
+            <Empty>{NO_REPOSITORIES}</Empty>
           ) : (
-            <List items={items} />
+            <Stack gap={6}>
+              {items.map((item, index) => (
+                <Row
+                  gap={8}
+                  key={`${item.title}:${item.meta}:${String(index)}`}
+                >
+                  <Ordinal rank={index + 1} />
+                  <List items={[item]} />
+                </Row>
+              ))}
+            </Stack>
           )}
         </Stack>
       </Frame>

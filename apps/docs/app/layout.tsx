@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     template: "%s | profile-bits",
   },
   description:
-    "GitHub profile widget generator. First-party packs: github, wakatime, rss, http.",
+    "GitHub profile widget generator. First-party packs: github, wakatime, rss, http, spotify, leetcode, chess, steam.",
   applicationName: "profile-bits",
   keywords: ["github", "profile", "readme", "widgets", "takumi"],
 };

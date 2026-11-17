@@ -6,7 +6,7 @@ import {
   type WidgetTheme,
 } from "@profile-bits/renderer";
 import { createElement } from "react";
-import { type LatestReaderSource, sliceLatestItems } from "./view-model.js";
+import { type LatestReaderSource, latestViewModel } from "./view-model.js";
 import { LatestWidget } from "./widget.js";
 
 export type RssLatestClient = RssClient;
@@ -17,9 +17,10 @@ export async function renderLatestSvg(input: {
   theme?: WidgetTheme;
   timezone?: string;
 }): Promise<string> {
+  const view = latestViewModel(input.items, input.limit);
   const node = await fromJsx(
     createElement(LatestWidget, {
-      items: sliceLatestItems(input.items, input.limit),
+      ...view,
       ...(input.theme !== undefined ? { theme: input.theme } : {}),
       ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
     }),

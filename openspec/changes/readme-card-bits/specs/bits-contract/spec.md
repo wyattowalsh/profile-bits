@@ -20,7 +20,7 @@ The Frozen 11 bit names MUST remain `Theme`, `Frame`, `Stack`, `Row`, `Text`, `M
 - **THEN** it MUST NOT edit `packages/bits/src/{Theme,Frame,Stack,Row,Text,Muted,Stat,Bar,Chip,Avatar,Divider}.tsx`
 
 ### Requirement: Approved README-card primitives are Image Heatmap Board Icon Grid List Time
-The OpenSpec-approved 12th+ bit names MUST be exactly `Image`, `Heatmap`, `Board`, `Icon`, `Grid`, `List`, and `Time`. Each MUST land later at `packages/bits/src/<BitName>.tsx` with a named export and a `BIT_EXPORTS` entry. Ranking name Cover MUST map to `Image` and MUST NOT create `Cover.tsx` or a `Cover` export. This change MUST NOT invent extra first-party bit names beyond those seven plus Frozen 11.
+The OpenSpec-approved README-card bit names MUST be exactly `Image`, `Heatmap`, `Board`, `Icon`, `Grid`, `List`, and `Time`. Each MUST exist at `packages/bits/src/<BitName>.tsx` with a named export and a `BIT_EXPORTS` entry. Ranking name Cover MUST map to `Image` and MUST NOT create `Cover.tsx` or a `Cover` export. This change MUST NOT invent extra README-card bit names beyond those seven plus Frozen 11. Later useful bits MAY also appear in `BIT_EXPORTS`.
 
 #### Scenario: Seven names are approved
 - **WHEN** Wave 3 asks `author-bit` for a README-card primitive
@@ -32,7 +32,7 @@ The OpenSpec-approved 12th+ bit names MUST be exactly `Image`, `Heatmap`, `Board
 
 #### Scenario: No extra first-party bit names
 - **WHEN** this change lands
-- **THEN** it MUST NOT approve bit names other than Frozen 11 plus Image, Heatmap, Board, Icon, Grid, List, and Time
+- **THEN** it MUST NOT approve README-card bit names other than Frozen 11 plus Image, Heatmap, Board, Icon, Grid, List, and Time, and later useful bits MAY remain in `BIT_EXPORTS`
 
 ### Requirement: Image is rectangular cover art
 `Image` MUST render rectangular cover art via `img` (album, game, or similar). It MUST NOT use Avatar’s circle crop (`borderRadius: size / 2` as the default shape). It MUST be Takumi-safe (`img` plus `tw` / `style` / `className` only).
@@ -112,13 +112,13 @@ Bits MUST use `div` / `span` / `img` plus `tw` / `style` / `className` only. Bit
 - **WHEN** this change lands
 - **THEN** the system MUST NOT add `plugin_<plugin>_<widget>_<option>` inputs and MUST NOT append `FIRST_PARTY_PLUGIN_IDS`, `FIRST_PARTY_WIDGET_IDS`, or `FIRST_PARTY_INTEGRATION_IDS`
 
-### Requirement: This change does not land bit sources
-W3-B-01 MUST be the OpenSpec contract only. It MUST NOT write `packages/bits/src/{Image,Heatmap,Board,Icon,Grid,List,Time}.tsx`, MUST NOT edit `packages/bits/src/index.ts` `BIT_EXPORTS`, MUST NOT edit DESIGN.md, and MUST NOT add `/generate/bits` samples. Later nodes MUST copy `Bit.template` per approved name (W3-B-02…08), then barrel (W3-B-09), then docs samples (W3-B-10).
+### Requirement: Approved README-card sources are exported
+`packages/bits/src/Image.tsx`, `packages/bits/src/Heatmap.tsx`, `packages/bits/src/Board.tsx`, `packages/bits/src/Icon.tsx`, `packages/bits/src/Grid.tsx`, `packages/bits/src/List.tsx`, and `packages/bits/src/Time.tsx` MUST exist. Each MUST be a named export and a `BIT_EXPORTS` entry. `BIT_EXPORTS` MUST include Frozen 11 and those seven names and MAY also include later useful bits. `Cover` MUST NOT be exported. `Dialog`, `Toast`, `Popover`, `Dropdown`, and `Command` MUST remain out of `BIT_EXPORTS`. This change MUST NOT rewrite Frozen 11 sources, MUST NOT edit DESIGN.md, and MUST NOT add flattened `plugin_<plugin>_<widget>_<option>` Action inputs. `/generate/bits` MAY include samples for the seven and for later useful bits.
 
-#### Scenario: W3-B-01 does not create Image.tsx
-- **WHEN** this OpenSpec change is written
-- **THEN** `packages/bits/src/Image.tsx` MUST NOT exist yet
+#### Scenario: Image source exists and is exported
+- **WHEN** this change is present on disk
+- **THEN** `packages/bits/src/Image.tsx` MUST exist and `BIT_EXPORTS` MUST include `Image`
 
-#### Scenario: Barrel and docs samples wait
-- **WHEN** this OpenSpec change is written
-- **THEN** `BIT_EXPORTS` MUST still be Frozen 11 only and `/generate/bits` MUST NOT gain the seven samples from this node
+#### Scenario: Barrel includes the seven and may include later useful bits
+- **WHEN** `BIT_EXPORTS` is read from `packages/bits/src/index.ts`
+- **THEN** `BIT_EXPORTS` MUST include Image, Heatmap, Board, Icon, Grid, List, and Time, MUST still include Frozen 11, and MAY also include later useful bits

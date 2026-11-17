@@ -1,8 +1,8 @@
 import {
   Chip,
+  Empty,
   Frame,
   Heatmap,
-  Muted,
   Row,
   Stack,
   Stat,
@@ -47,9 +47,7 @@ export function ContributionsWidget({
     <Theme theme={theme}>
       <Frame>
         {empty ? (
-          <Stack gap={8}>
-            <Muted>{NO_CONTRIBUTION_DATA}</Muted>
-          </Stack>
+          <Empty>{NO_CONTRIBUTION_DATA}</Empty>
         ) : (
           <Stack gap={8}>
             <Text size={16}>{login}</Text>

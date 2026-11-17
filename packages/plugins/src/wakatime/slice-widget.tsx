@@ -4,6 +4,7 @@ import {
   List,
   Muted,
   Stack,
+  StackBar,
   Text,
   Theme,
 } from "@profile-bits/bits";
@@ -34,12 +35,19 @@ export function SliceWidget({
   return (
     <Theme theme={theme}>
       <Frame>
-        <Stack gap={6}>
+        <Stack gap={4}>
           <Text size={14}>{title}</Text>
           {empty ? (
             <Muted>{emptyText}</Muted>
           ) : (
             <>
+              <StackBar
+                height={6}
+                segments={rows.map((row) => ({
+                  value: row.totalSeconds,
+                  label: row.name,
+                }))}
+              />
               <List items={rows.map(listItem)} />
               {rows.map((row, index) => (
                 <Bar key={`${row.name}:${String(index)}`} pct={row.percent} />

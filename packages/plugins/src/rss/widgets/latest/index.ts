@@ -7,7 +7,11 @@ export {
   type LatestItem,
   type LatestReaderItem,
   type LatestReaderSource,
+  type LatestViewModel,
   latestAt,
+  latestNow,
+  latestRelativeNow,
+  latestViewModel,
   readLatestItem,
   sliceLatestItems,
 } from "./view-model.js";

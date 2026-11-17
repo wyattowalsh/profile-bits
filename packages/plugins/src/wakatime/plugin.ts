@@ -18,6 +18,9 @@ export const WAKATIME_BITS_USED = [
   "Chip",
   "Divider",
   "List",
+  "Duration",
+  "Sparkline",
+  "StackBar",
 ] as const;
 
 export const wakatimePlugin = {

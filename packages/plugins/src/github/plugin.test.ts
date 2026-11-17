@@ -42,9 +42,11 @@ describe("githubPlugin", () => {
       "Bar",
       "Chip",
       "Divider",
+      "Empty",
       "Frame",
       "List",
       "Muted",
+      "Ordinal",
       "Row",
       "Stack",
       "Stat",
@@ -79,6 +81,8 @@ describe("githubPlugin", () => {
     ]);
     expect(bitsUsedForWidget("top-repos")).toEqual([...TOP_REPOS_BITS_USED]);
     expect(bitsUsedForWidget("top-repos")).toContain("List");
+    expect(bitsUsedForWidget("top-repos")).toContain("Ordinal");
+    expect(bitsUsedForWidget("top-repos")).toContain("Empty");
   });
 
   it("declares top-repos integration github only", () => {

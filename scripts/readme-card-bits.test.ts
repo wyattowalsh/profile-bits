@@ -125,14 +125,19 @@ describe("OpenSpec change readme-card-bits", () => {
     const barrel = readFileSync(join(BITS_SRC, "index.ts"), "utf8");
 
     expect(bits).toContain(
-      "### Requirement: This change does not land bit sources",
+      "### Requirement: Approved README-card sources are exported",
     );
+    expect(bits).toContain("MAY also include later useful bits");
+    expect(bits).not.toContain("MUST still be Frozen 11 only");
+    expect(bits).not.toContain("MUST NOT exist yet");
     expect(existsSync(join(BITS_SRC, "Cover.tsx"))).toBe(false);
+    expect(barrel).not.toContain('"Cover"');
     for (const name of APPROVED) {
       expect(existsSync(join(BITS_SRC, `${name}.tsx`))).toBe(true);
       expect(barrel).toContain(`./${name}.js`);
       expect(barrel).toContain(`"${name}"`);
     }
+    expect(barrel).toContain('"Sparkline"');
     for (const name of REFUSED) {
       expect(barrel).not.toContain(`"${name}"`);
     }

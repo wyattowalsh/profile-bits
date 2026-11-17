@@ -24,6 +24,8 @@ describe("leetcodePlugin pack registry", () => {
     expect(leetcodePlugin.bitsUsed).toEqual(LEETCODE_BITS_USED);
     expect(leetcodePlugin.bitsUsed).toContain("Stat");
     expect(leetcodePlugin.bitsUsed).toContain("Heatmap");
+    expect(leetcodePlugin.bitsUsed).toContain("Meter");
+    expect(leetcodePlugin.bitsUsed).toContain("StackBar");
     expect(leetcodePlugin.integrations).toEqual(
       deriveIntegrationUnion(WIDGET_INTEGRATIONS, leetcodePlugin.widgets),
     );

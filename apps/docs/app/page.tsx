@@ -8,11 +8,11 @@ export default function HomePage() {
         <h1>profile-bits</h1>
         <p>
           GitHub profile widget generator. A plugin is a pack of widgets plus
-          declared integrations. First-party packs: <code>github</code> (
-          <code>demo</code>, <code>stats</code>, <code>languages</code>),{" "}
-          <code>wakatime</code> (<code>coding</code>), <code>rss</code> (
-          <code>feed</code>), <code>http</code> (<code>json</code>,{" "}
-          <code>chips</code>).
+          declared integrations. First-party packs follow live{" "}
+          <code>FIRST_PARTY_PLUGIN_IDS</code>: <code>github</code>,{" "}
+          <code>wakatime</code>, <code>rss</code>, <code>http</code>,{" "}
+          <code>spotify</code>, <code>leetcode</code>, <code>chess</code>, and{" "}
+          <code>steam</code>.
         </p>
         <p>
           README delivery is the Action (commit widget files).{" "}

@@ -1,7 +1,7 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Author-bit may copy Bit.template for approved README-card names
-`author-bit` MUST treat `Image`, `Heatmap`, `Board`, `Icon`, `Grid`, `List`, and `Time` as OpenSpec-approved 12th+ names. After this delta, adding one of those names MUST copy the single generic `templates/Bit.template` to `packages/bits/src/<BitName>.tsx` (substitute `{{BitName}}`), then a later barrel node MUST add the named export and `BIT_EXPORTS` entry. The skill MUST NOT ship one template per Frozen 11 bit. The skill MUST NOT copy `Bit.template` onto Frozen 11 files. Completing Frozen 11 MUST still inventory live source plus export and stop as complete-existing when they exist. Ranking alias `Cover` MUST route to `Image` and MUST NOT create `Cover.tsx`. This change MUST NOT itself copy templates or edit `packages/bits/**`.
+`author-bit` MUST treat `Image`, `Heatmap`, `Board`, `Icon`, `Grid`, `List`, and `Time` as OpenSpec-approved 12th+ names. Those sources MUST exist at `packages/bits/src/<BitName>.tsx` with a named export and a `BIT_EXPORTS` entry. `BIT_EXPORTS` MAY also include later useful bits. Adding one of those names when its source is absent MUST copy the single generic `templates/Bit.template` to `packages/bits/src/<BitName>.tsx` (substitute `{{BitName}}`) and MUST add the named export and `BIT_EXPORTS` entry. The skill MUST NOT ship one template per Frozen 11 bit. The skill MUST NOT copy `Bit.template` onto Frozen 11 files. Completing Frozen 11 MUST still inventory live source plus export and stop as complete-existing when they exist. Ranking alias `Cover` MUST route to `Image` and MUST NOT create `Cover.tsx`.
 
 #### Scenario: Approved Image may use Bit.template after this delta
 - **WHEN** a later node adds OpenSpec-approved `Image`
@@ -17,7 +17,9 @@
 
 #### Scenario: This node does not copy templates
 - **WHEN** W3-B-01 lands the OpenSpec change
-- **THEN** it MUST NOT copy `Bit.template` and MUST NOT edit `packages/bits/src/index.ts`
+- **THEN** `packages/bits/src/Image.tsx`, `Heatmap.tsx`, `Board.tsx`, `Icon.tsx`, `Grid.tsx`, `List.tsx`, and `Time.tsx` MUST exist and `BIT_EXPORTS` MUST include those seven names and MAY also include later useful bits
+
+## ADDED Requirements
 
 ### Requirement: Author-bit refuses overlay primitives
 `author-bit` MUST stop when asked for `Dialog`, `Toast`, `Popover`, `Dropdown`, or `Command`. It MUST NOT create those source files, MUST NOT add them to `BIT_EXPORTS`, and MUST NOT create `author-dialog` or another seventh skill. Overlay widgets MUST NOT enter pack `bitsUsed`.

@@ -58,6 +58,7 @@ describe("top-repos widget", () => {
     });
     expect(texts).toContain("alpha");
     expect(texts).toContain("1.5k stars");
+    expect(texts).toContain("#1");
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
@@ -77,9 +78,13 @@ describe("top-repos widget", () => {
       payload: githubDumpFromFixtures({ heatmap: { weeks: 52 } }),
     });
     expect(svg).toMatch(/<svg\b/);
-    expect(
-      await cardTexts(githubDumpFromFixtures({ heatmap: { weeks: 52 } })),
-    ).toContain("Hello-World");
+    const fixtureTexts = await cardTexts(
+      githubDumpFromFixtures({ heatmap: { weeks: 52 } }),
+    );
+    expect(fixtureTexts).toContain("Hello-World");
+    expect(fixtureTexts).toContain("2.0k stars");
+    expect(fixtureTexts).toContain("#1");
+    expect(fixtureTexts).toContain("#2");
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

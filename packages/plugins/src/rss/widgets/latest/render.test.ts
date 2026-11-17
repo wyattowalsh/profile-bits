@@ -13,7 +13,7 @@ import { createElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderFeedFromClient } from "../feed/index.js";
 import { renderLatestFromClient, renderLatestSvg } from "./render.js";
-import { sliceLatestItems } from "./view-model.js";
+import { latestViewModel, sliceLatestItems } from "./view-model.js";
 import { LatestWidget, NO_LATEST_ITEM } from "./widget.js";
 
 const PUBLIC_V4 = "93.184.216.34";
@@ -70,31 +70,97 @@ describe("latest widget", () => {
     expect(globalThis.document).toBeUndefined();
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const dump = parseRssXml(loadFixture("atom.xml"));
-    const items = sliceLatestItems(dump, 1);
+    const view = latestViewModel(dump, 1);
+    expect(view.now).toBeNull();
     const node = (await fromJsx(
-      createElement(LatestWidget, { items }),
+      createElement(LatestWidget, { ...view }),
     )) as TakumiNode;
     const texts = collectTexts(node);
     expect(texts).toContain("Atom Item 1");
     expect(texts).toContain("2026-08-16 11:00");
+    expect(texts).not.toContain("just now");
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
 
   it("falls back to published_at and honors timezone on Time", async () => {
+    const at = "2026-08-16T11:00:00.000Z";
     const node = (await fromJsx(
       createElement(LatestWidget, {
         items: [
           {
             title: "Solo",
             url: "https://example.com/solo",
-            at: "2026-08-16T11:00:00.000Z",
+            at,
           },
         ],
+        now: at,
         timezone: "America/New_York",
       }),
     )) as TakumiNode;
-    expect(collectTexts(node)).toContain("2026-08-16 07:00");
+    const texts = collectTexts(node);
+    expect(texts).toContain("2026-08-16 07:00");
+    expect(texts).toContain("just now");
+  });
+
+  it("shows Relative against the injected now without replacing Time", async () => {
+    const node = (await fromJsx(
+      createElement(LatestWidget, {
+        items: [
+          {
+            title: "Solo",
+            url: "https://example.com/solo",
+            at: "2026-08-16T10:00:00.000Z",
+          },
+        ],
+        now: "2026-08-16T12:00:00.000Z",
+        timezone: "America/New_York",
+      }),
+    )) as TakumiNode;
+    const texts = collectTexts(node);
+    expect(texts).toContain("2026-08-16 06:00");
+    expect(texts).toContain("2h");
+    expect(texts).not.toContain("just now");
+  });
+
+  it("ages older items only when the caller injects now", async () => {
+    const view = latestViewModel(parseRssXml(loadFixture("atom.xml")), 2);
+    expect(view.now).toBeNull();
+    const node = (await fromJsx(
+      createElement(LatestWidget, {
+        ...view,
+        now: "2026-08-16T12:00:00.000Z",
+      }),
+    )) as TakumiNode;
+    const texts = collectTexts(node);
+    expect(texts).toContain("Atom Item 1");
+    expect(texts).toContain("Atom Item 2");
+    expect(texts).toContain("2026-08-16 11:00");
+    expect(texts).toContain("2026-08-16 10:00");
+    expect(texts).toContain("1h");
+    expect(texts).toContain("2h");
+    expect(texts).not.toContain("just now");
+  });
+
+  it("keeps an unparseable stamp on Time and skips Relative", async () => {
+    const node = (await fromJsx(
+      createElement(LatestWidget, {
+        items: [
+          {
+            title: "Bad",
+            url: "https://example.com/bad",
+            at: "not-a-date",
+          },
+        ],
+        now: "2026-08-16T12:00:00.000Z",
+      }),
+    )) as TakumiNode;
+    const texts = collectTexts(node);
+    expect(texts.filter((text) => text === "not-a-date")).toEqual([
+      "not-a-date",
+    ]);
+    expect(texts).not.toContain("just now");
+    expect(texts).not.toContain("2h");
   });
 
   it("renders No latest item for an empty dump items list", async () => {
@@ -171,13 +237,17 @@ describe("latest widget", () => {
   it("stays Takumi-safe: Time bit, no fetch in widget modules", () => {
     expect(WIDGET_SOURCE).toContain('from "@profile-bits/bits"');
     expect(WIDGET_SOURCE).toContain("<Time");
+    expect(WIDGET_SOURCE).toContain("<Relative");
     expect(WIDGET_SOURCE).toContain("NO_LATEST_ITEM");
     expect(WIDGET_SOURCE).not.toContain("react-dom");
     expect(WIDGET_SOURCE).not.toContain("useEffect");
     expect(RENDER_SOURCE).toContain("client.fetchFeed");
+    expect(RENDER_SOURCE).toContain("latestViewModel");
+    expect(RENDER_SOURCE).toContain("...view");
     for (const source of [WIDGET_SOURCE, RENDER_SOURCE, VIEW_SOURCE]) {
       expect(source).not.toMatch(/\bfetch\s*\(/);
       expect(source).not.toContain("plugin_rss_latest");
+      expect(source).not.toContain("Date.now");
     }
   });
 });

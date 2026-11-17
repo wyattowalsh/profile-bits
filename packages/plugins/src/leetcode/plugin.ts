@@ -30,7 +30,7 @@ export function deriveIntegrationUnion(
 
 const widgets = ["solved", "heatmap"] as const;
 
-/** Pack-level union. author-widget adds Stat and Heatmap. Not yaml. */
+/** Pack-level union. Stat stays. Meter and StackBar are ratios. Not yaml. */
 export const LEETCODE_BITS_USED = [
   "Theme",
   "Frame",
@@ -40,6 +40,8 @@ export const LEETCODE_BITS_USED = [
   "Muted",
   "Stat",
   "Heatmap",
+  "Meter",
+  "StackBar",
 ] as const;
 
 export const leetcodePlugin = {

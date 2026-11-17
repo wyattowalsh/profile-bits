@@ -7,6 +7,7 @@ export type AvatarStackProps = {
 };
 
 const AVATAR_STACK_MAX = 4;
+const AVATAR_MARK = "\u2588";
 
 export function AvatarStack({
   srcs,
@@ -20,11 +21,24 @@ export function AvatarStack({
   const shown = overflow ? srcs.slice(0, limit - 1) : srcs;
   const extra = overflow ? srcs.length - shown.length : 0;
   const overlap = Math.floor(px / 3);
+  const placeholder = shown.length === 0 && extra === 0;
   return (
     <div
       tw="flex flex-row"
       style={{ display: "flex", flexDirection: "row", alignItems: "center" }}
     >
+      {placeholder ? (
+        <span
+          style={{
+            color: theme.border,
+            fontFamily: theme.font,
+            fontSize: 1,
+            lineHeight: 1,
+          }}
+        >
+          {AVATAR_MARK}
+        </span>
+      ) : null}
       {shown.map((src, index) => (
         <img
           key={`${src}:${String(index)}`}

@@ -1,5 +1,6 @@
 import type { PluginIdentity } from "@profile-bits/core";
 
+/** Pack bits. `latest` uses Time for absolute stamps and Relative for age. */
 export const RSS_BITS_USED = [
   "Theme",
   "Frame",
@@ -8,6 +9,7 @@ export const RSS_BITS_USED = [
   "Text",
   "Muted",
   "Time",
+  "Relative",
 ] as const;
 
 export const rssPlugin = {

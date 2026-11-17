@@ -10,6 +10,15 @@ export type SolvedRow = {
   value: number;
 };
 
+/** Solved count against `allQuestionsCount` for the same difficulty. */
+export type SolvedMeter = {
+  label: string;
+  value: number;
+  max: number;
+};
+
+const OVERALL_DIFFICULTY = "All";
+
 export function asDumpRecord(value: unknown): Record<string, unknown> | null {
   if (value != null && typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -17,11 +26,7 @@ export function asDumpRecord(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
-export function solvedRows(payload: unknown): SolvedRow[] {
-  const dump = asDumpRecord(payload);
-  const user = asDumpRecord(dump?.matchedUser);
-  const stats = asDumpRecord(user?.submitStatsGlobal);
-  const list = stats?.acSubmissionNum;
+function countRows(list: unknown): SolvedRow[] {
   if (!Array.isArray(list)) {
     return [];
   }
@@ -42,6 +47,62 @@ export function solvedRows(payload: unknown): SolvedRow[] {
     rows.push({ label, value });
   }
   return rows;
+}
+
+export function solvedRows(payload: unknown): SolvedRow[] {
+  const dump = asDumpRecord(payload);
+  const user = asDumpRecord(dump?.matchedUser);
+  const stats = asDumpRecord(user?.submitStatsGlobal);
+  return countRows(stats?.acSubmissionNum);
+}
+
+function questionTotals(payload: unknown): SolvedRow[] {
+  const dump = asDumpRecord(payload);
+  if (dump != null && "allQuestionsCount" in dump) {
+    return countRows(dump.allQuestionsCount);
+  }
+  const user = asDumpRecord(dump?.matchedUser);
+  if (user != null && "allQuestionsCount" in user) {
+    return countRows(user.allQuestionsCount);
+  }
+  return [];
+}
+
+/**
+ * Completion meters use solved `count` and `allQuestionsCount`.
+ * `submissions` is not an acceptance percentage and is not used.
+ */
+export function solvedMeters(payload: unknown): SolvedMeter[] {
+  const totals = new Map<string, number>();
+  for (const row of questionTotals(payload)) {
+    if (!totals.has(row.label) && row.value > 0) {
+      totals.set(row.label, row.value);
+    }
+  }
+  const meters: SolvedMeter[] = [];
+  for (const row of solvedRows(payload)) {
+    if (row.label === OVERALL_DIFFICULTY) {
+      continue;
+    }
+    const max = totals.get(row.label);
+    if (max === undefined) {
+      continue;
+    }
+    meters.push({
+      label: `${row.label} / ${String(max)}`,
+      value: row.value,
+      max,
+    });
+  }
+  return meters;
+}
+
+/** Positive non-All difficulties. One part is not a split. */
+export function solvedSplit(payload: unknown): SolvedRow[] {
+  const parts = solvedRows(payload).filter(
+    (row) => row.label !== OVERALL_DIFFICULTY && row.value > 0,
+  );
+  return parts.length >= 2 ? parts : [];
 }
 
 function calendarValue(payload: unknown): unknown {

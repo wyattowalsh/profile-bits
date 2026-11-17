@@ -1,3 +1,4 @@
+import { BIT_EXPORTS } from "@profile-bits/bits";
 import { WIDGET_INTEGRATIONS } from "@profile-bits/core";
 import { describe, expect, it } from "vitest";
 import { RSS_BITS_USED, rssPlugin } from "./plugin.js";
@@ -10,6 +11,10 @@ describe("rssPlugin", () => {
     expect(rssPlugin.defaults.widgets).toEqual(["feed"]);
     expect(rssPlugin.bitsUsed).toEqual(RSS_BITS_USED);
     expect(rssPlugin.bitsUsed).toContain("Time");
+    expect(rssPlugin.bitsUsed).toContain("Relative");
+    for (const name of rssPlugin.bitsUsed) {
+      expect(BIT_EXPORTS).toContain(name);
+    }
     expect(WIDGET_INTEGRATIONS.latest).toEqual(["rss"]);
     expect(WIDGET_INTEGRATIONS.feed).toEqual(["rss"]);
   });

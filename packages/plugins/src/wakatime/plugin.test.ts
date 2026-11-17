@@ -32,6 +32,9 @@ describe("wakatimePlugin", () => {
       "Chip",
       "Divider",
       "List",
+      "Duration",
+      "Sparkline",
+      "StackBar",
     ]);
   });
 

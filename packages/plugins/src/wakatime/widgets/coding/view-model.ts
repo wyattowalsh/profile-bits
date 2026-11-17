@@ -3,6 +3,11 @@ import type {
   CodingPayload,
   WakatimeSliceItem,
 } from "@profile-bits/integrations";
+import {
+  dumpBits,
+  type SecondsStat,
+  type WakatimeDumpBitsSource,
+} from "../../read-dump.js";
 
 export const NO_CODING_DATA = "No coding data";
 
@@ -20,6 +25,8 @@ export type CodingViewModel = {
   empty: boolean;
   totalText: string;
   slices: CodingViewSlice[];
+  totals?: readonly SecondsStat[];
+  series?: readonly number[];
 };
 
 function toRows(
@@ -32,9 +39,10 @@ function toRows(
   }));
 }
 
-type CodingReader = CodingPayload & {
-  operating_systems?: readonly WakatimeSliceItem[];
-};
+type CodingReader = CodingPayload &
+  WakatimeDumpBitsSource & {
+    operating_systems?: readonly WakatimeSliceItem[];
+  };
 
 /** `os` is the widget include token. The stats dump stores `operating_systems`. */
 function sourceRows(
@@ -48,7 +56,7 @@ function sourceRows(
 }
 
 export function toCodingViewModel(
-  payload: CodingPayload,
+  payload: CodingReader,
   include: readonly CodingIncludeToken[],
   limit: number,
 ): CodingViewModel {
@@ -65,5 +73,6 @@ export function toCodingViewModel(
     empty,
     totalText: empty ? NO_CODING_DATA : payload.human_readable_total,
     slices: empty ? [] : slices,
+    ...(empty ? {} : dumpBits(payload)),
   };
 }
