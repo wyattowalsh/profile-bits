@@ -46,7 +46,6 @@ describe("githubPlugin", () => {
       "Frame",
       "List",
       "Muted",
-      "Ordinal",
       "Row",
       "Stack",
       "Stat",
@@ -81,7 +80,6 @@ describe("githubPlugin", () => {
     ]);
     expect(bitsUsedForWidget("top-repos")).toEqual([...TOP_REPOS_BITS_USED]);
     expect(bitsUsedForWidget("top-repos")).toContain("List");
-    expect(bitsUsedForWidget("top-repos")).toContain("Ordinal");
     expect(bitsUsedForWidget("top-repos")).toContain("Empty");
   });
 

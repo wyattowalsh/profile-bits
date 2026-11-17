@@ -30,7 +30,7 @@ export function deriveIntegrationUnion(
 
 const widgets = ["solved", "heatmap"] as const;
 
-/** Pack-level union. Stat stays. Meter and StackBar are ratios. Not yaml. */
+/** Pack-level union. Stat stays. StackBar is the difficulty split. Not yaml. */
 export const LEETCODE_BITS_USED = [
   "Theme",
   "Frame",
@@ -40,7 +40,6 @@ export const LEETCODE_BITS_USED = [
   "Muted",
   "Stat",
   "Heatmap",
-  "Meter",
   "StackBar",
 ] as const;
 

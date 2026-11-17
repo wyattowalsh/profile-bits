@@ -1,5 +1,4 @@
 import {
-  Bar,
   Frame,
   List,
   Muted,
@@ -49,9 +48,6 @@ export function SliceWidget({
                 }))}
               />
               <List items={rows.map(listItem)} />
-              {rows.map((row, index) => (
-                <Bar key={`${row.name}:${String(index)}`} pct={row.percent} />
-              ))}
             </>
           )}
         </Stack>

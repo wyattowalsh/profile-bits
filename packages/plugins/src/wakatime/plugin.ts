@@ -14,7 +14,6 @@ export const WAKATIME_BITS_USED = [
   "Text",
   "Muted",
   "Stat",
-  "Bar",
   "Chip",
   "Divider",
   "List",

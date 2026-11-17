@@ -28,7 +28,6 @@ describe("wakatimePlugin", () => {
       "Text",
       "Muted",
       "Stat",
-      "Bar",
       "Chip",
       "Divider",
       "List",

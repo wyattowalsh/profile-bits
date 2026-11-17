@@ -53,8 +53,8 @@ describe("leetcode select-dump", () => {
     const solved = readFileSync(join(WIDGETS, "solved/widget.tsx"), "utf8");
     const heatmap = readFileSync(join(WIDGETS, "heatmap/widget.tsx"), "utf8");
     expect(solved).toContain("Stat");
-    expect(solved).toContain("Meter");
     expect(solved).toContain("StackBar");
+    expect(solved).not.toContain("Meter");
     expect(solved).not.toContain("fetch(");
     expect(heatmap).toContain("Heatmap");
     expect(heatmap).not.toContain("Board");

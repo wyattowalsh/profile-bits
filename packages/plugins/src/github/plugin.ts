@@ -54,7 +54,6 @@ export const TOP_REPOS_BITS_USED = [
   "Text",
   "List",
   "Empty",
-  "Ordinal",
 ] as const;
 
 export const GITHUB_BITS_USED = [
