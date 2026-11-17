@@ -701,7 +701,7 @@ describe("renderPreview", () => {
     expect(source).toContain("classifyGithubHttp");
     expect(source).toContain("usesGithubIntegration");
     expect(source).toContain("githubPreviewNode");
-    expect(source).toContain("codingTemplate");
+    expect(source).toContain("CodingWidget");
     expect(source).toContain("feedTemplate");
     expect(source).toContain("jsonTemplate");
     expect(source).toContain("chipFixture");

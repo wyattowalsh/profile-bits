@@ -38,8 +38,8 @@ import {
 } from "../packages/plugins/src/http/widgets/json/jmes.ts";
 import { jsonTemplate } from "../packages/plugins/src/http/widgets/json/template.ts";
 import { feedTemplate } from "../packages/plugins/src/rss/widgets/feed/template.ts";
-import { codingTemplate } from "../packages/plugins/src/wakatime/widgets/coding/template.ts";
 import { toCodingViewModel } from "../packages/plugins/src/wakatime/widgets/coding/view-model.ts";
+import { CodingWidget } from "../packages/plugins/src/wakatime/widgets/coding/widget.tsx";
 import React, {
   createElement,
   type ReactElement,
@@ -373,9 +373,11 @@ async function main(): Promise<void> {
       ),
     );
 
-    const codingNode = codingTemplate(
-      toCodingViewModel(codingPayload, ["languages", "editors"], 8),
-      themePalette,
+    const codingNode = await fromJsx(
+      createElement(CodingWidget, {
+        model: toCodingViewModel(codingPayload, ["languages", "editors"], 8),
+        theme,
+      }),
     );
     rows.push(
       await writeAsset(

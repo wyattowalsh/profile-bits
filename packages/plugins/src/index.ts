@@ -47,8 +47,8 @@ export {
 } from "./rss/widgets/feed/index.js";
 export { WAKATIME_BITS_USED, wakatimePlugin } from "./wakatime/plugin.js";
 export { renderCodingSvg } from "./wakatime/widgets/coding/render.js";
-export { codingTemplate } from "./wakatime/widgets/coding/template.js";
 export {
   type CodingViewModel,
   toCodingViewModel,
 } from "./wakatime/widgets/coding/view-model.js";
+export { CodingWidget } from "./wakatime/widgets/coding/widget.js";

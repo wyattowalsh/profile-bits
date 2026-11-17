@@ -47,7 +47,6 @@ import {
   WakatimeStatsEnvelopeSchema,
 } from "@profile-bits/integrations";
 import {
-  codingTemplate,
   type FeedItem,
   feedTemplate,
   githubPreviewNode,
@@ -73,6 +72,7 @@ import {
   jsonTemplate,
   searchJson,
 } from "../../../../../packages/plugins/src/http/widgets/json/index";
+import { CodingWidget } from "../../../../../packages/plugins/src/wakatime/widgets/coding/widget";
 import { bitSampleElement } from "../../generate/bit-samples";
 import {
   isPreviewCodingRange,
@@ -1064,13 +1064,15 @@ async function previewNode(input: PreviewRenderInput) {
   const widget = input.widget;
   const palette = resolveWidgetTheme(input.theme);
   if (widget === "coding") {
-    const node = codingTemplate(
-      toCodingViewModel(
-        input.payload as CodingPayload,
-        codingInclude(input.options),
-        codingLimit(input.options),
-      ),
-      palette,
+    const node = await fromJsx(
+      createElement(CodingWidget, {
+        model: toCodingViewModel(
+          input.payload as CodingPayload,
+          codingInclude(input.options),
+          codingLimit(input.options),
+        ),
+        theme: input.theme,
+      }) as Parameters<typeof fromJsx>[0],
     );
     assertTakumiTree(node);
     return node;
