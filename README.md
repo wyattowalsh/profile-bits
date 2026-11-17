@@ -41,7 +41,7 @@ GitHub profile README widgets as dense GitHub-native stats cards.
 
 <!-- BADGES:END -->
 
-A **plugin** is a pack of widgets plus declared integrations (1..N widgets, 0..N integrations) — not a single card and not a single API. First-party packs: `github`, `wakatime`, `rss`, `http`. Rendered with [Takumi](https://takumi.kane.tw/) **480×160** stills (Geist, 1px borders, dark default).
+A **plugin** is a pack of widgets plus declared integrations (1..N widgets, 0..N integrations) — not a single card and not a single API. First-party packs follow live `FIRST_PARTY_PLUGIN_IDS`: `github`, `wakatime`, `rss`, `http`, `spotify`, `leetcode`, `chess`, and `steam`. Rendered with [Takumi](https://takumi.kane.tw/) **480×160** stills (Geist, 1px borders, dark default).
 
 README delivery is the **Action committing widget files**. Paste relative `![](./profile-bits/…)` embeds yourself. The Action does **not** patch `README.md`.
 
@@ -278,7 +278,7 @@ Live catalog: [`packages/core/src/types.ts`](packages/core/src/types.ts) (`FIRST
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: light)" srcset=".github/assets/plugin-map-light.png">
-    <img src=".github/assets/plugin-map.png" alt="First-party packs: github, wakatime, rss, http" width="720">
+    <img src=".github/assets/plugin-map.png" alt="First-party packs: github, wakatime, rss, http, spotify, leetcode, chess, steam" width="720">
   </picture>
 </p>
 

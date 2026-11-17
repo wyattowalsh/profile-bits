@@ -1,4 +1,12 @@
-import { Frame, Row, Stat, Text, Theme } from "@profile-bits/bits";
+import {
+  Delta,
+  Frame,
+  Row,
+  Stack,
+  Stat,
+  Text,
+  Theme,
+} from "@profile-bits/bits";
 import type { WidgetTheme } from "@profile-bits/renderer";
 import type { RatingsViewModel } from "./view-model.js";
 
@@ -16,7 +24,12 @@ export function RatingsWidget({
         ) : (
           <Row gap={12}>
             {chips.map((chip) => (
-              <Stat key={chip.label} label={chip.label} value={chip.value} />
+              <Stack gap={2} key={chip.label}>
+                <Stat label={chip.label} value={chip.value} />
+                {chip.peak !== undefined ? (
+                  <Delta value={chip.value - chip.peak} />
+                ) : null}
+              </Stack>
             ))}
           </Row>
         )}

@@ -41,6 +41,8 @@ export const STEAM_BITS_USED = [
   "Stat",
   "Image",
   "Duration",
+  "Status",
+  "Empty",
 ] as const;
 
 export const steamPlugin = {

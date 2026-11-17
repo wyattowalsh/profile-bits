@@ -43,6 +43,7 @@ export const CHESS_BITS_USED = [
   "Muted",
   "Stat",
   "Board",
+  "Delta",
 ] as const;
 
 export const chessPlugin = {

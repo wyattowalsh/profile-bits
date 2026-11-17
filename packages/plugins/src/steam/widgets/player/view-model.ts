@@ -6,6 +6,7 @@ export type PlayerViewModel = {
   empty: boolean;
   title: string;
   avatarUrl?: string;
+  status?: string;
 };
 
 export function playerViewModel(payload: unknown): PlayerViewModel {
@@ -14,7 +15,16 @@ export function playerViewModel(payload: unknown): PlayerViewModel {
     return { empty: true, title: NO_PLAYER };
   }
   if (player.avatarUrl === "") {
-    return { empty: false, title: player.name };
+    return player.status === undefined
+      ? { empty: false, title: player.name }
+      : { empty: false, title: player.name, status: player.status };
   }
-  return { empty: false, title: player.name, avatarUrl: player.avatarUrl };
+  return player.status === undefined
+    ? { empty: false, title: player.name, avatarUrl: player.avatarUrl }
+    : {
+        empty: false,
+        title: player.name,
+        avatarUrl: player.avatarUrl,
+        status: player.status,
+      };
 }

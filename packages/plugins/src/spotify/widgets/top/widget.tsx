@@ -2,6 +2,7 @@ import {
   Frame,
   Image,
   Muted,
+  Ordinal,
   Row,
   Stack,
   Text,
@@ -23,8 +24,12 @@ export function TopWidget({
           <Text size={16}>{title}</Text>
         ) : (
           <Stack gap={4}>
-            {tracks.map((track) => (
-              <Row gap={8} key={`${track.title}:${track.artists}`}>
+            {tracks.map((track, index) => (
+              <Row
+                gap={8}
+                key={`${track.title}:${track.artists}:${String(index)}`}
+              >
+                <Ordinal rank={index + 1} />
                 {track.coverUrl !== "" ? (
                   <Image
                     src={track.coverUrl}

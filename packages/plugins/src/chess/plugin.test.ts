@@ -25,6 +25,7 @@ describe("chessPlugin pack registry", () => {
     expect(chessPlugin.bitsUsed).toEqual(CHESS_BITS_USED);
     expect(chessPlugin.bitsUsed).toContain("Stat");
     expect(chessPlugin.bitsUsed).toContain("Board");
+    expect(chessPlugin.bitsUsed).toContain("Delta");
     expect(chessPlugin.integrations).toEqual(
       deriveIntegrationUnion(WIDGET_INTEGRATIONS, chessPlugin.widgets),
     );

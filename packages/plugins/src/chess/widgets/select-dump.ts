@@ -24,6 +24,7 @@ const LICHESS_PERFS = [
 export type RatingChip = {
   label: string;
   value: number;
+  peak?: number;
 };
 
 export function asDumpRecord(value: unknown): Record<string, unknown> | null {
@@ -52,18 +53,23 @@ function finiteRating(value: unknown): number | undefined {
     : undefined;
 }
 
-function ratingFromClass(node: unknown): number | undefined {
+function classRatings(node: unknown): { value?: number; peak?: number } {
   const record = asDumpRecord(node);
   if (record == null) {
-    return undefined;
+    return {};
   }
   const last = asDumpRecord(record.last);
   const highest = asDumpRecord(record.highest);
-  return (
-    finiteRating(last?.rating) ??
-    finiteRating(highest?.rating) ??
-    finiteRating(record.rating)
-  );
+  const current = finiteRating(last?.rating) ?? finiteRating(record.rating);
+  const peak = finiteRating(highest?.rating);
+  const value = current ?? peak;
+  if (value === undefined) {
+    return {};
+  }
+  if (current !== undefined && peak !== undefined && peak !== current) {
+    return { value: current, peak };
+  }
+  return { value };
 }
 
 export function ratingChips(payload: unknown): RatingChip[] {
@@ -90,11 +96,15 @@ function chipsFromMap(
   }
   const chips: RatingChip[] = [];
   for (const [key, label] of classes) {
-    const value = ratingFromClass(record[key]);
-    if (value === undefined) {
+    const ratings = classRatings(record[key]);
+    if (ratings.value === undefined) {
       continue;
     }
-    chips.push({ label, value });
+    chips.push(
+      ratings.peak === undefined
+        ? { label, value: ratings.value }
+        : { label, value: ratings.value, peak: ratings.peak },
+    );
   }
   return chips;
 }

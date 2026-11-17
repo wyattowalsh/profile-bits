@@ -23,6 +23,7 @@ describe("spotifyPlugin pack registry", () => {
     expect(spotifyPlugin.docsPath).toBe("spotify");
     expect(spotifyPlugin.bitsUsed).toEqual(SPOTIFY_BITS_USED);
     expect(spotifyPlugin.bitsUsed).toContain("Image");
+    expect(spotifyPlugin.bitsUsed).toContain("Ordinal");
     expect(spotifyPlugin.integrations).toEqual(
       deriveIntegrationUnion(WIDGET_INTEGRATIONS, spotifyPlugin.widgets),
     );

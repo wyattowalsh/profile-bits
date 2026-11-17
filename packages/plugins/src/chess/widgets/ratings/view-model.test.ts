@@ -40,6 +40,25 @@ describe("ratingsViewModel", () => {
     expect(model.chips).toEqual([{ label: "Bullet", value: 2600 }]);
   });
 
+  it("shows the gap from a recorded peak without inventing one", () => {
+    const model = ratingsViewModel({
+      source: "chesscom",
+      dump: {
+        stats: {
+          chess_blitz: {
+            last: { rating: 2800 },
+            highest: { rating: 2900 },
+          },
+          chess_rapid: { last: { rating: 2700 }, highest: { rating: 2700 } },
+        },
+      },
+    });
+    expect(model.chips).toEqual([
+      { label: "Blitz", value: 2800, peak: 2900 },
+      { label: "Rapid", value: 2700 },
+    ]);
+  });
+
   it("renders empty copy when no ratings exist", () => {
     expect(ratingsViewModel({ stats: { chess_blitz: {} } })).toEqual({
       empty: true,

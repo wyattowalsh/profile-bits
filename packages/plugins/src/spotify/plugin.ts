@@ -39,6 +39,7 @@ export const SPOTIFY_BITS_USED = [
   "Text",
   "Muted",
   "Image",
+  "Ordinal",
 ] as const;
 
 export const spotifyPlugin = {

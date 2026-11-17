@@ -6,6 +6,7 @@
 export type SteamPlayer = {
   name: string;
   avatarUrl: string;
+  status?: string;
 };
 
 export type SteamGame = {
@@ -30,6 +31,33 @@ function responseOf(
   return asDumpRecord(body?.response);
 }
 
+function personaStatus(state: unknown, game: unknown): string | undefined {
+  if (typeof game === "string" && game !== "") {
+    return `In ${game}`;
+  }
+  if (typeof state !== "number" || !Number.isInteger(state)) {
+    return undefined;
+  }
+  switch (state) {
+    case 0:
+      return "Offline";
+    case 1:
+      return "Online";
+    case 2:
+      return "Busy";
+    case 3:
+      return "Away";
+    case 4:
+      return "Snooze";
+    case 5:
+      return "Looking to trade";
+    case 6:
+      return "Looking to play";
+    default:
+      return undefined;
+  }
+}
+
 export function steamPlayer(payload: unknown): SteamPlayer | null {
   const response = responseOf(payload, "GetPlayerSummaries");
   const players = response?.players;
@@ -50,7 +78,10 @@ export function steamPlayer(payload: unknown): SteamPlayer | null {
       : typeof player.avatar === "string"
         ? player.avatar
         : "";
-  return { name, avatarUrl: avatar };
+  const status = personaStatus(player.personastate, player.gameextrainfo);
+  return status === undefined
+    ? { name, avatarUrl: avatar }
+    : { name, avatarUrl: avatar, status };
 }
 
 function gameIcon(game: Record<string, unknown>): string {

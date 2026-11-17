@@ -1,5 +1,6 @@
 import {
   Duration,
+  Empty,
   Frame,
   Image,
   Row,
@@ -20,7 +21,7 @@ export function RecentWidget({
     <Theme theme={theme}>
       <Frame>
         {empty ? (
-          <Text size={16}>{title}</Text>
+          <Empty>{title}</Empty>
         ) : (
           <Stack gap={4}>
             {games.map((game) => (

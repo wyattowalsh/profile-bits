@@ -42,6 +42,44 @@ describe("steam select-dump", () => {
     fetchSpy.mockRestore();
   });
 
+  it("reads persona state and the game being played", () => {
+    expect(
+      steamPlayer({
+        GetPlayerSummaries: {
+          response: {
+            players: [
+              {
+                personaname: "Octo",
+                avatarfull: "https://img.example/a.jpg",
+                personastate: 1,
+                gameextrainfo: "Half-Life",
+              },
+            ],
+          },
+        },
+      }),
+    ).toEqual({
+      name: "Octo",
+      avatarUrl: "https://img.example/a.jpg",
+      status: "In Half-Life",
+    });
+    expect(
+      steamPlayer({
+        GetPlayerSummaries: {
+          response: {
+            players: [
+              {
+                personaname: "Octo",
+                avatar: "https://img.example/b.jpg",
+                personastate: 0,
+              },
+            ],
+          },
+        },
+      })?.status,
+    ).toBe("Offline");
+  });
+
   it("omits a zero playtime instead of inventing a stat", () => {
     const games = recentGames(DUMP, 3);
     expect(games[1]?.hours).toBeUndefined();
