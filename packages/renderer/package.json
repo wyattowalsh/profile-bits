@@ -14,7 +14,7 @@
     "@takumi-rs/core": "catalog:",
     "@takumi-rs/helpers": "catalog:",
     "@takumi-rs/wasm": "catalog:",
-    "react": "19.2.8",
+    "react": "19.3.1",
     "rehype-sanitize": "catalog:",
     "rehype-stringify": "catalog:",
     "remark-gfm": "catalog:",
@@ -24,7 +24,7 @@
     "unified": "catalog:"
   },
   "devDependencies": {
-    "@types/react": "19.2.18",
+    "@types/react": "19.3.0",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
